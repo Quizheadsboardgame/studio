@@ -1,79 +1,59 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import type { Site } from '@/lib/data';
-import { Button } from '@/components/ui/button';
-import { generateDailyOperationalReport } from '@/ai/flows/generate-daily-operational-report';
-import { Loader2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from './ui/skeleton';
+import type { Site, Cleaner } from '@/lib/data';
 
 interface DailySummaryTabProps {
   sites: Site[];
+  cleaners: Cleaner[];
 }
 
-export default function DailySummaryTab({ sites }: DailySummaryTabProps) {
-  const [report, setReport] = useState('');
-  const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
+export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProps) {
+  const sitesWithNotes = sites.filter(site => site.notes && site.notes.trim() !== '');
+  const cleanersWithNotes = cleaners.filter(cleaner => cleaner.notes && cleaner.notes.trim() !== '');
 
-  const handleGenerateReport = () => {
-    startTransition(async () => {
-      setReport('');
-      
-      const relevantSites = sites
-        .filter(site => site.status !== 'N/A')
-        .map(site => ({ name: site.name, status: site.status, notes: site.notes }));
-
-      if (relevantSites.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "No Data",
-          description: "Please update site statuses before generating a report.",
-        });
-        return;
-      }
-
-      try {
-        const result = await generateDailyOperationalReport({ sites: relevantSites });
-        setReport(result);
-      } catch (error) {
-        console.error('Failed to generate report:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to generate the report. Please try again.",
-        });
-      }
-    });
-  };
+  const hasContent = sitesWithNotes.length > 0 || cleanersWithNotes.length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 space-y-2 sm:space-y-0">
-        <Button onClick={handleGenerateReport} disabled={isPending}>
-          {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {isPending ? 'Generating...' : 'Generate Report'}
-        </Button>
-        <p className="text-sm text-muted-foreground">AI-powered summary of the current site statuses.</p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        A summary of all notes recorded for sites and cleaners.
+      </p>
 
-      {(isPending || report) && (
-        <div className="rounded-lg border bg-card text-card-foreground p-6 min-h-[200px]">
-          {isPending && (
-            <div className="space-y-4">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-2/3" />
-            </div>
-          )}
-          {report && (
-            <div className="text-sm text-foreground whitespace-pre-wrap font-mono">
-              {report}
-            </div>
-          )}
+      {hasContent ? (
+        <div className="rounded-lg border bg-card text-card-foreground p-6">
+          <div className="space-y-6">
+            {sitesWithNotes.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-lg mb-2 text-card-foreground">Site Notes</h3>
+                <div className="space-y-2">
+                  {sitesWithNotes.map(site => (
+                    <div key={site.id}>
+                      <p className="font-medium text-foreground">{site.name}</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{site.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cleanersWithNotes.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-lg mb-2 text-card-foreground">Cleaner Notes</h3>
+                <div className="space-y-2">
+                  {cleanersWithNotes.map(cleaner => (
+                    <div key={cleaner.id}>
+                      <p className="font-medium text-foreground">{cleaner.name}</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{cleaner.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-card text-card-foreground p-6 min-h-[200px] flex items-center justify-center">
+            <p className="text-muted-foreground">No notes found for any sites or cleaners.</p>
         </div>
       )}
     </div>
