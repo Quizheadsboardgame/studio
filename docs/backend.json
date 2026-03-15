@@ -1,0 +1,166 @@
+{
+  "entities": {
+    "Site": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Site",
+      "type": "object",
+      "description": "Represents a physical location or area that requires cleaning services within the CleanOps Hub application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Site entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The common name or identifier for the cleaning site, e.g., 'Anne Mclaren' or 'MRC Epidemiology Level 3'."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current operational status of the site, indicating client satisfaction or required actions. Possible values include: 'N/A', 'Client happy', 'Operations request', 'Client concerns', 'Under control', 'Site under action plan', 'Site requires action plan'."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status"
+      ]
+    },
+    "Cleaner": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cleaner",
+      "type": "object",
+      "description": "Represents an individual cleaner managed within the CleanOps Hub application, including their profile and performance rating.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Cleaner entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the cleaner, e.g., 'Alasdair Strachan'."
+        },
+        "performanceRating": {
+          "type": "string",
+          "description": "The current performance rating of the cleaner, based on feedback or operational assessment. Possible values include: 'N/A', 'Excellent feedback', 'Site satisfied', 'Slight improvement needed', 'Needs retraining', 'Under action plan', 'Operational concerns'."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "performanceRating"
+      ]
+    },
+    "CleaningAssignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CleaningAssignment",
+      "type": "object",
+      "description": "Represents a scheduled cleaning task, linking a specific site to a cleaner with defined time slots.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CleaningAssignment entity."
+        },
+        "siteId": {
+          "type": "string",
+          "description": "Reference to the unique identifier of the Site where this cleaning assignment will occur. (Relationship: Site 1:N CleaningAssignment)"
+        },
+        "cleanerId": {
+          "type": "string",
+          "description": "Reference to the unique identifier of the Cleaner assigned to this task. (Relationship: Cleaner 1:N CleaningAssignment)"
+        },
+        "scheduledStartTime": {
+          "type": "string",
+          "description": "The scheduled start time for the cleaning assignment in HH:MM format (e.g., '23:30').",
+          "format": "time"
+        },
+        "scheduledEndTime": {
+          "type": "string",
+          "description": "The scheduled end time for the cleaning assignment in HH:MM format (e.g., '01:45').",
+          "format": "time"
+        }
+      },
+      "required": [
+        "id",
+        "siteId",
+        "cleanerId",
+        "scheduledStartTime",
+        "scheduledEndTime"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/admin_users/{userId}",
+        "definition": {
+          "entityName": "admin_user",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection for Database Access Control (DBAC). The existence of a document in this collection for a user's UID signifies administrative privileges. These documents are generally empty or contain minimal metadata.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique Firebase Authentication User ID (UID) of the administrator."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sites/{siteId}",
+        "definition": {
+          "entityName": "Site",
+          "schema": {
+            "$ref": "#/backend/entities/Site"
+          },
+          "description": "Top-level collection storing details about each physical cleaning site, including its name and operational status. Full CRUD access is granted to administrative users.",
+          "params": [
+            {
+              "name": "siteId",
+              "description": "Unique identifier for the Site entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/cleaners/{cleanerId}",
+        "definition": {
+          "entityName": "Cleaner",
+          "schema": {
+            "$ref": "#/backend/entities/Cleaner"
+          },
+          "description": "Top-level collection storing profiles and performance ratings for each cleaner. Full CRUD access is granted to administrative users.",
+          "params": [
+            {
+              "name": "cleanerId",
+              "description": "Unique identifier for the Cleaner entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/cleaning_assignments/{assignmentId}",
+        "definition": {
+          "entityName": "CleaningAssignment",
+          "schema": {
+            "$ref": "#/backend/entities/CleaningAssignment"
+          },
+          "description": "Top-level collection for all scheduled cleaning tasks. Each document links a specific site (via `siteId`) to a cleaner (via `cleanerId`) with defined time slots. Full CRUD access is granted to administrative users. Includes denormalized `siteId` and `cleanerId` for efficient querying and authorization independence.",
+          "params": [
+            {
+              "name": "assignmentId",
+              "description": "Unique identifier for the CleaningAssignment entity."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for the CleanOps Hub application prioritizes Authorization Independence, Structural Segregation, and clear Access Modeling to ensure robust and debuggable security rules. All core entities (Sites, Cleaners, CleaningAssignments) are placed in top-level collections. This design assumes a primary access model where 'administrative users' have full CRUD (Create, Read, Update, Delete) access to all operational data. A dedicated `/admin_users/{userId}` collection is introduced for Database Access Control (DBAC), where the existence of a document for a user's UID signifies administrative privileges.\n\n**Authorization Independence:** The design achieves authorization independence by avoiding hierarchical dependencies in security rules. For instance, `CleaningAssignment` documents are not subcollections of `Sites` or `Cleaners`. Instead, they are top-level entities (`/cleaning_assignments/{assignmentId}`) that reference `siteId` and `cleanerId`. This prevents the need for costly and complex `get()` calls in security rules to check permissions on parent documents. All authorization for these core operational entities will hinge on a single check: verifying if the `request.auth.uid` corresponds to an administrative user listed in the `/admin_users` collection. This simple, atomic check can be applied consistently across all data operations without relying on denormalized `ownerId` or `members` maps within the core entities themselves, as the entire system is centrally managed by admins.\n\n**QAPs (Queries Are Not Filters):** The structure facilitates secure `list` operations by adhering to the principle that security rules should not act as filters. Each collection (`/sites`, `/cleaners`, `/cleaning_assignments`) is designed with a homogeneous security posture: full access for administrative users. Therefore, a `list` operation on any of these collections will return all documents, as expected by an administrator. Security rules will simply grant or deny `list` access based on the `request.auth.uid` being an administrator. There is no mix of public and private data within these collections, preventing the need for complex, inefficient `where` clauses in rules. This allows queries to be performed efficiently client-side or server-side without security rule overhead, ensuring that only authorized users can perform `list` operations, and when they do, they see all relevant data."
+  }
+}
