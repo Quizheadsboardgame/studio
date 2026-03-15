@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry, type ActionPlan } from '@/lib/data';
+import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList } from 'lucide-react';
@@ -34,9 +34,6 @@ export default function DashboardPage() {
 
   const cleanersCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'cleaners') : null, [firestore, user]);
   const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
-
-  const historyCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'history') : null, [firestore, user]);
-  const { data: history, isLoading: historyLoading } = useCollection<SiteHistoryEntry>(historyCollection);
 
   const actionPlansCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
@@ -161,29 +158,13 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(cleanerRef);
   };
 
-  const handleRecordDay = () => {
-    if (!historyCollection || !sites) return;
-    const today = new Date().toISOString().split('T')[0];
-    const existingEntry = history?.find(entry => entry.date === today);
-    const newEntry = { date: today, sites: sites.map(s => ({...s})) };
-
-    if (existingEntry) {
-       const historyRef = doc(firestore, 'history', existingEntry.id);
-       setDocumentNonBlocking(historyRef, newEntry, { merge: true });
-       toast({ title: "Data Updated", description: "Today's site statuses have been updated." });
-    } else {
-       addDocumentNonBlocking(historyCollection, newEntry);
-       toast({ title: "Data Recorded", description: "Today's site statuses have been recorded." });
-    }
-  };
-
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
     if (!firestore) return;
     const planRef = doc(firestore, 'actionPlans', updatedPlan.id);
     setDocumentNonBlocking(planRef, updatedPlan, { merge: true });
   };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || historyLoading || actionPlansLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
 
@@ -266,7 +247,7 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="risk">
-              <RiskDashboardTab sites={sites || []} history={history || []} onRecordDay={handleRecordDay}/>
+              <RiskDashboardTab sites={sites || []} />
             </TabsContent>
 
             <TabsContent value="summary">
