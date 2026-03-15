@@ -95,3 +95,20 @@ export type SiteHistoryEntry = {
 };
 
 export const initialHistory: SiteHistoryEntry[] = [];
+
+export type ActionPlanTask = {
+  id: string;
+  description: string;
+  dueDate: string; // YYYY-MM-DD
+  completed: boolean;
+};
+
+export type ActionPlan = {
+  id: string; // site.id or cleaner.id
+  targetName: string;
+  targetType: 'site' | 'cleaner';
+  tasks: ActionPlanTask[];
+  notes?: string;
+};
+
+export const initialActionPlans: ActionPlan[] = [];

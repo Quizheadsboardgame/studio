@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { initialSites, initialCleaners, initialHistory, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry } from '@/lib/data';
+import { initialSites, initialCleaners, initialHistory, initialActionPlans, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry, type ActionPlan } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Bot, ClipboardList } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import ScheduleTab from '@/components/schedule-tab';
 import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
+import ActionPlanTab from '@/components/action-plan-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [cleaners, setCleaners] = useState<Cleaner[]>(initialCleaners);
   const [history, setHistory] = useState<SiteHistoryEntry[]>(initialHistory);
+  const [actionPlans, setActionPlans] = useState<ActionPlan[]>(initialActionPlans);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,10 @@ export default function DashboardPage() {
       const savedHistory = window.localStorage.getItem('history');
       if (savedHistory) {
         setHistory(JSON.parse(savedHistory));
+      }
+      const savedActionPlans = window.localStorage.getItem('actionPlans');
+      if (savedActionPlans) {
+        setActionPlans(JSON.parse(savedActionPlans));
       }
     } catch (error) {
       console.error("Error loading data from localStorage", error);
@@ -70,6 +76,16 @@ export default function DashboardPage() {
     }
   }, [history, isLoaded]);
   
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem('actionPlans', JSON.stringify(actionPlans));
+      } catch (error) {
+        console.error("Error saving action plans to localStorage", error);
+      }
+    }
+  }, [actionPlans, isLoaded]);
+
   const { toast } = useToast();
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
@@ -130,6 +146,17 @@ export default function DashboardPage() {
     }
   };
 
+  const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
+    const existingPlanIndex = actionPlans.findIndex(p => p.id === updatedPlan.id);
+    const newActionPlans = [...actionPlans];
+    if (existingPlanIndex > -1) {
+      newActionPlans[existingPlanIndex] = updatedPlan;
+    } else {
+      newActionPlans.push(updatedPlan);
+    }
+    setActionPlans(newActionPlans);
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-primary px-4 text-primary-foreground sm:h-20 sm:px-6">
@@ -144,12 +171,13 @@ export default function DashboardPage() {
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="sites" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto flex-wrap">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto flex-wrap">
             <TabsTrigger value="sites"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
             <TabsTrigger value="cleaners"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
             <TabsTrigger value="schedule"><Calendar className="mr-2 h-4 w-4" />Cleaner Schedule</TabsTrigger>
             <TabsTrigger value="risk"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
             <TabsTrigger value="summary"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
+            <TabsTrigger value="action-plan"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
           </TabsList>
           
           <TabsContent value="sites">
@@ -209,6 +237,15 @@ export default function DashboardPage() {
                 <DailySummaryTab sites={sites} cleaners={cleaners} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="action-plan">
+            <ActionPlanTab
+              sites={sites}
+              cleaners={cleaners}
+              actionPlans={actionPlans}
+              onUpdateActionPlan={handleUpdateActionPlan}
+            />
           </TabsContent>
         </Tabs>
       </main>
