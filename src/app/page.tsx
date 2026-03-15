@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { initialSites, initialCleaners, initialHistory, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,59 @@ export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [cleaners, setCleaners] = useState<Cleaner[]>(initialCleaners);
   const [history, setHistory] = useState<SiteHistoryEntry[]>(initialHistory);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedSites = window.localStorage.getItem('sites');
+      if (savedSites) {
+        setSites(JSON.parse(savedSites));
+      }
+      const savedCleaners = window.localStorage.getItem('cleaners');
+      if (savedCleaners) {
+        setCleaners(JSON.parse(savedCleaners));
+      }
+      const savedHistory = window.localStorage.getItem('history');
+      if (savedHistory) {
+        setHistory(JSON.parse(savedHistory));
+      }
+    } catch (error) {
+      console.error("Error loading data from localStorage", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem('sites', JSON.stringify(sites));
+      } catch (error) {
+        console.error("Error saving sites to localStorage", error);
+      }
+    }
+  }, [sites, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem('cleaners', JSON.stringify(cleaners));
+      } catch (error) {
+        console.error("Error saving cleaners to localStorage", error);
+      }
+    }
+  }, [cleaners, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem('history', JSON.stringify(history));
+      } catch (error) {
+        console.error("Error saving history to localStorage", error);
+      }
+    }
+  }, [history, isLoaded]);
+  
   const { toast } = useToast();
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {

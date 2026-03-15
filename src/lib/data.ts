@@ -94,38 +94,4 @@ export type SiteHistoryEntry = {
   sites: Site[];
 };
 
-export const initialHistory: SiteHistoryEntry[] = [
-  {
-    date: '2024-07-15',
-    sites: [
-      { id: 'site-1', name: 'Anne Mclaren', status: 'Client happy', notes: '' },
-      { id: 'site-2', name: 'Cedar', status: 'Under control', notes: '' },
-      { id: 'site-3', name: 'MRC Epidemiology Level 3', status: 'Site requires action plan', notes: '' },
-      { id: 'site-4', name: 'WBIC RPU Basement', status: 'Client happy', notes: '' },
-      { id: 'site-5', name: 'John Van Geest', status: 'Client concerns', notes: '' },
-      { id: 'site-6', name: 'Herschel Smith Building', status: 'Operations request', notes: '' },
-    ]
-  },
-  {
-    date: '2024-07-16',
-    sites: [
-      { id: 'site-1', name: 'Anne Mclaren', status: 'Client happy', notes: '' },
-      { id: 'site-2', name: 'Cedar', status: 'Client happy', notes: '' },
-      { id: 'site-3', name: 'MRC Epidemiology Level 3', status: 'Site under action plan', notes: '' },
-      { id: 'site-4', name: 'WBIC RPU Basement', status: 'Client happy', notes: '' },
-      { id: 'site-5', name: 'John Van Geest', status: 'Under control', notes: '' },
-      { id: 'site-6', name: 'Herschel Smith Building', status: 'Under control', notes: '' },
-    ]
-  },
-    {
-    date: '2024-07-17',
-    sites: [
-      { id: 'site-1', name: 'Anne Mclaren', status: 'Client happy', notes: '' },
-      { id: 'site-2', name: 'Cedar', status: 'Client happy', notes: '' },
-      { id: 'site-3', name: 'MRC Epidemiology Level 3', status: 'Under control', notes: '' },
-      { id: 'site-4', name: 'WBIC RPU Basement', status: 'Client happy', notes: '' },
-      { id: 'site-5', name: 'John Van Geest', status: 'Client happy', notes: '' },
-      { id: 'site-6', name: 'Herschel Smith Building', status: 'Client happy', notes: '' },
-    ]
-  }
-];
+export const initialHistory: SiteHistoryEntry[] = [];
