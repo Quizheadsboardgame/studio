@@ -165,7 +165,7 @@ export default function DashboardPage() {
                   <Sparkles className="h-6 w-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">
-                  CleanOps Hub
+                  Lot 4
               </h1>
           </div>
       </header>
