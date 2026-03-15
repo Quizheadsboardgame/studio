@@ -28,16 +28,16 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, auth]);
 
-  const sitesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'sites') : null, [firestore]);
+  const sitesCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'sites') : null, [firestore, user]);
   const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
 
-  const cleanersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'cleaners') : null, [firestore]);
+  const cleanersCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'cleaners') : null, [firestore, user]);
   const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
 
-  const historyCollection = useMemoFirebase(() => firestore ? collection(firestore, 'history') : null, [firestore]);
+  const historyCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'history') : null, [firestore, user]);
   const { data: history, isLoading: historyLoading } = useCollection<SiteHistoryEntry>(historyCollection);
 
-  const actionPlansCollection = useMemoFirebase(() => firestore ? collection(firestore, 'actionPlans') : null, [firestore]);
+  const actionPlansCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
 
   const handleSeedDatabase = async () => {
