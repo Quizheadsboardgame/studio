@@ -25,10 +25,44 @@ export const siteStatuses: SiteStatus[] = [
 ];
 
 export const initialSites: Site[] = [
-  "Anne Mclaren", "Cedar", "MRC Epidemiology Level 3", "WBIC RPU Basement", "John Van Geest",
-  "Herschel Smith Building", "Barton House", "Coton House", "Clinical Schools", "Grantchester House",
-  "Bay 13", "West Forvie", "Clifford Allbutt Building", "Island Research Building", "Obs",
-  "Paediatrics Level 8", "Surgery Level 9", "Radiology"
+  "ANNE MCLAREN",
+  "CEDAR",
+  "MRC EPIDEMIOLOGY LEVEL 3",
+  "WBIC RPU BASEMENT",
+  "JOHN VAN GEEST - JVG",
+  "HERSCHEL SMITH BUILDING - HSB",
+  "BARTON HOUSE",
+  "COTON HOUSE",
+  "CLINICAL SCHOOLS",
+  "GRANTCHESTER HOUSE",
+  "BAY 13",
+  "WEST FORVIE",
+  "CLIFFORD ALLBUTT BUILDING - CAB",
+  "ISLAND RESEARCH BUILDING - IRB",
+  "BONE RESEARCH/RADIOLOGY LEVEL 4",
+  "MEDICAL GENETICS LEVEL 6",
+  "OBS",
+  "PAEDIATRICS LEVEL 8",
+  "SURGERY & RHEUMATOLOGY LEVEL 6 HUB",
+  "SURGERY LEVEL 9",
+  "X RAY BLOCK RADIOLOGY LEVEL 5",
+  "JEFFREY CHEAH (CAPELLA) OFFICE",
+  "EAST FORVIE (IPH - INSTITUTE OF PUBLIC HELATH)",
+  "STRAGEWAYS (SLR)",
+  "MEDICINE LEVEL 5",
+  "IMS LEVELS 4&5",
+  "OLD IMS - LAB BLOCK 4",
+  "NEURO SPACE",
+  "P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4",
+  "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER",
+  "BIO-RESIPISHORY LAB LEVEL 1",
+  "ACCI LEVEL 6",
+  "POST DOC",
+  "HLRI - HEART & LUNG BUILDING / VICTOR PHILLIP DAHDAL",
+  "MRC WATERBEACH SAMPLE STORAGE",
+  "NERO SPACE",
+  "TMS F&G LEVEL 2 OFFICE SPACE",
+  "E7"
 ].map((name, index) => ({ id: `site-${index + 1}`, name, status: 'N/A', notes: '' }));
 
 
