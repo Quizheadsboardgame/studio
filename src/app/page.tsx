@@ -107,6 +107,14 @@ export default function DashboardPage() {
     setSites(prevSites => [...prevSites, newSite]);
   };
 
+  const handleEditSite = (siteId: string, newName: string) => {
+    setSites(sites.map(site => site.id === siteId ? { ...site, name: newName } : site));
+  };
+
+  const handleRemoveSite = (siteId: string) => {
+    setSites(sites.filter(site => site.id !== siteId));
+  };
+
   const handleCleanerRatingChange = (cleanerId: string, newRating: CleanerPerformance) => {
     setCleaners(cleaners.map(cleaner => cleaner.id === cleanerId ? { ...cleaner, rating: newRating } : cleaner));
   };
@@ -191,6 +199,8 @@ export default function DashboardPage() {
                   onStatusChange={handleSiteStatusChange}
                   onNoteChange={handleSiteNoteChange}
                   onAddSite={handleAddSite}
+                  onEditSite={handleEditSite}
+                  onRemoveSite={handleRemoveSite}
                 />
               </CardContent>
             </Card>
