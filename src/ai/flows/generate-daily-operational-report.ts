@@ -75,45 +75,42 @@ const generateDailyOperationalReportPrompt = ai.definePrompt({
     }),
   },
   output: { schema: GenerateDailyOperationalReportOutputSchema },
-  prompt: `You are an intelligent assistant for a cleaning operations manager. Your task is to generate a natural language daily summary report based on the provided site categorization. Incorporate any notes provided for each site.
+  prompt: `You are an intelligent assistant for a cleaning operations manager. Your task is to generate a daily summary report based on the categorized lists of sites provided. For each site, include any notes that have been provided. The report should be structured into Green, Amber, and Red categories.
 
-DAILY CLEANING OPERATIONS REPORT
+### DAILY CLEANING OPERATIONS REPORT
 
-Overall Operational Health:
-- Identify key trends from the categorized lists.
-- Highlight the overall sentiment regarding the sites.
+---
 
-Positive Performing Sites:
+#### Green: Positive Performing Sites
 {{#if goodSites.length}}
-  The following sites are performing exceptionally well:
-  {{#each goodSites}}
-    - {{name}}{{#if notes}}: {{notes}}{{/if}}
-  {{/each}}
+{{#each goodSites}}
+- **{{name}}**{{#if notes}}: {{notes}}{{/if}}
+{{/each}}
 {{else}}
-  No sites are currently identified as performing exceptionally well.
+*No sites are currently identified as performing exceptionally well.*
 {{/if}}
 
-Sites Requiring Monitoring:
+---
+
+#### Amber: Sites Requiring Monitoring
 {{#if monitorSites.length}}
-  These sites require attention or monitoring:
-  {{#each monitorSites}}
-    - {{name}}{{#if notes}}: {{notes}}{{/if}}
-  {{/each}}
+{{#each monitorSites}}
+- **{{name}}**{{#if notes}}: {{notes}}{{/if}}
+{{/each}}
 {{else}}
-  No sites are currently flagged for monitoring.
+*No sites are currently flagged for monitoring.*
 {{/if}}
 
-Sites With Significant Issues:
+---
+
+#### Red: Sites With Significant Issues
 {{#if issueSites.length}}
-  The following sites are currently experiencing significant issues or require immediate action:
-  {{#each issueSites}}
-    - {{name}}{{#if notes}}: {{notes}}{{/if}}
-  {{/each}}
+{{#each issueSites}}
+- **{{name}}**{{#if notes}}: {{notes}}{{/if}}
+{{/each}}
 {{else}}
-  No sites are currently reporting significant issues.
-{{/if}}
-
-Provide a concise, professional, and actionable report. Emphasize insights and priorities for the operations manager. If there are no sites in a category, explicitly state that and maintain a positive or neutral tone where appropriate.`,
+*No sites are currently reporting significant issues.*
+{{/if}}`,
 });
 
 const generateDailyOperationalReportFlow = ai.defineFlow(
@@ -138,7 +135,8 @@ const generateDailyOperationalReportFlow = ai.defineFlow(
         monitorSites.push(siteInfo);
       } else if (
         site.status === 'Client concerns' ||
-        site.status.includes('action')
+        site.status === 'Site under action plan' ||
+        site.status === 'Site requires action plan'
       ) {
         issueSites.push(siteInfo);
       }
