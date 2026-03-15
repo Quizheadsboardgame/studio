@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { initialSites, initialCleaners, initialHistory, initialActionPlans, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry, type ActionPlan } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Bot, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import ScheduleTab from '@/components/schedule-tab';
@@ -159,12 +159,12 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-primary px-4 text-primary-foreground sm:h-20 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-3">
-              <div className="bg-primary-foreground/10 p-2 rounded-lg">
-                  <Bot className="h-6 w-6 text-primary-foreground" />
+              <div className="bg-primary/10 p-2 rounded-lg">
+                  <Sparkles className="h-6 w-6 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight font-headline">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">
                   CleanOps Hub
               </h1>
           </div>

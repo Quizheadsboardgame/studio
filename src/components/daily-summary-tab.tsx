@@ -59,7 +59,7 @@ export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProp
     ].length > 0;
 
   const renderColorPill = (color: 'red' | 'amber' | 'green' | 'other') => {
-      return <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
+      return <span className={cn('h-4 w-1.5 rounded-full shrink-0', {
           'bg-destructive': color === 'red',
           'bg-chart-4': color === 'amber',
           'bg-accent': color === 'green',

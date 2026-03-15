@@ -53,16 +53,14 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
           </TableHeader>
           <TableBody>
             {sites.length > 0 ? sites.map((site) => (
-              <TableRow key={site.id}>
+              <TableRow key={site.id} className={cn({
+                'border-l-4 border-accent': site.status === 'Client happy',
+                'border-l-4 border-destructive': site.status === 'Client concerns' || site.status.includes('action plan'),
+                'border-l-4 border-chart-4': site.status === 'Operations request' || site.status === 'Under control',
+                'border-l-4 border-transparent': site.status === 'N/A',
+              })}>
                 <TableCell className="font-medium align-top py-4">
-                  <div className="flex items-center gap-2">
-                    <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
-                      'bg-accent': site.status === 'Client happy',
-                      'bg-destructive': site.status.includes('action plan'),
-                      'bg-transparent': site.status !== 'Client happy' && !site.status.includes('action plan')
-                    })} />
-                    <span>{site.name}</span>
-                  </div>
+                  {site.name}
                 </TableCell>
                 <TableCell className="align-top py-4">
                   <Select

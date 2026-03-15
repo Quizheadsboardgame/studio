@@ -55,16 +55,14 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
           </TableHeader>
           <TableBody>
             {cleaners.length > 0 ? cleaners.map((cleaner) => (
-              <TableRow key={cleaner.id}>
+              <TableRow key={cleaner.id} className={cn({
+                  'border-l-4 border-accent': cleaner.rating === 'Excellent feedback',
+                  'border-l-4 border-destructive': cleaner.rating === 'Needs retraining' || cleaner.rating === 'Under action plan' || cleaner.rating === 'Operational concerns',
+                  'border-l-4 border-chart-4': cleaner.rating === 'Site satisfied' || cleaner.rating === 'Slight improvement needed',
+                  'border-l-4 border-transparent': cleaner.rating === 'N/A',
+              })}>
                 <TableCell className="font-medium align-top py-4">
-                  <div className="flex items-center gap-2">
-                    <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
-                      'bg-accent': cleaner.rating === 'Excellent feedback',
-                      'bg-destructive': cleaner.rating.includes('retraining') || cleaner.rating.includes('action plan') || cleaner.rating.includes('concerns'),
-                      'bg-transparent': cleaner.rating !== 'Excellent feedback' && !(cleaner.rating.includes('retraining') || cleaner.rating.includes('action plan') || cleaner.rating.includes('concerns'))
-                    })} />
-                    <span>{cleaner.name}</span>
-                  </div>
+                  {cleaner.name}
                 </TableCell>
                 <TableCell className="align-top py-4">
                   <Select
