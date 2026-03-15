@@ -4,42 +4,69 @@ import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { Cleaner, CleanerPerformance } from '@/lib/data';
 import { cleanerPerformances } from '@/lib/data';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 interface CleanersTabProps {
   cleaners: Cleaner[];
   onRatingChange: (cleanerId: string, newRating: CleanerPerformance) => void;
+  onNoteChange: (cleanerId: string, newNote: string) => void;
+  onAddCleaner: (cleanerName: string) => void;
+  onRemoveCleaner: (cleanerId: string) => void;
 }
 
-export default function CleanersTab({ cleaners, onRatingChange }: CleanersTabProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, onAddCleaner, onRemoveCleaner }: CleanersTabProps) {
+  const [newCleanerName, setNewCleanerName] = useState('');
 
-  const filteredCleaners = cleaners.filter(cleaner =>
-    cleaner.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAddClick = () => {
+    onAddCleaner(newCleanerName);
+    setNewCleanerName('');
+  };
 
   return (
     <div className="space-y-4">
-      <Input
-        placeholder="Search Cleaner..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex gap-2">
+        <Input
+          placeholder="Enter new cleaner name..."
+          value={newCleanerName}
+          onChange={(e) => setNewCleanerName(e.target.value)}
+          className="max-w-sm"
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddClick(); }}
+        />
+        <Button onClick={handleAddClick} size="sm">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Cleaner
+        </Button>
+      </div>
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[60%]">Cleaner</TableHead>
-              <TableHead>Rating</TableHead>
+              <TableHead className="w-[30%]">Cleaner</TableHead>
+              <TableHead className="w-[25%]">Rating</TableHead>
+              <TableHead>Notes</TableHead>
+              <TableHead className="w-[10%] text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCleaners.length > 0 ? filteredCleaners.map((cleaner) => (
+            {cleaners.length > 0 ? cleaners.map((cleaner) => (
               <TableRow key={cleaner.id}>
-                <TableCell className="font-medium">{cleaner.name}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium align-top py-4">
+                  <div className="flex items-center gap-2">
+                    <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
+                      'bg-accent': cleaner.rating === 'Excellent feedback',
+                      'bg-destructive': cleaner.rating.includes('retraining') || cleaner.rating.includes('action plan') || cleaner.rating.includes('concerns'),
+                      'bg-transparent': cleaner.rating !== 'Excellent feedback' && !(cleaner.rating.includes('retraining') || cleaner.rating.includes('action plan') || cleaner.rating.includes('concerns'))
+                    })} />
+                    <span>{cleaner.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top py-4">
                   <Select
                     value={cleaner.rating}
                     onValueChange={(newRating: CleanerPerformance) => onRatingChange(cleaner.id, newRating)}
@@ -56,11 +83,33 @@ export default function CleanersTab({ cleaners, onRatingChange }: CleanersTabPro
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell className="py-2 align-top">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="notes" className="border-b-0">
+                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline">
+                          {cleaner.notes ? 'View/Edit Notes' : 'Add Notes'}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          placeholder="Add notes for this cleaner..."
+                          value={cleaner.notes || ''}
+                          onChange={(e) => onNoteChange(cleaner.id, e.target.value)}
+                          className="w-full min-h-[60px] resize-y"
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </TableCell>
+                <TableCell className="align-top py-4 text-right">
+                    <Button variant="ghost" size="icon" onClick={() => onRemoveCleaner(cleaner.id)}>
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </TableCell>
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={2} className="h-24 text-center">
-                  No cleaners found.
+                <TableCell colSpan={4} className="h-24 text-center">
+                  No cleaners found. Add one to get started.
                 </TableCell>
               </TableRow>
             )}

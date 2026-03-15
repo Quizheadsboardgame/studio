@@ -55,6 +55,7 @@ export type Cleaner = {
   id: string;
   name: string;
   rating: CleanerPerformance;
+  notes?: string;
 };
 
 export const initialCleaners: Cleaner[] = [
@@ -64,7 +65,7 @@ export const initialCleaners: Cleaner[] = [
   "Ioana Boltasiu", "Joyce Howard", "Ludegardo Cabral", "Manuel Mendonca", "Mircalla Bond", "Nolasco De Sousa",
   "Piotr Skrzypczyk", "Rhyse Howard", "Rosana Da Silva", "Salvador Da Costa", "Sergio Dos Reis", "Shakila Soloman",
   "Thomas Boltasiu", "Veronica Smintina", "Zbigniew Bajor"
-].map((name, index) => ({ id: `cleaner-${index + 1}`, name, rating: 'N/A' }));
+].map((name, index) => ({ id: `cleaner-${index + 1}`, name, rating: 'N/A', notes: '' }));
 
 
 export type ScheduleEntry = {

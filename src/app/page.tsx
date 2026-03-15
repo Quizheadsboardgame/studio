@@ -39,6 +39,25 @@ export default function DashboardPage() {
     setCleaners(cleaners.map(cleaner => cleaner.id === cleanerId ? { ...cleaner, rating: newRating } : cleaner));
   };
   
+  const handleCleanerNoteChange = (cleanerId: string, newNote: string) => {
+    setCleaners(cleaners.map(cleaner => cleaner.id === cleanerId ? { ...cleaner, notes: newNote } : cleaner));
+  };
+
+  const handleAddCleaner = (cleanerName: string) => {
+    if (cleanerName.trim() === '') return;
+    const newCleaner: Cleaner = {
+      id: `cleaner-${Date.now()}`,
+      name: cleanerName,
+      rating: 'N/A',
+      notes: ''
+    };
+    setCleaners(prevCleaners => [...prevCleaners, newCleaner]);
+  };
+
+  const handleRemoveCleaner = (cleanerId: string) => {
+    setCleaners(cleaners.filter(cleaner => cleaner.id !== cleanerId));
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-primary px-4 text-primary-foreground sm:h-20 sm:px-6">
@@ -83,7 +102,13 @@ export default function DashboardPage() {
                 <CardTitle>Cleaner Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <CleanersTab cleaners={cleaners} onRatingChange={handleCleanerRatingChange} />
+                <CleanersTab 
+                  cleaners={cleaners} 
+                  onRatingChange={handleCleanerRatingChange}
+                  onNoteChange={handleCleanerNoteChange}
+                  onAddCleaner={handleAddCleaner}
+                  onRemoveCleaner={handleRemoveCleaner}
+                />
               </CardContent>
             </Card>
           </TabsContent>
