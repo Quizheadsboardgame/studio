@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
+  const [initialSeedDone, setInitialSeedDone] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -41,8 +42,12 @@ export default function DashboardPage() {
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
 
   const handleSeedDatabase = async () => {
-    if (!firestore || !sitesCollection || !cleanersCollection || sitesLoading || cleanersLoading) {
-      toast({ variant: "destructive", title: "Cannot Seed", description: "Data is still loading or Firebase is not ready." });
+    if (!firestore || !sitesCollection || !cleanersCollection) {
+      toast({ variant: "destructive", title: "Cannot Seed", description: "Firebase is not ready." });
+      return;
+    }
+    if (sitesLoading || cleanersLoading) {
+      toast({ variant: "destructive", title: "Cannot Seed", description: "Data is still loading." });
       return;
     }
     toast({ title: "Re-seeding Database...", description: "This may take a moment." });
@@ -83,6 +88,15 @@ export default function DashboardPage() {
       toast({ variant: "destructive", title: "Seeding Failed", description: errorMessage });
     }
   };
+  
+  useEffect(() => {
+    // If data has loaded, the collections are empty, and we haven't seeded yet, then seed.
+    if (!sitesLoading && !cleanersLoading && sites?.length === 0 && cleaners?.length === 0 && !initialSeedDone) {
+      handleSeedDatabase();
+      setInitialSeedDone(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sitesLoading, cleanersLoading, sites, cleaners, initialSeedDone]);
 
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
@@ -188,7 +202,7 @@ export default function DashboardPage() {
           </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {isLoading ? (
+        {isLoading && !initialSeedDone ? (
            <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-96 w-full" />
