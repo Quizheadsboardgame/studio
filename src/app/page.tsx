@@ -91,12 +91,12 @@ export default function DashboardPage() {
   
   useEffect(() => {
     // If data has loaded, the collections are empty, and we haven't seeded yet, then seed.
-    if (!sitesLoading && !cleanersLoading && sites?.length === 0 && cleaners?.length === 0 && !initialSeedDone) {
+    if (!isUserLoading && user && !sitesLoading && !cleanersLoading && sites?.length === 0 && cleaners?.length === 0 && !initialSeedDone) {
       handleSeedDatabase();
       setInitialSeedDone(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sitesLoading, cleanersLoading, sites, cleaners, initialSeedDone]);
+  }, [isUserLoading, user, sitesLoading, cleanersLoading, sites, cleaners, initialSeedDone]);
 
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
@@ -185,6 +185,7 @@ export default function DashboardPage() {
 
   const isLoading = isUserLoading || sitesLoading || cleanersLoading || historyLoading || actionPlansLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
+  const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -243,7 +244,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <CleanersTab 
-                    cleaners={cleaners || []} 
+                    cleaners={sortedCleaners} 
                     onRatingChange={handleCleanerRatingChange}
                     onNoteChange={handleCleanerNoteChange}
                     onAddCleaner={handleAddCleaner}
@@ -269,13 +270,13 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="summary">
-              <DailySummaryTab sites={sites || []} cleaners={cleaners || []} actionPlans={actionPlans || []} />
+              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} />
             </TabsContent>
 
             <TabsContent value="action-plan">
               <ActionPlanTab
                 sites={sites || []}
-                cleaners={cleaners || []}
+                cleaners={sortedCleaners}
                 actionPlans={actionPlans || []}
                 onUpdateActionPlan={handleUpdateActionPlan}
               />
