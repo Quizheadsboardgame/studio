@@ -41,29 +41,46 @@ export default function DashboardPage() {
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
 
   const handleSeedDatabase = async () => {
-    if (!firestore) return;
+    if (!firestore || !sitesCollection || !cleanersCollection || sitesLoading || cleanersLoading) {
+      toast({ variant: "destructive", title: "Cannot Seed", description: "Data is still loading or Firebase is not ready." });
+      return;
+    }
+    toast({ title: "Re-seeding Database...", description: "This may take a moment." });
     try {
       const batch = writeBatch(firestore);
       
-      if ((!sites || sites.length === 0)) {
-        initialSites.forEach(site => {
-            const docRef = doc(sitesCollection!);
-            batch.set(docRef, { name: site.name, status: site.status, notes: site.notes });
+      // Delete existing sites and cleaners
+      if (sites) {
+        sites.forEach(site => {
+          const docRef = doc(firestore, 'sites', site.id);
+          batch.delete(docRef);
         });
       }
+      if (cleaners) {
+        cleaners.forEach(cleaner => {
+          const docRef = doc(firestore, 'cleaners', cleaner.id);
+          batch.delete(docRef);
+        });
+      }
+      
+      // Add initial sites from `data.ts`
+      initialSites.forEach(site => {
+          const docRef = doc(sitesCollection);
+          batch.set(docRef, { name: site.name, status: site.status, notes: site.notes });
+      });
 
-      if ((!cleaners || cleaners.length === 0)) {
-        initialCleaners.forEach(cleaner => {
-            const docRef = doc(cleanersCollection!);
-            batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes });
-        });
-      }
+      // Add initial cleaners from `data.ts`
+      initialCleaners.forEach(cleaner => {
+          const docRef = doc(cleanersCollection);
+          batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes });
+      });
 
       await batch.commit();
-      toast({ title: "Database Seeded", description: "Initial data has been loaded." });
+      toast({ title: "Database Reloaded", description: "All site and cleaner data has been reset to the initial state." });
     } catch (error) {
       console.error("Error seeding database:", error);
-      toast({ variant: "destructive", title: "Seeding Failed", description: "Could not load initial data." });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ variant: "destructive", title: "Seeding Failed", description: errorMessage });
     }
   };
 
@@ -152,7 +169,7 @@ export default function DashboardPage() {
     setDocumentNonBlocking(planRef, updatedPlan, { merge: true });
   };
 
-  const isLoading = sitesLoading || cleanersLoading || historyLoading || actionPlansLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || historyLoading || actionPlansLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
 
   return (
@@ -171,7 +188,7 @@ export default function DashboardPage() {
           </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {isUserLoading || isLoading ? (
+        {isLoading ? (
            <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-96 w-full" />
