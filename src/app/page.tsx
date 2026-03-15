@@ -234,7 +234,7 @@ export default function DashboardPage() {
                 <CardTitle>Daily Operations Report</CardTitle>
               </CardHeader>
               <CardContent>
-                <DailySummaryTab sites={sites} cleaners={cleaners} />
+                <DailySummaryTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} />
               </CardContent>
             </Card>
           </TabsContent>
