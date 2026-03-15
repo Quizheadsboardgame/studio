@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import type { Site, Cleaner, ActionPlan } from '@/lib/data';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -15,38 +15,45 @@ interface DailySummaryTabProps {
 
 export default function DailySummaryTab({ sites, cleaners, actionPlans }: DailySummaryTabProps) {
   const { toast } = useToast();
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+  const sitesWithNotes = useMemo(() => {
+    return sites.filter(site => site.notes && site.notes.trim() !== '');
+  }, [sites]);
+
+  const cleanersWithNotes = useMemo(() => {
+    return cleaners.filter(cleaner => cleaner.notes && cleaner.notes.trim() !== '');
+  }, [cleaners]);
+  
+  const tasksDueToday = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return actionPlans
+      .flatMap(plan => 
+        plan.tasks
+          .filter(task => task.dueDate === today && !task.completed)
+          .map(task => ({ ...task, targetName: plan.targetName }))
+      );
+  }, [actionPlans]);
+
+  const hasContent = useMemo(() => {
+    return sitesWithNotes.length > 0 || cleanersWithNotes.length > 0 || tasksDueToday.length > 0;
+  }, [sitesWithNotes, cleanersWithNotes, tasksDueToday]);
+
+  const handleRefreshToast = () => {
     toast({
       title: "Summary Refreshed",
-      description: "The daily summary has been updated with the latest data.",
+      description: "The summary has been updated with the latest data.",
     });
   };
 
-  const sitesWithNotes = sites.filter(site => site.notes && site.notes.trim() !== '');
-  const cleanersWithNotes = cleaners.filter(cleaner => cleaner.notes && cleaner.notes.trim() !== '');
-  
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const tasksDueToday = actionPlans
-    .flatMap(plan => 
-      plan.tasks
-        .filter(task => task.dueDate === today && !task.completed)
-        .map(task => ({ ...task, targetName: plan.targetName }))
-    );
-
-  const hasContent = sitesWithNotes.length > 0 || cleanersWithNotes.length > 0 || tasksDueToday.length > 0;
-
   return (
-    <div className="space-y-4" key={refreshKey}>
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          A summary of all notes and tasks due today.
+          A summary of all notes and tasks due today. Updates automatically.
         </p>
-        <Button onClick={handleRefresh} variant="outline" size="sm">
+        <Button onClick={handleRefreshToast} variant="outline" size="sm">
           <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh Summary
+          Refresh
         </Button>
       </div>
 
