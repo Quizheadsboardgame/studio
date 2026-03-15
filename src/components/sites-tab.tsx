@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Site, SiteStatus } from '@/lib/data';
 import { siteStatuses } from '@/lib/data';
 import { PlusCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 interface SitesTabProps {
   sites: Site[];
@@ -52,7 +54,16 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
           <TableBody>
             {sites.length > 0 ? sites.map((site) => (
               <TableRow key={site.id}>
-                <TableCell className="font-medium align-top py-4">{site.name}</TableCell>
+                <TableCell className="font-medium align-top py-4">
+                  <div className="flex items-center gap-2">
+                    <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
+                      'bg-accent': site.status === 'Client happy',
+                      'bg-destructive': site.status.includes('action plan'),
+                      'bg-transparent': site.status !== 'Client happy' && !site.status.includes('action plan')
+                    })} />
+                    <span>{site.name}</span>
+                  </div>
+                </TableCell>
                 <TableCell className="align-top py-4">
                   <Select
                     value={site.status}
@@ -70,13 +81,22 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="py-2">
-                  <Textarea
-                    placeholder="Add notes for this site..."
-                    value={site.notes || ''}
-                    onChange={(e) => onNoteChange(site.id, e.target.value)}
-                    className="w-full min-h-[60px] resize-y"
-                  />
+                <TableCell className="py-2 align-top">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="notes" className="border-b-0">
+                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline">
+                          {site.notes ? 'View/Edit Notes' : 'Add Notes'}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          placeholder="Add notes for this site..."
+                          value={site.notes || ''}
+                          onChange={(e) => onNoteChange(site.id, e.target.value)}
+                          className="w-full min-h-[60px] resize-y"
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </TableCell>
               </TableRow>
             )) : (
