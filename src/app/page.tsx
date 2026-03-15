@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance } from '@/lib/data';
+import { initialSites, initialCleaners, initialHistory, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Bot } from 'lucide-react';
@@ -11,10 +11,13 @@ import ScheduleTab from '@/components/schedule-tab';
 import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [cleaners, setCleaners] = useState<Cleaner[]>(initialCleaners);
+  const [history, setHistory] = useState<SiteHistoryEntry[]>(initialHistory);
+  const { toast } = useToast();
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     setSites(sites.map(site => site.id === siteId ? { ...site, status: newStatus } : site));
@@ -56,6 +59,22 @@ export default function DashboardPage() {
 
   const handleRemoveCleaner = (cleanerId: string) => {
     setCleaners(cleaners.filter(cleaner => cleaner.id !== cleanerId));
+  };
+
+  const handleRecordDay = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const existingEntryIndex = history.findIndex(entry => entry.date === today);
+    const newEntry = { date: today, sites: sites.map(s => ({...s})) };
+
+    if (existingEntryIndex > -1) {
+      const updatedHistory = [...history];
+      updatedHistory[existingEntryIndex] = newEntry;
+      setHistory(updatedHistory);
+       toast({ title: "Data Updated", description: "Today's site statuses have been updated." });
+    } else {
+      setHistory(prevHistory => [...prevHistory, newEntry]);
+       toast({ title: "Data Recorded", description: "Today's site statuses have been recorded." });
+    }
   };
 
   return (
@@ -125,7 +144,7 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="risk">
-             <RiskDashboardTab sites={sites} />
+             <RiskDashboardTab sites={sites} history={history} onRecordDay={handleRecordDay}/>
           </TabsContent>
 
           <TabsContent value="summary">

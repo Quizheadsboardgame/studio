@@ -1,79 +1,104 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Site } from '@/lib/data';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, AlertTriangle, ShieldX } from 'lucide-react';
+import type { Site, SiteHistoryEntry } from '@/lib/data';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Archive } from 'lucide-react';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from "recharts"
+import { format, parseISO } from 'date-fns';
 
 interface RiskDashboardTabProps {
   sites: Site[];
+  history: SiteHistoryEntry[];
+  onRecordDay: () => void;
 }
 
-export default function RiskDashboardTab({ sites }: RiskDashboardTabProps) {
-  const { greenSites, amberSites, redSites } = useMemo(() => {
-    const green: string[] = [];
-    const amber: string[] = [];
-    const red: string[] = [];
+const chartConfig = {
+  green: {
+    label: "Green",
+    color: "hsl(var(--chart-2))",
+  },
+  amber: {
+    label: "Amber",
+    color: "hsl(var(--chart-4))",
+  },
+  red: {
+    label: "Red",
+    color: "hsl(var(--chart-1))",
+  },
+} as const;
 
-    sites.forEach(site => {
-      if (site.status === 'N/A') return;
+export default function RiskDashboardTab({ sites, history, onRecordDay }: RiskDashboardTabProps) {
 
-      if (site.status === 'Client happy') {
-        green.push(site.name);
-      } else if (site.status === 'Operations request' || site.status === 'Under control') {
-        amber.push(site.name);
-      } else if (site.status === 'Client concerns' || site.status.includes('action')) {
-        red.push(site.name);
-      }
+  const chartData = useMemo(() => {
+    // sort history by date
+    const sortedHistory = [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    return sortedHistory.map(entry => {
+      const green = entry.sites.filter(s => s.status === 'Client happy').length;
+      const amber = entry.sites.filter(s => s.status === 'Operations request' || s.status === 'Under control').length;
+      const red = entry.sites.filter(s => s.status === 'Client concerns' || s.status.includes('action')).length;
+      
+      return {
+        date: format(parseISO(entry.date), "dd MMM"),
+        green,
+        amber,
+        red,
+      };
     });
-
-    return { greenSites: green, amberSites: amber, redSites: red };
-  }, [sites]);
+  }, [history]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Green Sites
-          </CardTitle>
-          <CheckCircle className="h-4 w-4 text-accent" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{greenSites.length}</div>
-          <div className="pt-2 text-xs text-muted-foreground space-y-1">
-            {greenSites.length > 0 ? greenSites.map(name => <p key={name}>{name}</p>) : <p>No sites with exceptional status.</p>}
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <CardTitle>Site Risk Analysis</CardTitle>
+                <CardDescription>Daily trend of site risk categories. Click below to save today's data.</CardDescription>
+            </div>
+            <Button onClick={onRecordDay} variant="outline" size="sm">
+                <Archive className="mr-2 h-4 w-4" />
+                Record Today's Status
+            </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {chartData.length > 0 ? (
+          <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+            <BarChart accessibilityLayer data={chartData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+              />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="dot" />}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar dataKey="green" fill="var(--color-green)" radius={4} />
+              <Bar dataKey="amber" fill="var(--color-amber)" radius={4} />
+              <Bar dataKey="red" fill="var(--color-red)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[300px] text-center text-muted-foreground">
+            <p>No historical data to display.</p>
+            <p className="text-sm">Record today's status to get started.</p>
           </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Monitor Sites
-          </CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{amberSites.length}</div>
-          <div className="pt-2 text-xs text-muted-foreground space-y-1">
-            {amberSites.length > 0 ? amberSites.map(name => <p key={name}>{name}</p>) : <p>No sites requiring monitoring.</p>}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Risk Sites
-          </CardTitle>
-          <ShieldX className="h-4 w-4 text-destructive" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{redSites.length}</div>
-          <div className="pt-2 text-xs text-muted-foreground space-y-1">
-            {redSites.length > 0 ? redSites.map(name => <p key={name}>{name}</p>) : <p>No sites with identified risks.</p>}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
