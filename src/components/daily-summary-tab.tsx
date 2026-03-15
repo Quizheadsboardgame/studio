@@ -1,17 +1,19 @@
 'use client';
 
 import { useReducer } from 'react';
-import type { Site, Cleaner, SiteStatus, CleanerPerformance } from '@/lib/data';
+import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan } from '@/lib/data';
 import { schedule } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { format, parseISO, isToday } from 'date-fns';
 
 interface DailySummaryTabProps {
   sites: Site[];
   cleaners: Cleaner[];
+  actionPlans: ActionPlan[];
 }
 
 type GroupedItems<T> = {
@@ -36,8 +38,8 @@ const getCleanerColor = (rating: CleanerPerformance) => {
 }
 
 
-export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProps) {
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+export default function DailySummaryTab({ sites, cleaners, actionPlans }: DailySummaryTabProps) {
+  const [key, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const groupedSites = sites.reduce((acc, site) => {
     if (site.status === 'N/A' && (!site.notes || site.notes.trim() === '')) return acc;
@@ -52,10 +54,15 @@ export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProp
     acc[color].push(cleaner);
     return acc;
   }, { red: [], amber: [], green: [], other: [] } as GroupedItems<Cleaner>);
+  
+  const todaysTasks = actionPlans
+    .flatMap(plan => plan.tasks.map(task => ({ ...task, targetName: plan.targetName, targetType: plan.targetType })))
+    .filter(task => isToday(parseISO(task.dueDate)) && !task.completed);
 
   const hasContent = [
       ...Object.values(groupedSites).flat(), 
-      ...Object.values(groupedCleaners).flat()
+      ...Object.values(groupedCleaners).flat(),
+      ...todaysTasks,
     ].length > 0;
 
   const renderColorPill = (color: 'red' | 'amber' | 'green' | 'other') => {
@@ -68,7 +75,7 @@ export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProp
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" key={key}>
        <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -85,6 +92,25 @@ export default function DailySummaryTab({ sites, cleaners }: DailySummaryTabProp
             <CardContent>
                 {hasContent ? (
                     <div className="space-y-6">
+
+                        {/* ACTION PLAN TASKS FOR TODAY */}
+                        {todaysTasks.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-lg mb-2">Action Plan Tasks Due Today</h3>
+                            <div className="space-y-4 p-4 border rounded-lg">
+                              {todaysTasks.map(task => (
+                                <div key={task.id} className="pl-6 space-y-1">
+                                  <p className="font-medium text-foreground">{task.description}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    For: {task.targetName} ({task.targetType})
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {todaysTasks.length > 0 && <Separator />}
+
                         {/* SITE SUMMARY */}
                         <div>
                             <h3 className="font-semibold text-lg mb-2">Site Status Summary</h3>

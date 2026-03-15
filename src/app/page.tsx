@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { initialSites, initialCleaners, initialHistory, initialActionPlans, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type SiteHistoryEntry, type ActionPlan } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,72 +19,6 @@ export default function DashboardPage() {
   const [cleaners, setCleaners] = useState<Cleaner[]>(initialCleaners);
   const [history, setHistory] = useState<SiteHistoryEntry[]>(initialHistory);
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>(initialActionPlans);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const savedSites = window.localStorage.getItem('sites');
-      if (savedSites) {
-        setSites(JSON.parse(savedSites));
-      }
-      const savedCleaners = window.localStorage.getItem('cleaners');
-      if (savedCleaners) {
-        setCleaners(JSON.parse(savedCleaners));
-      }
-      const savedHistory = window.localStorage.getItem('history');
-      if (savedHistory) {
-        setHistory(JSON.parse(savedHistory));
-      }
-      const savedActionPlans = window.localStorage.getItem('actionPlans');
-      if (savedActionPlans) {
-        setActionPlans(JSON.parse(savedActionPlans));
-      }
-    } catch (error) {
-      console.error("Error loading data from localStorage", error);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        window.localStorage.setItem('sites', JSON.stringify(sites));
-      } catch (error) {
-        console.error("Error saving sites to localStorage", error);
-      }
-    }
-  }, [sites, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        window.localStorage.setItem('cleaners', JSON.stringify(cleaners));
-      } catch (error) {
-        console.error("Error saving cleaners to localStorage", error);
-      }
-    }
-  }, [cleaners, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        window.localStorage.setItem('history', JSON.stringify(history));
-      } catch (error) {
-        console.error("Error saving history to localStorage", error);
-      }
-    }
-  }, [history, isLoaded]);
-  
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        window.localStorage.setItem('actionPlans', JSON.stringify(actionPlans));
-      } catch (error) {
-        console.error("Error saving action plans to localStorage", error);
-      }
-    }
-  }, [actionPlans, isLoaded]);
 
   const { toast } = useToast();
 
@@ -104,11 +38,11 @@ export default function DashboardPage() {
       status: 'N/A',
       notes: ''
     };
-    setSites(prevSites => [...prevSites, newSite]);
+    setSites(prevSites => [...prevSites, newSite].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
-    setSites(sites.map(site => site.id === siteId ? { ...site, name: newName } : site));
+    setSites(sites.map(site => site.id === siteId ? { ...site, name: newName } : site).sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   const handleRemoveSite = (siteId: string) => {
@@ -239,7 +173,7 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="summary">
-             <DailySummaryTab sites={sites} cleaners={cleaners} />
+             <DailySummaryTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} />
           </TabsContent>
 
           <TabsContent value="action-plan">
