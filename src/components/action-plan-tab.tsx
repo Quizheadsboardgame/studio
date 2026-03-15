@@ -21,12 +21,13 @@ interface ActionPlanTabProps {
 }
 
 function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { item: {id: string, name: string, type: 'site' | 'cleaner'}, plan: ActionPlan | undefined, onUpdateActionPlan: (plan: ActionPlan) => void}) {
+  // Ensure the plan always has an ID, using the item's ID if no plan exists yet.
   const plan = useMemo(() => initialPlan || { id: item.id, targetName: item.name, targetType: item.type, tasks: [], notes: '' }, [initialPlan, item]);
   
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
 
-  const handleUpdate = (updatedPlan: Partial<ActionPlan>) => {
+  const handleUpdate = (updatedPlan: Partial<Omit<ActionPlan, 'id'>>) => {
     onUpdateActionPlan({ ...plan, ...updatedPlan });
   };
 
@@ -110,17 +111,20 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
 }
 
 export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan }: ActionPlanTabProps) {
+  const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
+  const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
+
   const actionItems = useMemo(() => {
-    const siteItems = sites
+    const siteItems = sortedSites
       .filter(s => s.status === 'Site under action plan' || s.status === 'Site requires action plan')
       .map(s => ({ id: s.id, name: s.name, type: 'site' as const }));
 
-    const cleanerItems = cleaners
+    const cleanerItems = sortedCleaners
       .filter(c => c.rating === 'Under action plan' || c.rating === 'Needs retraining')
       .map(c => ({ id: c.id, name: c.name, type: 'cleaner' as const }));
 
     return [...siteItems, ...cleanerItems].sort((a, b) => a.name.localeCompare(b.name));
-  }, [sites, cleaners]);
+  }, [sortedSites, sortedCleaners]);
 
   if (actionItems.length === 0) {
     return (

@@ -1,138 +1,14 @@
-/**
- * @file firestore.rules
- * @description Firestore Security Rules for the CleanOps Hub application.
- *
- * @core_philosophy
- * This ruleset enforces a strict, centralized administrative access model. All data
- * operations on core entities (sites, cleaners, assignments) are restricted to
- * authenticated users who have been designated as administrators.
- *
- * @data_structure
- * The data is organized into flat, top-level collections for each core entity:
- * - /sites/{siteId}
- * - /cleaners/{cleanerId}
- * - /cleaning_assignments/{assignmentId}
- * A dedicated collection, /admin_users/{userId}, is used for Database Access
- * Control (DBAC). The existence of a document in this collection with an ID
- * matching a user's UID grants them administrative privileges across the entire
- * database.
- *
- * @key_security_decisions
- * - Default Deny: All operations are denied by default. Access is only granted
- *   explicitly to administrators.
- * - No Public Access: There is no publicly readable or writable data. All users
- *   must be authenticated, and only admins can perform actions.
- * - Centralized Admin Control: A single `isAdmin()` check, which verifies a
- *   user's document in the `/admin_users` collection, governs all access. This
- *   simplifies security logic and ensures consistent authorization.
- * - Admin Management: Only existing administrators can add or remove other
- *   administrators, preventing unauthorized privilege escalation.
- *
- * @denormalization_for_authorization
- * This system uses a dedicated collection (`/admin_users`) to manage roles rather
- * than denormalizing ownership fields onto each data document. This is ideal for
- * a centrally managed system where access is global (all-or-nothing for admins)
- * instead of per-document. The `exists()` call to check the admin collection
- * is efficient and provides a single source of truth for all authorization decisions.
- *
- * @structural_segregation
- * The data model naturally segregates access. All core operational data is
- * private to administrators. There is no mix of public and private data within
 
- * any collection, which simplifies list queries and security.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // Helper Functions
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user is an administrator.
-     * An admin is defined by the existence of a document in the /admin_users
-     * collection with their UID as the document ID.
-     */
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
-    }
-
-    // -------------------------------------------------------------------------
-    // Collection Rules
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Controls access to the admin user list. Only existing admins
-     * can view or manage the list of other administrators.
-     * NOTE: Bootstrapping the first admin must be done manually via the
-     * Firebase Console or a trusted server-side environment.
-     * @path /admin_users/{userId}
-     * @allow An existing admin (auth.uid='admin_abc') creates a document for a new admin. (create)
-     * @deny A non-admin user (auth.uid='user_xyz') tries to make themselves an admin. (create)
-     * @principle Prevents privilege escalation by ensuring only trusted admins can manage roles.
-     */
-    match /admin_users/{userId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Controls access to the 'sites' collection. Full CRUD access
-     * is granted exclusively to administrative users.
-     * @path /sites/{siteId}
-     * @allow An admin user creates a new site document. (create)
-     * @deny A regular, non-admin user attempts to read a site document. (get)
-     * @principle Enforces a global admin role for all operational data management.
-     */
-    match /sites/{siteId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Controls access to the 'cleaners' collection. Full CRUD access
-     * is granted exclusively to administrative users.
-     * @path /cleaners/{cleanerId}
-     * @allow An admin user deletes a cleaner's profile. (delete)
-     * @deny A regular, non-admin user attempts to list all cleaners. (list)
-     * @principle Enforces a global admin role for all operational data management.
-     */
-    match /cleaners/{cleanerId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Controls access to the 'cleaning_assignments' collection.
-     * Full CRUD access is granted exclusively to administrative users.
-     * @path /cleaning_assignments/{assignmentId}
-     * @allow An admin user updates an existing cleaning assignment. (update)
-     * @deny A regular, non-admin user attempts to create a new assignment. (create)
-     * @principle Enforces a global admin role for all operational data management.
-     */
-    match /cleaning_assignments/{assignmentId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+    match /{document=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }
