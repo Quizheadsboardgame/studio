@@ -11,6 +11,7 @@ export type Site = {
   id: string;
   name: string;
   status: SiteStatus;
+  notes?: string;
 };
 
 export const siteStatuses: SiteStatus[] = [
@@ -28,7 +29,7 @@ export const initialSites: Site[] = [
   "Herschel Smith Building", "Barton House", "Coton House", "Clinical Schools", "Grantchester House",
   "Bay 13", "West Forvie", "Clifford Allbutt Building", "Island Research Building", "Obs",
   "Paediatrics Level 8", "Surgery Level 9", "Radiology"
-].map((name, index) => ({ id: `site-${index + 1}`, name, status: 'N/A' }));
+].map((name, index) => ({ id: `site-${index + 1}`, name, status: 'N/A', notes: '' }));
 
 
 export type CleanerPerformance =

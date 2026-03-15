@@ -20,6 +20,21 @@ export default function DashboardPage() {
     setSites(sites.map(site => site.id === siteId ? { ...site, status: newStatus } : site));
   };
 
+  const handleSiteNoteChange = (siteId: string, newNote: string) => {
+    setSites(sites.map(site => site.id === siteId ? { ...site, notes: newNote } : site));
+  };
+
+  const handleAddSite = (siteName: string) => {
+    if (siteName.trim() === '') return;
+    const newSite: Site = {
+      id: `site-${Date.now()}`,
+      name: siteName,
+      status: 'N/A',
+      notes: ''
+    };
+    setSites(prevSites => [...prevSites, newSite]);
+  };
+
   const handleCleanerRatingChange = (cleanerId: string, newRating: CleanerPerformance) => {
     setCleaners(cleaners.map(cleaner => cleaner.id === cleanerId ? { ...cleaner, rating: newRating } : cleaner));
   };
@@ -52,7 +67,12 @@ export default function DashboardPage() {
                 <CardTitle>Site Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <SitesTab sites={sites} onStatusChange={handleSiteStatusChange} />
+                <SitesTab 
+                  sites={sites} 
+                  onStatusChange={handleSiteStatusChange}
+                  onNoteChange={handleSiteNoteChange}
+                  onAddSite={handleAddSite}
+                />
               </CardContent>
             </Card>
           </TabsContent>

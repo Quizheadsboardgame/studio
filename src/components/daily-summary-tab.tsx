@@ -23,7 +23,7 @@ export default function DailySummaryTab({ sites }: DailySummaryTabProps) {
       
       const relevantSites = sites
         .filter(site => site.status !== 'N/A')
-        .map(site => ({ name: site.name, status: site.status }));
+        .map(site => ({ name: site.name, status: site.status, notes: site.notes }));
 
       if (relevantSites.length === 0) {
         toast({

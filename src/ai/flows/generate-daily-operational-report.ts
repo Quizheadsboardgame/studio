@@ -28,9 +28,10 @@ const GenerateDailyOperationalReportInputSchema = z.object({
         status: SiteStatusSchema.describe(
           'The current operational status of the cleaning site.'
         ),
+        notes: z.string().optional().describe('Additional notes for the site.'),
       })
     )
-    .describe('An array of cleaning sites with their current statuses.'),
+    .describe('An array of cleaning sites with their current statuses and notes.'),
 });
 export type GenerateDailyOperationalReportInput = z.infer<
   typeof GenerateDailyOperationalReportInputSchema
@@ -49,27 +50,32 @@ export async function generateDailyOperationalReport(
   return generateDailyOperationalReportFlow(input);
 }
 
+const SiteInfoSchema = z.object({
+  name: z.string(),
+  notes: z.string().optional(),
+});
+
 const generateDailyOperationalReportPrompt = ai.definePrompt({
   name: 'generateDailyOperationalReportPrompt',
   input: {
     schema: z.object({
       goodSites: z
-        .array(z.string())
+        .array(SiteInfoSchema)
         .describe('List of sites with positive status (e.g., "Client happy").'),
       monitorSites: z
-        .array(z.string())
+        .array(SiteInfoSchema)
         .describe(
           'List of sites requiring monitoring (e.g., "Operations request", "Under control").'
         ),
       issueSites: z
-        .array(z.string())
+        .array(SiteInfoSchema)
         .describe(
           'List of sites with issues or requiring action (e.g., "Client concerns", "Site under action plan", "Site requires action plan").'
         ),
     }),
   },
   output: { schema: GenerateDailyOperationalReportOutputSchema },
-  prompt: `You are an intelligent assistant for a cleaning operations manager. Your task is to generate a natural language daily summary report based on the provided site categorization.
+  prompt: `You are an intelligent assistant for a cleaning operations manager. Your task is to generate a natural language daily summary report based on the provided site categorization. Incorporate any notes provided for each site.
 
 DAILY CLEANING OPERATIONS REPORT
 
@@ -81,7 +87,7 @@ Positive Performing Sites:
 {{#if goodSites.length}}
   The following sites are performing exceptionally well:
   {{#each goodSites}}
-    - {{this}}
+    - {{name}}{{#if notes}}: {{notes}}{{/if}}
   {{/each}}
 {{else}}
   No sites are currently identified as performing exceptionally well.
@@ -91,7 +97,7 @@ Sites Requiring Monitoring:
 {{#if monitorSites.length}}
   These sites require attention or monitoring:
   {{#each monitorSites}}
-    - {{this}}
+    - {{name}}{{#if notes}}: {{notes}}{{/if}}
   {{/each}}
 {{else}}
   No sites are currently flagged for monitoring.
@@ -101,7 +107,7 @@ Sites With Significant Issues:
 {{#if issueSites.length}}
   The following sites are currently experiencing significant issues or require immediate action:
   {{#each issueSites}}
-    - {{this}}
+    - {{name}}{{#if notes}}: {{notes}}{{/if}}
   {{/each}}
 {{else}}
   No sites are currently reporting significant issues.
@@ -117,23 +123,24 @@ const generateDailyOperationalReportFlow = ai.defineFlow(
     outputSchema: GenerateDailyOperationalReportOutputSchema,
   },
   async (input) => {
-    const goodSites: string[] = [];
-    const monitorSites: string[] = [];
-    const issueSites: string[] = [];
+    const goodSites: z.infer<typeof SiteInfoSchema>[] = [];
+    const monitorSites: z.infer<typeof SiteInfoSchema>[] = [];
+    const issueSites: z.infer<typeof SiteInfoSchema>[] = [];
 
     input.sites.forEach((site) => {
+        const siteInfo = { name: site.name, notes: site.notes };
       if (site.status === 'Client happy') {
-        goodSites.push(site.name);
+        goodSites.push(siteInfo);
       } else if (
         site.status === 'Operations request' ||
         site.status === 'Under control'
       ) {
-        monitorSites.push(site.name);
+        monitorSites.push(siteInfo);
       } else if (
         site.status === 'Client concerns' ||
         site.status.includes('action')
       ) {
-        issueSites.push(site.name);
+        issueSites.push(siteInfo);
       }
     });
 
