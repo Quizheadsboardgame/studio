@@ -229,14 +229,7 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="summary">
-            <Card>
-              <CardHeader>
-                <CardTitle>Daily Operations Report</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DailySummaryTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} />
-              </CardContent>
-            </Card>
+             <DailySummaryTab sites={sites} cleaners={cleaners} />
           </TabsContent>
 
           <TabsContent value="action-plan">
