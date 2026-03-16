@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { initialSites, initialCleaners, initialSchedule, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -215,13 +215,16 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:h-20 sm:px-6">
-          <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-4">
+              <div className="bg-accent p-3 rounded-lg">
+                  <ClipboardCheck className="h-6 w-6 text-accent-foreground" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">
-                  Lot 4
-              </h1>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">
+                    Excellerate Ops
+                </h1>
+                <p className="text-sm text-muted-foreground">Cleaning Operations Hub</p>
+              </div>
           </div>
           <div className="ml-auto">
             <Button onClick={handleSeedDatabase} variant="outline" size="sm">Seed Database</Button>
