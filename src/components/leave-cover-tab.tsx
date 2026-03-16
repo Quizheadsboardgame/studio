@@ -7,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
 import { format, eachDayOfInterval, parseISO } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
@@ -30,17 +29,23 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCleanerId, setSelectedCleanerId] = useState<string>('');
   const [leaveType, setLeaveType] = useState<'holiday' | 'sick'>('holiday');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!selectedCleanerId || !dateRange?.from) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a cleaner, leave type, and date range.' });
+    if (!selectedCleanerId || !startDate) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a cleaner and a start date.' });
       return;
     }
 
-    const fromDate = dateRange.from;
-    const toDate = dateRange.to || dateRange.from;
+    const fromDate = startDate;
+    const toDate = endDate || startDate;
+
+    if (toDate < fromDate) {
+        toast({ variant: 'destructive', title: 'Invalid Date Range', description: 'End date cannot be before the start date.' });
+        return;
+    }
 
     const cleanerName = cleaners.find(c => c.id === selectedCleanerId)?.name || 'Unknown Cleaner';
     onAddLeave({ cleanerId: selectedCleanerId, cleanerName, type: leaveType, startDate: format(fromDate, 'yyyy-MM-dd'), endDate: format(toDate, 'yyyy-MM-dd') }, fromDate, toDate);
@@ -49,7 +54,8 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
     setIsOpen(false);
     setSelectedCleanerId('');
     setLeaveType('holiday');
-    setDateRange(undefined);
+    setStartDate(undefined);
+    setEndDate(undefined);
     toast({ title: 'Leave Booked', description: `${leaveType === 'holiday' ? 'Holiday' : 'Sickness'} for ${cleanerName} has been logged.` });
   };
 
@@ -86,9 +92,27 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
               </SelectContent>
             </Select>
           </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="start-date" className="text-right">
+              Start Date
+            </Label>
+            <DatePicker
+              date={startDate}
+              onDateChange={setStartDate}
+              className="col-span-3"
+              placeholder="Select start date"
+            />
+          </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dates" className="text-right">Dates</Label>
-            <DateRangePicker className="col-span-3" date={dateRange} onDateChange={setDateRange} />
+            <Label htmlFor="end-date" className="text-right">
+              End Date
+            </Label>
+            <DatePicker
+              date={endDate}
+              onDateChange={setEndDate}
+              className="col-span-3"
+              placeholder="(Optional) Select end date"
+            />
           </div>
         </div>
         <DialogFooter>
