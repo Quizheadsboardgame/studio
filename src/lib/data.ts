@@ -1,4 +1,5 @@
 
+
 export type SiteStatus =
   | 'N/A'
   | 'Client happy'
@@ -116,7 +117,7 @@ export type ScheduleEntry = {
   finish: string;
 };
 
-export const schedule: ScheduleEntry[] = [
+export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = [
   ["Coton House Level 5 NIHR Resources", "Alasdair Strachan", "11:30pm", "1.45am"],
   ["Medicine Level 5, E Spur", "Alasdair Strachan", "5pm", "7pm"],
   ["Medicine Level 5, E Spur", "Alasdair Strachan", "8.30pm", "11.30pm"],
@@ -207,7 +208,7 @@ export const schedule: ScheduleEntry[] = [
   ["Clinical Schools Building - Level 2 & 3", "Veronica Smintina", "3pm", "6pm"],
   ["Grantchester House (6 Weekly Deep Clean)", "Veronica Smintina", "Additional Ancillary work", ""],
   ["UoC - Capella Building /Jeffrey Cheah Biomedical Centre (JCBC)", "Zbigniew Bajor", "4.30am", "8.30am"]
-].map(([site, cleaner, start, finish], index) => ({ id: `schedule-${index+1}`, site, cleaner, start, finish }));
+].map(([site, cleaner, start, finish]) => ({ site, cleaner, start, finish }));
 
 export type SiteHistoryEntry = {
   id: string;

@@ -220,6 +220,36 @@
         "date",
         "sites"
       ]
+    },
+    "ScheduleEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ScheduleEntry",
+      "type": "object",
+      "description": "Represents a single entry in the cleaning schedule.",
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The name of the site being cleaned."
+        },
+        "cleaner": {
+          "type": "string",
+          "description": "The name of the cleaner assigned."
+        },
+        "start": {
+          "type": "string",
+          "description": "The start time of the shift."
+        },
+        "finish": {
+          "type": "string",
+          "description": "The finish time of the shift."
+        }
+      },
+      "required": [
+        "site",
+        "cleaner",
+        "start",
+        "finish"
+      ]
     }
   },
   "auth": {
@@ -288,6 +318,16 @@
             "$ref": "#/backend/entities/Cover"
           },
           "description": "Collection storing all cover arrangements for absent cleaners."
+        }
+      },
+      {
+        "path": "/schedule/{scheduleEntryId}",
+        "definition": {
+          "entityName": "ScheduleEntry",
+          "schema": {
+            "$ref": "#/backend/entities/ScheduleEntry"
+          },
+          "description": "Top-level collection storing the cleaning schedule."
         }
       }
     ]

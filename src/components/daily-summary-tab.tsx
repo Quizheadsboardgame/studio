@@ -1,8 +1,7 @@
 'use client';
 
 import { useReducer } from 'react';
-import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan } from '@/lib/data';
-import { schedule } from '@/lib/data';
+import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan, ScheduleEntry } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,7 @@ interface DailySummaryTabProps {
   sites: Site[];
   cleaners: Cleaner[];
   actionPlans: ActionPlan[];
+  schedule: ScheduleEntry[];
 }
 
 type GroupedItems<T> = {
@@ -38,7 +38,7 @@ const getCleanerColor = (rating: CleanerPerformance) => {
 }
 
 
-export default function DailySummaryTab({ sites, cleaners, actionPlans }: DailySummaryTabProps) {
+export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule }: DailySummaryTabProps) {
   const [key, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const groupedSites = sites.reduce((acc, site) => {

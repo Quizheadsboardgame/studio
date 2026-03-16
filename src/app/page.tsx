@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type Cover } from '@/lib/data';
+import { initialSites, initialCleaners, initialSchedule, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type Cover, type ScheduleEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList, CalendarOff } from 'lucide-react';
@@ -46,13 +46,16 @@ export default function DashboardPage() {
   const coversCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'covers') : null, [firestore, user]);
   const { data: covers, isLoading: coversLoading } = useCollection<Cover>(coversCollection);
 
+  const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
+  const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
+
 
   const handleSeedDatabase = async () => {
-    if (!firestore || !sitesCollection || !cleanersCollection) {
+    if (!firestore || !sitesCollection || !cleanersCollection || !scheduleCollection) {
       toast({ variant: "destructive", title: "Cannot Seed", description: "Firebase is not ready." });
       return;
     }
-    if (sitesLoading || cleanersLoading) {
+    if (sitesLoading || cleanersLoading || scheduleLoading) {
       toast({ variant: "destructive", title: "Cannot Seed", description: "Data is still loading." });
       return;
     }
@@ -60,13 +63,10 @@ export default function DashboardPage() {
     try {
       const batch = writeBatch(firestore);
       
-      if (sites) {
-        sites.forEach(site => batch.delete(doc(firestore, 'sites', site.id)));
-      }
-      if (cleaners) {
-        cleaners.forEach(cleaner => batch.delete(doc(firestore, 'cleaners', cleaner.id)));
-      }
-      
+      if (sites) sites.forEach(site => batch.delete(doc(firestore, 'sites', site.id)));
+      if (cleaners) cleaners.forEach(cleaner => batch.delete(doc(firestore, 'cleaners', cleaner.id)));
+      if (schedule) schedule.forEach(entry => batch.delete(doc(firestore, 'schedule', entry.id)));
+
       initialSites.forEach(site => {
           const docRef = doc(sitesCollection);
           batch.set(docRef, { name: site.name, status: site.status, notes: site.notes });
@@ -77,8 +77,13 @@ export default function DashboardPage() {
           batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes, holidayAllowance: cleaner.holidayAllowance, holidayTaken: cleaner.holidayTaken });
       });
 
+      initialSchedule.forEach(entry => {
+          const docRef = doc(scheduleCollection);
+          batch.set(docRef, { site: entry.site, cleaner: entry.cleaner, start: entry.start, finish: entry.finish });
+      });
+
       await batch.commit();
-      toast({ title: "Database Reloaded", description: "All site and cleaner data has been reset to the initial state." });
+      toast({ title: "Database Reloaded", description: "All data has been reset to the initial state." });
     } catch (error) {
       console.error("Error seeding database:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -87,12 +92,12 @@ export default function DashboardPage() {
   };
   
   useEffect(() => {
-    if (!isUserLoading && user && !sitesLoading && !cleanersLoading && sites?.length === 0 && cleaners?.length === 0 && !initialSeedDone) {
+    if (!isUserLoading && user && !sitesLoading && !cleanersLoading && !scheduleLoading && sites?.length === 0 && cleaners?.length === 0 && schedule?.length === 0 && !initialSeedDone) {
       handleSeedDatabase();
       setInitialSeedDone(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUserLoading, user, sitesLoading, cleanersLoading, sites, cleaners, initialSeedDone]);
+  }, [isUserLoading, user, sitesLoading, cleanersLoading, scheduleLoading, sites, cleaners, schedule, initialSeedDone]);
 
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
@@ -184,10 +189,25 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(doc(firestore, 'covers', coverId));
   };
 
+  const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
+    if (!scheduleCollection) return;
+    addDocumentNonBlocking(scheduleCollection, newEntry);
+  };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || coversLoading;
+  const handleUpdateScheduleEntry = (entryId: string, updatedEntry: Partial<Omit<ScheduleEntry, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'schedule', entryId), updatedEntry);
+  };
+
+  const handleRemoveScheduleEntry = (entryId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
+  };
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || coversLoading || scheduleLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
+  const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -258,14 +278,21 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="company-schedule">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Company Schedule</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CompanyScheduleTab />
-                </CardContent>
-              </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Company Schedule</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <CompanyScheduleTab 
+                            schedule={sortedSchedule}
+                            sites={sortedSites}
+                            cleaners={sortedCleaners}
+                            onAdd={handleAddScheduleEntry}
+                            onUpdate={handleUpdateScheduleEntry}
+                            onRemove={handleRemoveScheduleEntry}
+                        />
+                    </CardContent>
+                </Card>
             </TabsContent>
             
             <TabsContent value="leave-cover">
@@ -285,7 +312,7 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="summary">
-              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} />
+              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} />
             </TabsContent>
 
             <TabsContent value="action-plan">
