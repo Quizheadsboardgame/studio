@@ -66,6 +66,9 @@ export default function DashboardPage() {
       if (sites) sites.forEach(site => batch.delete(doc(firestore, 'sites', site.id)));
       if (cleaners) cleaners.forEach(cleaner => batch.delete(doc(firestore, 'cleaners', cleaner.id)));
       if (schedule) schedule.forEach(entry => batch.delete(doc(firestore, 'schedule', entry.id)));
+      if (leave) leave.forEach(l => batch.delete(doc(firestore, 'leave', l.id)));
+      if (covers) covers.forEach(c => batch.delete(doc(firestore, 'covers', c.id)));
+      if (actionPlans) actionPlans.forEach(ap => batch.delete(doc(firestore, 'actionPlans', ap.id)));
 
       initialSites.forEach(site => {
           const docRef = doc(sitesCollection);
@@ -92,12 +95,17 @@ export default function DashboardPage() {
   };
   
   useEffect(() => {
-    if (!isUserLoading && user && !sitesLoading && !cleanersLoading && !scheduleLoading && sites?.length === 0 && cleaners?.length === 0 && schedule?.length === 0 && !initialSeedDone) {
-      handleSeedDatabase();
-      setInitialSeedDone(true);
+    if (!isUserLoading && user && firestore && !sitesLoading && !cleanersLoading && !scheduleLoading && sites && cleaners && schedule && !initialSeedDone) {
+        if (sites.length === 0 && cleaners.length === 0 && schedule.length === 0) {
+            handleSeedDatabase();
+            setInitialSeedDone(true);
+        } else {
+             // Mark as done even if not empty to prevent re-seeding on navigation
+            setInitialSeedDone(true);
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUserLoading, user, sitesLoading, cleanersLoading, scheduleLoading, sites, cleaners, schedule, initialSeedDone]);
+  }, [isUserLoading, user, firestore, sitesLoading, cleanersLoading, scheduleLoading, sites, cleaners, schedule]);
 
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
@@ -146,18 +154,22 @@ export default function DashboardPage() {
   };
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
-    if (!firestore) return;
-    setDocumentNonBlocking(doc(firestore, 'actionPlans', updatedPlan.id), updatedPlan, { merge: true });
+    if (!firestore || !actionPlansCollection) return;
+    setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'days'>, startDate: Date, endDate: Date) => {
-    if (!leaveCollection || !firestore || !cleaners) return;
+    if (!leaveCollection || !firestore) return;
     const days = differenceInBusinessDays(endDate, startDate) + 1;
     const newLeave = { ...newLeaveData, days };
 
     addDocumentNonBlocking(leaveCollection, newLeave);
 
     if (newLeave.type === 'holiday') {
+      if (!cleaners) {
+        console.warn("Cannot update holiday allowance: cleaners data not available yet.");
+        return;
+      }
       const cleaner = cleaners.find(c => c.id === newLeave.cleanerId);
       if (cleaner) {
         const newHolidayTaken = (cleaner.holidayTaken || 0) + days;
@@ -167,10 +179,14 @@ export default function DashboardPage() {
   };
 
   const handleDeleteLeave = (leaveToDelete: Leave) => {
-    if (!firestore || !cleaners) return;
+    if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
 
     if (leaveToDelete.type === 'holiday') {
+      if (!cleaners) {
+        console.warn("Cannot update holiday allowance: cleaners data not available yet.");
+        return;
+      }
       const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
       if (cleaner) {
         const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - leaveToDelete.days);
@@ -232,7 +248,7 @@ export default function DashboardPage() {
             </div>
         ) : (
           <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 h-auto flex-wrap">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto flex-wrap">
               <TabsTrigger value="sites"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
               <TabsTrigger value="cleaners"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
@@ -307,8 +323,8 @@ export default function DashboardPage() {
                />
             </TabsContent>
 
-            <TabsContent value="risk">
-              <RiskDashboardTab sites={sites || []} />
+             <TabsContent value="risk">
+                <RiskDashboardTab sites={sites || []} />
             </TabsContent>
 
             <TabsContent value="summary">
