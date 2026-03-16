@@ -1,7 +1,7 @@
 import { schedule } from '@/lib/data';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export default function ScheduleTab() {
+export default function CompanyScheduleTab() {
   return (
     <div className="border rounded-lg overflow-hidden">
         <Table>

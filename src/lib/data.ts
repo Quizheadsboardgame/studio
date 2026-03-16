@@ -45,7 +45,6 @@ export const initialSites: Omit<Site, 'id'>[] = [
     "ISLAND RESEARCH BUILDING - IRB",
     "JEFFREY CHEAH (CAPELLA) OFFICE",
     "JOHN VAN GEEST - JVG",
-    "MEDICAL GENETICS LEVEL 6",
     "MEDICINE LEVEL 5",
     "MRC EPIDEMIOLOGY LEVEL 3",
     "MRC WATERBEACH SAMPLE STORAGE",
@@ -91,6 +90,8 @@ export type Cleaner = {
   name: string;
   rating: CleanerPerformance;
   notes?: string;
+  holidayAllowance: number;
+  holidayTaken: number;
 };
 
 export const initialCleaners: Omit<Cleaner, 'id'>[] = [
@@ -104,7 +105,7 @@ export const initialCleaners: Omit<Cleaner, 'id'>[] = [
   "Owen Newton", "Piotr Skrzypczyk", "Placido Da Costa", "Rhyse Howard", "Rosana Da Silva",
   "Salvador Da Costa", "Sergio Dos Reis", "Shakila Soloman", "Susana Correia", "Thomas Boltasiu",
   "Ubaldo Soares Vital", "Vacant", "Veronica Smintina", "Zbigniew Bajor"
-].sort((a, b) => a.localeCompare(b)).map(name => ({ name, rating: 'N/A' as CleanerPerformance, notes: '' }));
+].sort((a, b) => a.localeCompare(b)).map(name => ({ name, rating: 'N/A' as CleanerPerformance, notes: '', holidayAllowance: 20, holidayTaken: 0 }));
 
 
 export type ScheduleEntry = {
@@ -158,7 +159,7 @@ export const schedule: ScheduleEntry[] = [
   ["Institute of Metabolic Sciences (IMS)", "Grzegorz Pluskota", "2.30pm", "8.15pm"],
   ["Medical Genetics, ATC Level 6", "Grzegorz Pluskota", "10.15pm", "11.30pm"],
   ["MRC Epidemiology, ATC Level 3", "Grzegorz Pluskota", "8.15pm", "10.15pm"],
-  ["John van Geest Centre for Brain Repair", "Ioana Boltasiu", "7pm", "9pm"],
+  ["John van Geest Centre for Brain Repair", "Ioana  Boltasiu", "7pm", "9pm"],
   ["UoC - Capella Building /Jeffrey Cheah Biomedical Centre (JCBC)", "Januario Correia", "4.30am", "8.30am"],
   ["Anne Mclaren", "Joyce Howard", "6am", "10am"],
   ["Heart & Lung Research Institute (HLRI)", "Leonardi Figundo", "6am", "8.30am"],
@@ -228,3 +229,22 @@ export type ActionPlan = {
   tasks: ActionPlanTask[];
   notes?: string;
 };
+
+export type Leave = {
+    id: string;
+    cleanerId: string;
+    cleanerName: string;
+    type: 'holiday' | 'sick';
+    startDate: string; // YYYY-MM-DD
+    endDate: string; // YYYY-MM-DD
+    days: number;
+}
+
+export type Cover = {
+    id: string;
+    leaveId: string;
+    originalCleanerName: string;
+    coveringCleanerId: string;
+    coveringCleanerName: string;
+    date: string; // YYYY-MM-DD
+}

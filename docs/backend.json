@@ -28,7 +28,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Cleaner",
       "type": "object",
-      "description": "Represents an individual cleaner managed within the CleanOps Hub application, including their profile and performance rating.",
+      "description": "Represents an individual cleaner managed within the CleanOps Hub application, including their profile, performance rating, and leave tracking.",
       "properties": {
         "name": {
           "type": "string",
@@ -41,11 +41,103 @@
         "notes": {
           "type": "string",
           "description": "Optional notes or comments about the cleaner."
+        },
+        "holidayAllowance": {
+          "type": "number",
+          "description": "The total number of holiday days the cleaner is entitled to per year."
+        },
+        "holidayTaken": {
+          "type": "number",
+          "description": "The number of holiday days the cleaner has taken so far."
         }
       },
       "required": [
         "name",
-        "rating"
+        "rating",
+        "holidayAllowance",
+        "holidayTaken"
+      ]
+    },
+    "Leave": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Leave",
+      "type": "object",
+      "description": "Represents a period of absence (holiday or sickness) for a cleaner.",
+      "properties": {
+        "cleanerId": {
+          "type": "string",
+          "description": "The ID of the cleaner taking leave."
+        },
+        "cleanerName": {
+          "type": "string",
+          "description": "The name of the cleaner taking leave."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "holiday",
+            "sick"
+          ],
+          "description": "The type of leave."
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The start date of the leave period (YYYY-MM-DD)."
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The end date of the leave period (YYYY-MM-DD)."
+        },
+        "days": {
+          "type": "number",
+          "description": "The number of working days the leave period covers."
+        }
+      },
+      "required": [
+        "cleanerId",
+        "cleanerName",
+        "type",
+        "startDate",
+        "endDate",
+        "days"
+      ]
+    },
+    "Cover": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cover",
+      "type": "object",
+      "description": "Represents a cover arrangement for an absent cleaner on a specific date.",
+      "properties": {
+        "leaveId": {
+          "type": "string",
+          "description": "The ID of the leave record this cover is for."
+        },
+        "originalCleanerName": {
+          "type": "string",
+          "description": "Name of the cleaner who is on leave."
+        },
+        "coveringCleanerId": {
+          "type": "string",
+          "description": "The ID of the cleaner providing cover."
+        },
+        "coveringCleanerName": {
+          "type": "string",
+          "description": "The name of the cleaner providing cover."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The specific date of the cover (YYYY-MM-DD)."
+        }
+      },
+      "required": [
+        "leaveId",
+        "originalCleanerName",
+        "coveringCleanerId",
+        "coveringCleanerName",
+        "date"
       ]
     },
     "ActionPlanTask": {
@@ -54,12 +146,26 @@
       "type": "object",
       "description": "A single task within an action plan.",
       "properties": {
-        "id": { "type": "string" },
-        "description": { "type": "string" },
-        "dueDate": { "type": "string", "format": "date" },
-        "completed": { "type": "boolean" }
+        "id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "completed": {
+          "type": "boolean"
+        }
       },
-      "required": ["id", "description", "dueDate", "completed"]
+      "required": [
+        "id",
+        "description",
+        "dueDate",
+        "completed"
+      ]
     },
     "ActionPlan": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -67,29 +173,53 @@
       "type": "object",
       "description": "An action plan for a site or a cleaner.",
       "properties": {
-        "targetName": { "type": "string" },
-        "targetType": { "type": "string", "enum": ["site", "cleaner"] },
+        "targetName": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string",
+          "enum": [
+            "site",
+            "cleaner"
+          ]
+        },
         "tasks": {
           "type": "array",
-          "items": { "$ref": "#/backend/entities/ActionPlanTask" }
+          "items": {
+            "$ref": "#/backend/entities/ActionPlanTask"
+          }
         },
-        "notes": { "type": "string" }
+        "notes": {
+          "type": "string"
+        }
       },
-      "required": ["targetName", "targetType", "tasks"]
+      "required": [
+        "targetName",
+        "targetType",
+        "tasks"
+      ]
     },
     "SiteHistory": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "SiteHistory",
-        "type": "object",
-        "description": "A snapshot of all site statuses on a specific date.",
-        "properties": {
-            "date": { "type": "string", "format": "date" },
-            "sites": {
-                "type": "array",
-                "items": { "$ref": "#/backend/entities/Site" }
-            }
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SiteHistory",
+      "type": "object",
+      "description": "A snapshot of all site statuses on a specific date.",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
         },
-        "required": ["date", "sites"]
+        "sites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Site"
+          }
+        }
+      },
+      "required": [
+        "date",
+        "sites"
+      ]
     }
   },
   "auth": {
@@ -123,17 +253,41 @@
       {
         "path": "/history/{historyId}",
         "definition": {
-            "entityName": "SiteHistory",
-            "schema": { "$ref": "#/backend/entities/SiteHistory" },
-            "description": "Collection storing historical snapshots of site statuses."
+          "entityName": "SiteHistory",
+          "schema": {
+            "$ref": "#/backend/entities/SiteHistory"
+          },
+          "description": "Collection storing historical snapshots of site statuses."
         }
       },
       {
         "path": "/actionPlans/{actionPlanId}",
         "definition": {
-            "entityName": "ActionPlan",
-            "schema": { "$ref": "#/backend/entities/ActionPlan" },
-            "description": "Collection storing action plans for sites and cleaners."
+          "entityName": "ActionPlan",
+          "schema": {
+            "$ref": "#/backend/entities/ActionPlan"
+          },
+          "description": "Collection storing action plans for sites and cleaners."
+        }
+      },
+      {
+        "path": "/leave/{leaveId}",
+        "definition": {
+          "entityName": "Leave",
+          "schema": {
+            "$ref": "#/backend/entities/Leave"
+          },
+          "description": "Collection storing all leave records (holiday and sickness) for cleaners."
+        }
+      },
+      {
+        "path": "/covers/{coverId}",
+        "definition": {
+          "entityName": "Cover",
+          "schema": {
+            "$ref": "#/backend/entities/Cover"
+          },
+          "description": "Collection storing all cover arrangements for absent cleaners."
         }
       }
     ]

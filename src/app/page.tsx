@@ -1,22 +1,24 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan } from '@/lib/data';
+import { initialSites, initialCleaners, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type Cover } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList, CalendarOff } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
-import ScheduleTab from '@/components/schedule-tab';
+import CompanyScheduleTab from '@/components/schedule-tab';
 import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import ActionPlanTab from '@/components/action-plan-tab';
+import LeaveCoverTab from '@/components/leave-cover-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { differenceInBusinessDays } from 'date-fns';
 
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
@@ -29,14 +31,21 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, auth]);
 
-  const sitesCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'sites') : null, [firestore, user]);
+  const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
   const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
 
-  const cleanersCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'cleaners') : null, [firestore, user]);
+  const cleanersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'cleaners') : null, [firestore, user]);
   const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
 
-  const actionPlansCollection = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
+  const actionPlansCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
+  
+  const leaveCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'leave') : null, [firestore, user]);
+  const { data: leave, isLoading: leaveLoading } = useCollection<Leave>(leaveCollection);
+
+  const coversCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'covers') : null, [firestore, user]);
+  const { data: covers, isLoading: coversLoading } = useCollection<Cover>(coversCollection);
+
 
   const handleSeedDatabase = async () => {
     if (!firestore || !sitesCollection || !cleanersCollection) {
@@ -51,30 +60,21 @@ export default function DashboardPage() {
     try {
       const batch = writeBatch(firestore);
       
-      // Delete existing sites and cleaners
       if (sites) {
-        sites.forEach(site => {
-          const docRef = doc(firestore, 'sites', site.id);
-          batch.delete(docRef);
-        });
+        sites.forEach(site => batch.delete(doc(firestore, 'sites', site.id)));
       }
       if (cleaners) {
-        cleaners.forEach(cleaner => {
-          const docRef = doc(firestore, 'cleaners', cleaner.id);
-          batch.delete(docRef);
-        });
+        cleaners.forEach(cleaner => batch.delete(doc(firestore, 'cleaners', cleaner.id)));
       }
       
-      // Add initial sites from `data.ts`
       initialSites.forEach(site => {
           const docRef = doc(sitesCollection);
           batch.set(docRef, { name: site.name, status: site.status, notes: site.notes });
       });
 
-      // Add initial cleaners from `data.ts`
       initialCleaners.forEach(cleaner => {
           const docRef = doc(cleanersCollection);
-          batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes });
+          batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes, holidayAllowance: cleaner.holidayAllowance, holidayTaken: cleaner.holidayTaken });
       });
 
       await batch.commit();
@@ -87,7 +87,6 @@ export default function DashboardPage() {
   };
   
   useEffect(() => {
-    // If data has loaded, the collections are empty, and we haven't seeded yet, then seed.
     if (!isUserLoading && user && !sitesLoading && !cleanersLoading && sites?.length === 0 && cleaners?.length === 0 && !initialSeedDone) {
       handleSeedDatabase();
       setInitialSeedDone(true);
@@ -98,73 +97,95 @@ export default function DashboardPage() {
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
-    const siteRef = doc(firestore, 'sites', siteId);
-    updateDocumentNonBlocking(siteRef, { status: newStatus });
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { status: newStatus });
   };
 
   const handleSiteNoteChange = (siteId: string, newNote: string) => {
      if (!firestore) return;
-    const siteRef = doc(firestore, 'sites', siteId);
-    updateDocumentNonBlocking(siteRef, { notes: newNote });
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { notes: newNote });
   };
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    const newSite: Omit<Site, 'id'> = {
-      name: siteName,
-      status: 'N/A',
-      notes: ''
-    };
-    addDocumentNonBlocking(sitesCollection, newSite);
+    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
     if (!firestore) return;
-    const siteRef = doc(firestore, 'sites', siteId);
-    updateDocumentNonBlocking(siteRef, { name: newName });
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { name: newName });
   };
 
   const handleRemoveSite = (siteId: string) => {
     if (!firestore) return;
-    const siteRef = doc(firestore, 'sites', siteId);
-    deleteDocumentNonBlocking(siteRef);
+    deleteDocumentNonBlocking(doc(firestore, 'sites', siteId));
   };
 
   const handleCleanerRatingChange = (cleanerId: string, newRating: CleanerPerformance) => {
     if (!firestore) return;
-    const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-    updateDocumentNonBlocking(cleanerRef, { rating: newRating });
+    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { rating: newRating });
   };
   
   const handleCleanerNoteChange = (cleanerId: string, newNote: string) => {
     if (!firestore) return;
-    const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-    updateDocumentNonBlocking(cleanerRef, { notes: newNote });
+    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { notes: newNote });
   };
 
   const handleAddCleaner = (cleanerName: string) => {
     if (cleanerName.trim() === '' || !cleanersCollection) return;
-    const newCleaner: Omit<Cleaner, 'id'> = {
-      name: cleanerName,
-      rating: 'N/A',
-      notes: ''
-    };
-    addDocumentNonBlocking(cleanersCollection, newCleaner);
+    addDocumentNonBlocking(cleanersCollection, { name: cleanerName, rating: 'N/A', notes: '', holidayAllowance: 20, holidayTaken: 0 });
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
     if (!firestore) return;
-    const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-    deleteDocumentNonBlocking(cleanerRef);
+    deleteDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId));
   };
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
     if (!firestore) return;
-    const planRef = doc(firestore, 'actionPlans', updatedPlan.id);
-    setDocumentNonBlocking(planRef, updatedPlan, { merge: true });
+    setDocumentNonBlocking(doc(firestore, 'actionPlans', updatedPlan.id), updatedPlan, { merge: true });
+  };
+  
+  const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'days'>, startDate: Date, endDate: Date) => {
+    if (!leaveCollection || !firestore || !cleaners) return;
+    const days = differenceInBusinessDays(endDate, startDate) + 1;
+    const newLeave = { ...newLeaveData, days };
+
+    addDocumentNonBlocking(leaveCollection, newLeave);
+
+    if (newLeave.type === 'holiday') {
+      const cleaner = cleaners.find(c => c.id === newLeave.cleanerId);
+      if (cleaner) {
+        const newHolidayTaken = (cleaner.holidayTaken || 0) + days;
+        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeave.cleanerId), { holidayTaken: newHolidayTaken });
+      }
+    }
   };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading;
+  const handleDeleteLeave = (leaveToDelete: Leave) => {
+    if (!firestore || !cleaners) return;
+    deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
+
+    if (leaveToDelete.type === 'holiday') {
+      const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
+      if (cleaner) {
+        const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - leaveToDelete.days);
+        updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { holidayTaken: newHolidayTaken });
+      }
+    }
+  };
+  
+  const handleAddCover = (newCover: Omit<Cover, 'id'>) => {
+    if (!coversCollection) return;
+    addDocumentNonBlocking(coversCollection, newCover);
+  };
+  
+  const handleRemoveCover = (coverId: string) => {
+    if (!firestore) return;
+    deleteDocumentNonBlocking(doc(firestore, 'covers', coverId));
+  };
+
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || coversLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
 
@@ -191,10 +212,11 @@ export default function DashboardPage() {
             </div>
         ) : (
           <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto flex-wrap">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 h-auto flex-wrap">
               <TabsTrigger value="sites"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
               <TabsTrigger value="cleaners"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
-              <TabsTrigger value="schedule"><Calendar className="mr-2 h-4 w-4" />Cleaner Schedule</TabsTrigger>
+              <TabsTrigger value="company-schedule"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
+              <TabsTrigger value="leave-cover"><CalendarOff className="mr-2 h-4 w-4" />Leave / Cover</TabsTrigger>
               <TabsTrigger value="risk"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
               <TabsTrigger value="summary"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
               <TabsTrigger value="action-plan"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
@@ -235,15 +257,27 @@ export default function DashboardPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="schedule">
+            <TabsContent value="company-schedule">
               <Card>
                 <CardHeader>
-                  <CardTitle>Cleaner Schedule</CardTitle>
+                  <CardTitle>Company Schedule</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScheduleTab />
+                  <CompanyScheduleTab />
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="leave-cover">
+               <LeaveCoverTab 
+                  cleaners={sortedCleaners}
+                  leave={leave || []}
+                  covers={covers || []}
+                  onAddLeave={handleAddLeave}
+                  onDeleteLeave={handleDeleteLeave}
+                  onAddCover={handleAddCover}
+                  onRemoveCover={handleRemoveCover}
+               />
             </TabsContent>
 
             <TabsContent value="risk">
