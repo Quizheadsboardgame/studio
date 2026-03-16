@@ -34,13 +34,16 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!selectedCleanerId || !dateRange?.from || !dateRange?.to) {
+    if (!selectedCleanerId || !dateRange?.from) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a cleaner, leave type, and date range.' });
       return;
     }
 
+    const fromDate = dateRange.from;
+    const toDate = dateRange.to || dateRange.from;
+
     const cleanerName = cleaners.find(c => c.id === selectedCleanerId)?.name || 'Unknown Cleaner';
-    onAddLeave({ cleanerId: selectedCleanerId, cleanerName, type: leaveType, startDate: format(dateRange.from, 'yyyy-MM-dd'), endDate: format(dateRange.to, 'yyyy-MM-dd') }, dateRange.from, dateRange.to);
+    onAddLeave({ cleanerId: selectedCleanerId, cleanerName, type: leaveType, startDate: format(fromDate, 'yyyy-MM-dd'), endDate: format(toDate, 'yyyy-MM-dd') }, fromDate, toDate);
     
     // Reset form and close dialog
     setIsOpen(false);
