@@ -1,24 +1,23 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { initialSites, initialCleaners, initialSchedule, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type Cover, type ScheduleEntry } from '@/lib/data';
+import { initialSites, initialCleaners, initialSchedule, type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList, CalendarOff } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, Sparkles, ClipboardList, CalendarDays } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
 import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import ActionPlanTab from '@/components/action-plan-tab';
-import LeaveCoverTab from '@/components/leave-cover-tab';
+import LeaveCalendarTab from '@/components/leave-calendar-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { differenceInBusinessDays } from 'date-fns';
 
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
@@ -43,9 +42,6 @@ export default function DashboardPage() {
   const leaveCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'leave') : null, [firestore, user]);
   const { data: leave, isLoading: leaveLoading } = useCollection<Leave>(leaveCollection);
 
-  const coversCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'covers') : null, [firestore, user]);
-  const { data: covers, isLoading: coversLoading } = useCollection<Cover>(coversCollection);
-
   const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
   const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
 
@@ -67,7 +63,6 @@ export default function DashboardPage() {
       if (cleaners) cleaners.forEach(cleaner => batch.delete(doc(firestore, 'cleaners', cleaner.id)));
       if (schedule) schedule.forEach(entry => batch.delete(doc(firestore, 'schedule', entry.id)));
       if (leave) leave.forEach(l => batch.delete(doc(firestore, 'leave', l.id)));
-      if (covers) covers.forEach(c => batch.delete(doc(firestore, 'covers', c.id)));
       if (actionPlans) actionPlans.forEach(ap => batch.delete(doc(firestore, 'actionPlans', ap.id)));
 
       initialSites.forEach(site => {
@@ -158,22 +153,19 @@ export default function DashboardPage() {
     setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
   
-  const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'days'>, startDate: Date, endDate: Date) => {
+  const handleAddLeave = (newLeaveData: Omit<Leave, 'id'>) => {
     if (!leaveCollection || !firestore) return;
-    const days = differenceInBusinessDays(endDate, startDate) + 1;
-    const newLeave = { ...newLeaveData, days };
+    addDocumentNonBlocking(leaveCollection, newLeaveData);
 
-    addDocumentNonBlocking(leaveCollection, newLeave);
-
-    if (newLeave.type === 'holiday') {
+    if (newLeaveData.type === 'holiday') {
       if (!cleaners) {
         console.warn("Cannot update holiday allowance: cleaners data not available yet.");
         return;
       }
-      const cleaner = cleaners.find(c => c.id === newLeave.cleanerId);
+      const cleaner = cleaners.find(c => c.id === newLeaveData.cleanerId);
       if (cleaner) {
-        const newHolidayTaken = (cleaner.holidayTaken || 0) + days;
-        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeave.cleanerId), { holidayTaken: newHolidayTaken });
+        const newHolidayTaken = (cleaner.holidayTaken || 0) + 1;
+        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { holidayTaken: newHolidayTaken });
       }
     }
   };
@@ -189,22 +181,12 @@ export default function DashboardPage() {
       }
       const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
       if (cleaner) {
-        const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - leaveToDelete.days);
+        const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - 1);
         updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { holidayTaken: newHolidayTaken });
       }
     }
   };
   
-  const handleAddCover = (newCover: Omit<Cover, 'id'>) => {
-    if (!coversCollection) return;
-    addDocumentNonBlocking(coversCollection, newCover);
-  };
-  
-  const handleRemoveCover = (coverId: string) => {
-    if (!firestore) return;
-    deleteDocumentNonBlocking(doc(firestore, 'covers', coverId));
-  };
-
   const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
     if (!scheduleCollection) return;
     addDocumentNonBlocking(scheduleCollection, newEntry);
@@ -220,7 +202,7 @@ export default function DashboardPage() {
       deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
   };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || coversLoading || scheduleLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
@@ -252,7 +234,7 @@ export default function DashboardPage() {
               <TabsTrigger value="sites"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
               <TabsTrigger value="cleaners"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
-              <TabsTrigger value="leave-cover"><CalendarOff className="mr-2 h-4 w-4" />Leave / Cover</TabsTrigger>
+              <TabsTrigger value="leave-calendar"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
               <TabsTrigger value="risk"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
               <TabsTrigger value="summary"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
               <TabsTrigger value="action-plan"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
@@ -311,15 +293,12 @@ export default function DashboardPage() {
                 </Card>
             </TabsContent>
             
-            <TabsContent value="leave-cover">
-               <LeaveCoverTab 
+            <TabsContent value="leave-calendar">
+               <LeaveCalendarTab 
                   cleaners={sortedCleaners}
                   leave={leave || []}
-                  covers={covers || []}
                   onAddLeave={handleAddLeave}
                   onDeleteLeave={handleDeleteLeave}
-                  onAddCover={handleAddCover}
-                  onRemoveCover={handleRemoveCover}
                />
             </TabsContent>
 

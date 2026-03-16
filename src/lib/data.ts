@@ -236,16 +236,5 @@ export type Leave = {
     cleanerId: string;
     cleanerName: string;
     type: 'holiday' | 'sick';
-    startDate: string; // YYYY-MM-DD
-    endDate: string; // YYYY-MM-DD
-    days: number;
-}
-
-export type Cover = {
-    id: string;
-    leaveId: string;
-    originalCleanerName: string;
-    coveringCleanerId: string;
-    coveringCleanerName: string;
     date: string; // YYYY-MM-DD
 }
