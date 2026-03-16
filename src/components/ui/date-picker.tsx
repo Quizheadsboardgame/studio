@@ -18,11 +18,12 @@ interface DatePickerProps {
     onDateChange: (date: Date | undefined) => void;
     className?: string;
     placeholder?: string;
+    modal?: boolean;
 }
 
-export function DatePicker({ date, onDateChange, className, placeholder }: DatePickerProps) {
+export function DatePicker({ date, onDateChange, className, placeholder, modal }: DatePickerProps) {
   return (
-    <Popover>
+    <Popover modal={modal}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}

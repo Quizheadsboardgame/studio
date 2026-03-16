@@ -101,6 +101,7 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
               onDateChange={setStartDate}
               className="col-span-3"
               placeholder="Select start date"
+              modal={false}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -112,6 +113,7 @@ function LeaveBookingDialog({ cleaners, onAddLeave }: { cleaners: Cleaner[], onA
               onDateChange={setEndDate}
               className="col-span-3"
               placeholder="(Optional) Select end date"
+              modal={false}
             />
           </div>
         </div>
