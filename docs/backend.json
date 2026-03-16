@@ -84,6 +84,14 @@
           "type": "string",
           "format": "date",
           "description": "The date of the leave (YYYY-MM-DD)."
+        },
+        "coverCleanerName": {
+          "type": "string",
+          "description": "The name of the cleaner providing cover."
+        },
+        "isCovered": {
+          "type": "boolean",
+          "description": "Indicates whether cover has been arranged for this absence."
         }
       },
       "required": [

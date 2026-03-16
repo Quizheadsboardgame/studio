@@ -155,7 +155,7 @@ export default function DashboardPage() {
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id'>) => {
     if (!leaveCollection || !firestore) return;
-    addDocumentNonBlocking(leaveCollection, newLeaveData);
+    addDocumentNonBlocking(leaveCollection, { ...newLeaveData, isCovered: false, coverCleanerName: '' });
 
     if (newLeaveData.type === 'holiday') {
       if (!cleaners) {
@@ -168,6 +168,11 @@ export default function DashboardPage() {
         updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { holidayTaken: newHolidayTaken });
       }
     }
+  };
+
+  const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
+    if (!firestore) return;
+    updateDocumentNonBlocking(doc(firestore, 'leave', leaveId), updatedData);
   };
 
   const handleDeleteLeave = (leaveToDelete: Leave) => {
@@ -299,6 +304,7 @@ export default function DashboardPage() {
                   leave={leave || []}
                   onAddLeave={handleAddLeave}
                   onDeleteLeave={handleDeleteLeave}
+                  onUpdateLeave={handleUpdateLeave}
                />
             </TabsContent>
 
@@ -307,7 +313,7 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="summary">
-              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} />
+              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />
             </TabsContent>
 
             <TabsContent value="action-plan">

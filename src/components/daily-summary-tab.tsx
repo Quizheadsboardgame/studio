@@ -1,7 +1,7 @@
 'use client';
 
 import { useReducer } from 'react';
-import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan, ScheduleEntry } from '@/lib/data';
+import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan, ScheduleEntry, Leave } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ interface DailySummaryTabProps {
   cleaners: Cleaner[];
   actionPlans: ActionPlan[];
   schedule: ScheduleEntry[];
+  leave: Leave[];
 }
 
 type GroupedItems<T> = {
@@ -38,7 +39,7 @@ const getCleanerColor = (rating: CleanerPerformance) => {
 }
 
 
-export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule }: DailySummaryTabProps) {
+export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule, leave }: DailySummaryTabProps) {
   const [key, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const groupedSites = sites.reduce((acc, site) => {
@@ -59,10 +60,13 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
     .flatMap(plan => plan.tasks.map(task => ({ ...task, targetName: plan.targetName, targetType: plan.targetType })))
     .filter(task => isToday(parseISO(task.dueDate)) && !task.completed);
 
+  const todaysAbsences = leave.filter(l => isToday(parseISO(l.date)));
+
   const hasContent = [
       ...Object.values(groupedSites).flat(), 
       ...Object.values(groupedCleaners).flat(),
       ...todaysTasks,
+      ...todaysAbsences,
     ].length > 0;
 
   const renderColorPill = (color: 'red' | 'amber' | 'green' | 'other') => {
@@ -92,6 +96,33 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
             <CardContent>
                 {hasContent ? (
                     <div className="space-y-6">
+
+                        {/* COVER SUMMARY */}
+                        {todaysAbsences.length > 0 && (
+                            <div>
+                                <h3 className="font-semibold text-lg mb-2">Absences & Cover Today</h3>
+                                <div className="space-y-4 p-4 border rounded-lg">
+                                    {todaysAbsences.map(absence => (
+                                    <div key={absence.id} className="flex items-center gap-3">
+                                        <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
+                                            'bg-accent': absence.isCovered,
+                                            'bg-destructive': !absence.isCovered,
+                                        })} />
+                                        <div className="flex-grow">
+                                        <p className="font-medium">{absence.cleanerName} is off ({absence.type})</p>
+                                        {absence.isCovered ? (
+                                            <p className="text-sm text-muted-foreground">Covered by: {absence.coverCleanerName}</p>
+                                        ) : (
+                                            <p className="text-sm text-destructive font-medium">NOT COVERED</p>
+                                        )}
+                                        </div>
+                                    </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {(todaysAbsences.length > 0 && (todaysTasks.length > 0 || Object.values(groupedSites).flat().length > 0)) && <Separator />}
+
 
                         {/* ACTION PLAN TASKS FOR TODAY */}
                         {todaysTasks.length > 0 && (

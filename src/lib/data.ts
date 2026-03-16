@@ -237,4 +237,6 @@ export type Leave = {
     cleanerName: string;
     type: 'holiday' | 'sick';
     date: string; // YYYY-MM-DD
+    coverCleanerName?: string;
+    isCovered?: boolean;
 }

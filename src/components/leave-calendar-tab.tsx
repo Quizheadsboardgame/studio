@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Trash2 } from 'lucide-react';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, isFuture, startOfToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -18,6 +18,7 @@ interface LeaveCalendarTabProps {
   leave: Leave[];
   onAddLeave: (leaveData: Omit<Leave, 'id'>) => void;
   onDeleteLeave: (leave: Leave) => void;
+  onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
 }
 
 function AddLeaveForm({ cleaners, selectedDate, onAddLeave, onClose }: { cleaners: Cleaner[], selectedDate: Date, onAddLeave: LeaveCalendarTabProps['onAddLeave'], onClose: () => void }) {
@@ -72,10 +73,11 @@ function AddLeaveForm({ cleaners, selectedDate, onAddLeave, onClose }: { cleaner
     );
 }
 
-export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDeleteLeave }: LeaveCalendarTabProps) {
+export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
   const [month, setMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
   
   const handleDayClick = (day: Date) => {
       setSelectedDay(day);
@@ -104,6 +106,30 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
     if (!cleaner) return 'N/A';
     return `${(cleaner.holidayAllowance || 20) - (cleaner.holidayTaken || 0)}`;
   }
+
+  const upcomingAbsences = useMemo(() => {
+    const today = startOfToday();
+    return leave
+      .filter(l => isFuture(parseISO(l.date)) || isToday(parseISO(l.date)))
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+  }, [leave]);
+
+  const handleAssignCover = (leaveId: string, coverCleanerName: string) => {
+    const isCovered = !!coverCleanerName;
+    onUpdateLeave(leaveId, { coverCleanerName, isCovered });
+    
+    if (isCovered) {
+        toast({
+          title: 'Cover Assigned',
+          description: `${coverCleanerName} is now covering this shift.`,
+        });
+    } else {
+        toast({
+          title: 'Cover Removed',
+          description: `The shift is now marked as uncovered.`,
+        });
+    }
+  };
 
 
   return (
@@ -150,6 +176,51 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
                     </table>
                 </div>
             </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Upcoming Absences & Cover</CardTitle>
+          <CardDescription>Assign cover for upcoming holidays and sickness.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {upcomingAbsences.length > 0 ? (
+            <div className="space-y-4">
+              {upcomingAbsences.map(l => (
+                <div key={l.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-3 border rounded-lg">
+                  <div className="font-medium">
+                    <p>{l.cleanerName}</p>
+                    <p className="text-sm text-muted-foreground">{format(parseISO(l.date), 'EEE, PPP')}</p>
+                  </div>
+                  <div>
+                    <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
+                    <Select
+                      value={l.coverCleanerName || ''}
+                      onValueChange={(cleanerName) => handleAssignCover(l.id, cleanerName)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a cleaner to cover..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">
+                          <span className="text-muted-foreground">None (Uncovered)</span>
+                        </SelectItem>
+                        {cleaners
+                          .filter(c => c.name !== l.cleanerName)
+                          .map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No upcoming absences.</p>
+          )}
         </CardContent>
       </Card>
 
