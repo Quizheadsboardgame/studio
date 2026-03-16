@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Trash2 } from 'lucide-react';
-import { format, parseISO, isSameDay, isFuture, startOfToday } from 'date-fns';
+import { format, parseISO, isSameDay, isFuture, startOfToday, isToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
