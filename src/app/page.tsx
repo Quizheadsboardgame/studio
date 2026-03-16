@@ -72,7 +72,7 @@ export default function DashboardPage() {
 
       initialCleaners.forEach(cleaner => {
           const docRef = doc(cleanersCollection);
-          batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes, holidayAllowance: cleaner.holidayAllowance, holidayTaken: cleaner.holidayTaken });
+          batch.set(docRef, { name: cleaner.name, rating: cleaner.rating, notes: cleaner.notes, holidayAllowance: cleaner.holidayAllowance, holidayTaken: cleaner.holidayTaken, sickDaysTaken: cleaner.sickDaysTaken });
       });
 
       initialSchedule.forEach(entry => {
@@ -140,7 +140,7 @@ export default function DashboardPage() {
 
   const handleAddCleaner = (cleanerName: string) => {
     if (cleanerName.trim() === '' || !cleanersCollection) return;
-    addDocumentNonBlocking(cleanersCollection, { name: cleanerName, rating: 'N/A', notes: '', holidayAllowance: 20, holidayTaken: 0 });
+    addDocumentNonBlocking(cleanersCollection, { name: cleanerName, rating: 'N/A', notes: '', holidayAllowance: 20, holidayTaken: 0, sickDaysTaken: 0 });
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
@@ -157,15 +157,18 @@ export default function DashboardPage() {
     if (!leaveCollection || !firestore) return;
     addDocumentNonBlocking(leaveCollection, { ...newLeaveData, isCovered: false, coverCleanerName: '' });
 
-    if (newLeaveData.type === 'holiday') {
-      if (!cleaners) {
-        console.warn("Cannot update holiday allowance: cleaners data not available yet.");
-        return;
-      }
-      const cleaner = cleaners.find(c => c.id === newLeaveData.cleanerId);
-      if (cleaner) {
+    if (!cleaners) {
+      console.warn("Cannot update leave counts: cleaners data not available yet.");
+      return;
+    }
+    const cleaner = cleaners.find(c => c.id === newLeaveData.cleanerId);
+    if (cleaner) {
+      if (newLeaveData.type === 'holiday') {
         const newHolidayTaken = (cleaner.holidayTaken || 0) + 1;
         updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { holidayTaken: newHolidayTaken });
+      } else if (newLeaveData.type === 'sick') {
+        const newSickDaysTaken = (cleaner.sickDaysTaken || 0) + 1;
+        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { sickDaysTaken: newSickDaysTaken });
       }
     }
   };
@@ -179,15 +182,18 @@ export default function DashboardPage() {
     if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
 
-    if (leaveToDelete.type === 'holiday') {
-      if (!cleaners) {
-        console.warn("Cannot update holiday allowance: cleaners data not available yet.");
-        return;
-      }
-      const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
-      if (cleaner) {
+    if (!cleaners) {
+      console.warn("Cannot update leave counts: cleaners data not available yet.");
+      return;
+    }
+    const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
+    if (cleaner) {
+      if (leaveToDelete.type === 'holiday') {
         const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - 1);
         updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { holidayTaken: newHolidayTaken });
+      } else if (leaveToDelete.type === 'sick') {
+        const newSickDaysTaken = Math.max(0, (cleaner.sickDaysTaken || 0) - 1);
+        updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { sickDaysTaken: newSickDaysTaken });
       }
     }
   };

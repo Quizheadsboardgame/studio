@@ -124,37 +124,45 @@ export default function CompanyScheduleTab({ schedule, sites, cleaners, onAdd, o
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {schedule.map((entry) => (
-                        <TableRow key={entry.id}>
-                            <TableCell>{editingRowId === entry.id ? (
-                                <Select value={editedRow.site} onValueChange={(value) => setEditedRow(prev => ({...prev, site: value}))}>
-                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            ) : entry.site}</TableCell>
-                            <TableCell>{editingRowId === entry.id ? (
-                                <Select value={editedRow.cleaner} onValueChange={(value) => setEditedRow(prev => ({...prev, cleaner: value}))}>
-                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                    <SelectContent>{cleaners.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            ) : entry.cleaner}</TableCell>
-                            <TableCell>{editingRowId === entry.id ? <Input value={editedRow.start} onChange={e => setEditedRow(prev => ({...prev, start: e.target.value}))} /> : entry.start}</TableCell>
-                            <TableCell>{editingRowId === entry.id ? <Input value={editedRow.finish} onChange={e => setEditedRow(prev => ({...prev, finish: e.target.value}))} /> : entry.finish}</TableCell>
-                            <TableCell className="text-right">
-                                {editingRowId === entry.id ? (
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(entry.id)}><Check className="h-4 w-4 text-green-600" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={handleCancelEdit}><X className="h-4 w-4 text-red-600" /></Button>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(entry)}><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => onRemove(entry.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-                                    </div>
-                                )}
+                    {schedule.length > 0 ? (
+                        schedule.map((entry) => (
+                            <TableRow key={entry.id}>
+                                <TableCell>{editingRowId === entry.id ? (
+                                    <Select value={editedRow.site} onValueChange={(value) => setEditedRow(prev => ({...prev, site: value}))}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                ) : entry.site}</TableCell>
+                                <TableCell>{editingRowId === entry.id ? (
+                                    <Select value={editedRow.cleaner} onValueChange={(value) => setEditedRow(prev => ({...prev, cleaner: value}))}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>{cleaners.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                ) : entry.cleaner}</TableCell>
+                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.start} onChange={e => setEditedRow(prev => ({...prev, start: e.target.value}))} /> : entry.start}</TableCell>
+                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.finish} onChange={e => setEditedRow(prev => ({...prev, finish: e.target.value}))} /> : entry.finish}</TableCell>
+                                <TableCell className="text-right">
+                                    {editingRowId === entry.id ? (
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(entry.id)}><Check className="h-4 w-4 text-green-600" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={handleCancelEdit}><X className="h-4 w-4 text-red-600" /></Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(entry)}><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => onRemove(entry.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                                        </div>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                No schedule entries found. Click "Add Entry" to create one.
                             </TableCell>
                         </TableRow>
-                    ))}
+                    )}
                 </TableBody>
             </Table>
         </div>

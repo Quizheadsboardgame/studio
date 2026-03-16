@@ -93,6 +93,7 @@ export type Cleaner = {
   notes?: string;
   holidayAllowance: number;
   holidayTaken: number;
+  sickDaysTaken: number;
 };
 
 export const initialCleaners: Omit<Cleaner, 'id'>[] = [
@@ -106,7 +107,7 @@ export const initialCleaners: Omit<Cleaner, 'id'>[] = [
   "Owen Newton", "Piotr Skrzypczyk", "Placido Da Costa", "Rhyse Howard", "Rosana Da Silva",
   "Salvador Da Costa", "Sergio Dos Reis", "Shakila Soloman", "Susana Correia", "Thomas Boltasiu",
   "Ubaldo Soares Vital", "Vacant", "Veronica Smintina", "Zbigniew Bajor"
-].sort((a, b) => a.localeCompare(b)).map(name => ({ name, rating: 'N/A' as CleanerPerformance, notes: '', holidayAllowance: 20, holidayTaken: 0 }));
+].sort((a, b) => a.localeCompare(b)).map(name => ({ name, rating: 'N/A' as CleanerPerformance, notes: '', holidayAllowance: 20, holidayTaken: 0, sickDaysTaken: 0 }));
 
 
 export type ScheduleEntry = {

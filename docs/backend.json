@@ -49,13 +49,18 @@
         "holidayTaken": {
           "type": "number",
           "description": "The number of holiday days the cleaner has taken so far."
+        },
+        "sickDaysTaken": {
+          "type": "number",
+          "description": "The total number of sick days taken by the cleaner."
         }
       },
       "required": [
         "name",
         "rating",
         "holidayAllowance",
-        "holidayTaken"
+        "holidayTaken",
+        "sickDaysTaken"
       ]
     },
     "Leave": {

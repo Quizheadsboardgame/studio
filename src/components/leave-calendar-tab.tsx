@@ -101,8 +101,7 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
       sick: { backgroundColor: 'hsl(var(--destructive))', color: 'hsl(var(--destructive-foreground))', borderRadius: '0.25rem' }
   };
   
-  const remainingHolidays = (cleanerId: string) => {
-    const cleaner = cleaners.find(c => c.id === cleanerId);
+  const getRemainingHolidays = (cleaner: Cleaner) => {
     if (!cleaner) return 'N/A';
     return `${(cleaner.holidayAllowance || 20) - (cleaner.holidayTaken || 0)}`;
   }
@@ -139,7 +138,7 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
       <Card>
         <CardHeader>
             <CardTitle>Leave Calendar</CardTitle>
-            <CardDescription>Click a date to add holiday or log sickness. View holiday balances below.</CardDescription>
+            <CardDescription>Click a date to add holiday or log sickness. View leave balances below.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-8">
             <div className="flex-grow flex justify-center">
@@ -158,20 +157,22 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
                 />
             </div>
             <div className="w-full md:w-1/3">
-                <h3 className="text-lg font-semibold mb-2">Holiday Balances</h3>
+                <h3 className="text-lg font-semibold mb-2">Leave Balances</h3>
                  <div className="border rounded-lg max-h-96 overflow-y-auto">
                     <table className="w-full text-sm">
                          <thead className="sticky top-0 bg-muted">
                             <tr className="border-b">
                                 <th className="py-2 px-3 text-left font-medium">Cleaner</th>
-                                <th className="py-2 px-3 text-center font-medium">Remaining</th>
+                                <th className="py-2 px-3 text-center font-medium">Holidays Left</th>
+                                <th className="py-2 px-3 text-center font-medium">Sick Days</th>
                             </tr>
                         </thead>
                         <tbody>
                             {cleaners.map(cleaner => (
                                 <tr key={cleaner.id} className="border-b last:border-b-0">
                                     <td className="py-2 px-3 font-medium">{cleaner.name}</td>
-                                    <td className={`py-2 px-3 text-center font-bold`}>{remainingHolidays(cleaner.id)}</td>
+                                    <td className={`py-2 px-3 text-center font-bold`}>{getRemainingHolidays(cleaner)}</td>
+                                    <td className="py-2 px-3 text-center font-bold">{cleaner.sickDaysTaken || 0}</td>
                                 </tr>
                             ))}
                         </tbody>
