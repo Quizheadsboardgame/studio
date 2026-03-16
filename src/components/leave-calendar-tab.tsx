@@ -115,13 +115,15 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
   }, [leave]);
 
   const handleAssignCover = (leaveId: string, coverCleanerName: string) => {
-    const isCovered = !!coverCleanerName;
-    onUpdateLeave(leaveId, { coverCleanerName, isCovered });
+    const isActuallyCovered = coverCleanerName && coverCleanerName !== '__NONE__';
+    const finalCoverName = isActuallyCovered ? coverCleanerName : '';
+
+    onUpdateLeave(leaveId, { coverCleanerName: finalCoverName, isCovered: isActuallyCovered });
     
-    if (isCovered) {
+    if (isActuallyCovered) {
         toast({
           title: 'Cover Assigned',
-          description: `${coverCleanerName} is now covering this shift.`,
+          description: `${finalCoverName} is now covering this shift.`,
         });
     } else {
         toast({
@@ -199,14 +201,14 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
                   <div className="md:col-span-2">
                     <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
                     <Select
-                      value={l.coverCleanerName || ''}
+                      value={l.coverCleanerName || '__NONE__'}
                       onValueChange={(cleanerName) => handleAssignCover(l.id, cleanerName)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a cleaner to cover..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">
+                        <SelectItem value="__NONE__">
                           <span className="text-muted-foreground">None (Uncovered)</span>
                         </SelectItem>
                         {cleaners
