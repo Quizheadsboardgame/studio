@@ -17,6 +17,29 @@
         "notes": {
           "type": "string",
           "description": "Optional notes or comments about the site."
+        },
+        "auditStatus": {
+          "type": "string",
+          "enum": [
+            "Not Booked",
+            "Booked",
+            "Completed"
+          ],
+          "description": "The current status of the audit for the site."
+        },
+        "auditBookedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the audit is booked for."
+        },
+        "auditCompletedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the audit was completed."
+        },
+        "auditNotes": {
+          "type": "string",
+          "description": "Notes related to the site audit."
         }
       },
       "required": [

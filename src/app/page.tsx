@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -12,6 +12,7 @@ import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import ActionPlanTab from '@/components/action-plan-tab';
 import LeaveCalendarTab from '@/components/leave-calendar-tab';
+import AuditsTab from '@/components/audits-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -50,10 +51,15 @@ export default function DashboardPage() {
      if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { notes: newNote });
   };
+  
+  const handleUpdateAudit = (siteId: string, auditData: Partial<Site>) => {
+    if (!firestore) return;
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), auditData);
+  };
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
+    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '', auditStatus: 'Not Booked' });
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
@@ -179,11 +185,12 @@ export default function DashboardPage() {
             </div>
         ) : (
           <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto flex-wrap">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 h-auto flex-wrap">
               <TabsTrigger value="sites" className="data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
               <TabsTrigger value="cleaners" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
               <TabsTrigger value="leave-calendar" className="data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
+              <TabsTrigger value="audits" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
               <TabsTrigger value="risk" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
               <TabsTrigger value="summary" className="data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
               <TabsTrigger value="action-plan" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
@@ -251,6 +258,13 @@ export default function DashboardPage() {
                   onDeleteLeave={handleDeleteLeave}
                   onUpdateLeave={handleUpdateLeave}
                />
+            </TabsContent>
+            
+            <TabsContent value="audits">
+              <AuditsTab 
+                sites={sortedSites} 
+                onUpdateAudit={handleUpdateAudit}
+              />
             </TabsContent>
 
              <TabsContent value="risk">

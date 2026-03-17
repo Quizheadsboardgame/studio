@@ -9,13 +9,6 @@ export type SiteStatus =
   | 'Site under action plan'
   | 'Site requires action plan';
 
-export type Site = {
-  id: string;
-  name: string;
-  status: SiteStatus;
-  notes?: string;
-};
-
 export const siteStatuses: SiteStatus[] = [
   'N/A',
   'Client happy',
@@ -25,6 +18,21 @@ export const siteStatuses: SiteStatus[] = [
   'Site under action plan',
   'Site requires action plan',
 ];
+
+export type AuditStatus = 'Not Booked' | 'Booked' | 'Completed';
+export const auditStatuses: AuditStatus[] = ['Not Booked', 'Booked', 'Completed'];
+
+export type Site = {
+  id: string;
+  name: string;
+  status: SiteStatus;
+  notes?: string;
+  auditStatus?: AuditStatus;
+  auditBookedDate?: string; // YYYY-MM-DD
+  auditCompletedDate?: string; // YYYY-MM-DD
+  auditNotes?: string;
+};
+
 
 export const initialSites: Omit<Site, 'id'>[] = [
     "ACCI LEVEL 6",
