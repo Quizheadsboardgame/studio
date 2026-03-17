@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Cleaner, Leave } from '@/lib/data';
+import type { Cleaner, Leave, ScheduleEntry } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 interface LeaveCalendarTabProps {
   cleaners: Cleaner[];
   leave: Leave[];
+  schedule: ScheduleEntry[];
   onAddLeave: (leaveData: Omit<Leave, 'id'>) => void;
   onDeleteLeave: (leave: Leave) => void;
   onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
@@ -73,7 +74,7 @@ function AddLeaveForm({ cleaners, selectedDate, onAddLeave, onClose }: { cleaner
     );
 }
 
-export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
+export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
   const [month, setMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -96,10 +97,6 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
       holiday: holidays,
       sick: sickDays,
   };
-  const modifierStyles = {
-      holiday: { backgroundColor: 'hsl(var(--chart-4))', color: 'hsl(var(--primary-foreground))', borderRadius: '0.25rem' },
-      sick: { backgroundColor: 'hsl(var(--destructive))', color: 'hsl(var(--destructive-foreground))', borderRadius: '0.25rem' }
-  };
   
   const getRemainingHolidays = (cleaner: Cleaner) => {
     if (!cleaner) return 'N/A';
@@ -108,10 +105,37 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
 
   const upcomingAbsences = useMemo(() => {
     const today = startOfToday();
-    return leave
-      .filter(l => isFuture(parseISO(l.date)) || isToday(parseISO(l.date)))
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-  }, [leave]);
+    const upcoming = leave
+      .filter(l => isFuture(parseISO(l.date)) || isToday(parseISO(l.date)));
+
+    const detailedAbsences = upcoming.flatMap(l => {
+      const cleanerSchedule = schedule.filter(s => s.cleaner === l.cleanerName);
+      
+      if (cleanerSchedule.length > 0) {
+        return cleanerSchedule.map((s, index) => ({
+          ...l,
+          site: s.site,
+          time: `${s.start} - ${s.finish}`,
+          uniqueId: `${l.id}-${s.id || index}` // Use index as a fallback for key
+        }));
+      }
+      
+      // If cleaner has no scheduled shifts, still show the absence entry.
+      return [{ 
+        ...l, 
+        site: 'No scheduled shift', 
+        time: 'N/A',
+        uniqueId: l.id
+      }];
+    });
+
+    return detailedAbsences.sort((a, b) => {
+        const dateA = parseISO(a.date).getTime();
+        const dateB = parseISO(b.date).getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        return a.cleanerName.localeCompare(b.cleanerName);
+    });
+  }, [leave, schedule]);
 
   const handleAssignCover = (leaveId: string, coverCleanerName: string) => {
     const isActuallyCovered = coverCleanerName && coverCleanerName !== '__NONE__';
@@ -191,15 +215,19 @@ export default function LeaveCalendarTab({ cleaners, leave, onAddLeave, onDelete
           {upcomingAbsences.length > 0 ? (
             <div className="space-y-4">
               {upcomingAbsences.map(l => (
-                <div key={l.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-3 border rounded-lg">
-                  <div className="font-medium">
+                <div key={l.uniqueId} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4 p-3 border rounded-lg">
+                  <div className="font-medium md:col-span-1">
                     <p>{l.cleanerName}</p>
                     <p className="text-sm text-muted-foreground">{format(parseISO(l.date), 'EEE, PPP')}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                     <p className="font-medium">{l.site}</p>
+                     <p className="text-sm text-muted-foreground">{l.time}</p>
                   </div>
                   <div>
                     <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-1">
                     <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
                     <Select
                       value={l.coverCleanerName || '__NONE__'}

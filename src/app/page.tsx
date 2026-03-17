@@ -311,6 +311,7 @@ export default function DashboardPage() {
                <LeaveCalendarTab 
                   cleaners={sortedCleaners}
                   leave={leave || []}
+                  schedule={sortedSchedule || []}
                   onAddLeave={handleAddLeave}
                   onDeleteLeave={handleDeleteLeave}
                   onUpdateLeave={handleUpdateLeave}
