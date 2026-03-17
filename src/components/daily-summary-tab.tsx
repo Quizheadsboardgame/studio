@@ -32,9 +32,9 @@ const getSiteColor = (status: SiteStatus) => {
 }
 
 const getCleanerColor = (rating: CleanerPerformance) => {
-    if (rating === 'Excellent feedback') return 'green';
+    if (rating === 'Excellent feedback' || rating === 'Site satisfied') return 'green';
     if (rating.includes('action plan') || rating === 'Needs retraining' || rating === 'Operational concerns') return 'red';
-    if (rating === 'Site satisfied' || rating === 'Slight improvement needed') return 'amber';
+    if (rating === 'Slight improvement needed') return 'amber';
     return 'other';
 }
 
