@@ -283,6 +283,36 @@
         "start",
         "finish"
       ]
+    },
+    "Supply": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Supply",
+      "type": "object",
+      "description": "Represents a single cleaning supply item, used for inventory management.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the supply item, e.g., 'Bleach' or 'Paper Towels'."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The current quantity in stock."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement for the quantity, e.g., 'bottles', 'rolls', 'litres'."
+        },
+        "reorderLevel": {
+          "type": "number",
+          "description": "The stock quantity at which a reorder is triggered."
+        }
+      },
+      "required": [
+        "name",
+        "quantity",
+        "unit",
+        "reorderLevel"
+      ]
     }
   },
   "auth": {
@@ -351,6 +381,16 @@
             "$ref": "#/backend/entities/ScheduleEntry"
           },
           "description": "Top-level collection storing the cleaning schedule."
+        }
+      },
+      {
+        "path": "/supplies/{supplyId}",
+        "definition": {
+          "entityName": "Supply",
+          "schema": {
+            "$ref": "#/backend/entities/Supply"
+          },
+          "description": "Top-level collection for managing inventory of cleaning supplies."
         }
       }
     ]

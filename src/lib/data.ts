@@ -259,4 +259,12 @@ export type Leave = {
     coverAssignments: CoverAssignment[];
 }
 
+export type Supply = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  reorderLevel: number;
+};
+
     

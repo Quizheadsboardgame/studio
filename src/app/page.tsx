@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Supply } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck, FileClock } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck, FileClock, Package } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -14,6 +14,7 @@ import ActionPlanTab from '@/components/action-plan-tab';
 import LeaveCalendarTab from '@/components/leave-calendar-tab';
 import AuditsTab from '@/components/audits-tab';
 import AuditHistoryTab from '@/components/audit-history-tab';
+import SuppliesTab from '@/components/supplies-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -45,6 +46,9 @@ export default function DashboardPage() {
 
   const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
   const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
+  
+  const suppliesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplies') : null, [firestore, user]);
+  const { data: supplies, isLoading: suppliesLoading } = useCollection<Supply>(suppliesCollection);
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
@@ -202,11 +206,27 @@ export default function DashboardPage() {
       if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
   };
+  
+  const handleAddSupply = (newSupply: Omit<Supply, 'id'>) => {
+    if (!suppliesCollection) return;
+    addDocumentNonBlocking(suppliesCollection, newSupply);
+  };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading;
+  const handleUpdateSupply = (supplyId: string, updatedSupply: Partial<Omit<Supply, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'supplies', supplyId), updatedSupply);
+  };
+
+  const handleRemoveSupply = (supplyId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'supplies', supplyId));
+  };
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || suppliesLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
+  const sortedSupplies = useMemo(() => supplies ? [...supplies].sort((a, b) => a.name.localeCompare(b.name)) : [], [supplies]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -231,11 +251,12 @@ export default function DashboardPage() {
             </div>
         ) : (
           <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto flex-wrap">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 h-auto flex-wrap">
               <TabsTrigger value="sites" className="data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
               <TabsTrigger value="cleaners" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
               <TabsTrigger value="leave-calendar" className="data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
+              <TabsTrigger value="supplies" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supplies</TabsTrigger>
               <TabsTrigger value="audits" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
               <TabsTrigger value="audit-history" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
               <TabsTrigger value="risk" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
@@ -307,6 +328,22 @@ export default function DashboardPage() {
                />
             </TabsContent>
             
+             <TabsContent value="supplies">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Supply Inventory</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <SuppliesTab 
+                            supplies={sortedSupplies}
+                            onAdd={handleAddSupply}
+                            onUpdate={handleUpdateSupply}
+                            onRemove={handleRemoveSupply}
+                        />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
             <TabsContent value="audits">
               <AuditsTab 
                 sites={sortedSites} 
