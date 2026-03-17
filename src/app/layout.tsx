@@ -3,8 +3,8 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Excellerate Ops',
-  description: 'Cleaning Operations Hub',
+  title: 'Excellerate Services',
+  description: 'Lot 4. Addenbrooke’s',
 };
 
 export default function RootLayout({

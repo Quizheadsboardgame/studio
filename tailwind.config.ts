@@ -15,6 +15,11 @@ export default {
         code: ['monospace'],
       },
       colors: {
+        'excellerate-orange': '#f37021',
+        'excellerate-red': '#e2231a',
+        'excellerate-blue': '#0054a6',
+        'excellerate-teal': '#00a99d',
+        'excellerate-lime': '#99ca3c',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
