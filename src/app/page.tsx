@@ -319,7 +319,7 @@ export default function DashboardPage() {
             </TabsContent>
 
              <TabsContent value="risk">
-                <RiskDashboardTab sites={sites || []} />
+                <RiskDashboardTab sites={sites || []} cleaners={sortedCleaners} />
             </TabsContent>
 
             <TabsContent value="summary">

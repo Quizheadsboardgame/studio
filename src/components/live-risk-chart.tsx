@@ -6,15 +6,9 @@ import {
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  type ChartConfig,
 } from "@/components/ui/chart"
 import { PieChart, Pie, Cell } from "recharts"
-
-const currentRiskChartConfig = {
-    Red: { label: "Red", color: "hsl(var(--chart-1))" },
-    Amber: { label: "Amber", color: "hsl(var(--chart-4))" },
-    Green: { label: "Green", color: "hsl(var(--chart-2))" },
-    "N/A": { label: "N/A", color: "hsl(var(--muted))" },
-} as const;
 
 interface LiveRiskChartProps {
     data: {
@@ -22,19 +16,20 @@ interface LiveRiskChartProps {
         value: number;
         fill: string;
     }[];
+    chartConfig: ChartConfig;
 }
 
-export default function LiveRiskChart({ data }: LiveRiskChartProps) {
+export default function LiveRiskChart({ data, chartConfig }: LiveRiskChartProps) {
     if (data.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-center text-muted-foreground">
-                <p>No site data available to display.</p>
+                <p>No data available to display.</p>
             </div>
         );
     }
 
     return (
-        <ChartContainer config={currentRiskChartConfig} className="min-h-[400px] w-full flex justify-center items-center">
+        <ChartContainer config={chartConfig} className="min-h-[400px] w-full flex justify-center items-center">
             <PieChart>
                 <ChartTooltip
                     cursor={false}
@@ -49,6 +44,7 @@ export default function LiveRiskChart({ data }: LiveRiskChartProps) {
                     outerRadius={120}
                     labelLine={false}
                     label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                        if (percent === 0) return null;
                         const RADIAN = Math.PI / 180;
                         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
