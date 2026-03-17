@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Supply } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck, FileClock, Package } from 'lucide-react';
@@ -47,8 +47,8 @@ export default function DashboardPage() {
   const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
   const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
   
-  const suppliesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplies') : null, [firestore, user]);
-  const { data: supplies, isLoading: suppliesLoading } = useCollection<Supply>(suppliesCollection);
+  const supplyOrdersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplyOrders') : null, [firestore, user]);
+  const { data: supplyOrders, isLoading: supplyOrdersLoading } = useCollection<MonthlySupplyOrder>(supplyOrdersCollection);
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
@@ -207,26 +207,51 @@ export default function DashboardPage() {
       deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
   };
   
-  const handleAddSupply = (newSupply: Omit<Supply, 'id'>) => {
-    if (!suppliesCollection) return;
-    addDocumentNonBlocking(suppliesCollection, newSupply);
+  const handleSetSupplyOrder = (siteId: string, consumableId: string, date: Date, quantity: number) => {
+    if (!firestore) return;
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const docId = `${siteId}-${consumableId}-${format(date, 'yyyy-MM')}`;
+    
+    const orderData: Omit<MonthlySupplyOrder, 'id'> = {
+      siteId,
+      consumableId,
+      year,
+      month,
+      quantity,
+    };
+    
+    if (quantity > 0) {
+      setDocumentNonBlocking(doc(firestore, 'supplyOrders', docId), orderData, { merge: true });
+    } else {
+      // If quantity is 0 or less, we can remove the document.
+      deleteDocumentNonBlocking(doc(firestore, 'supplyOrders', docId));
+    }
   };
 
-  const handleUpdateSupply = (supplyId: string, updatedSupply: Partial<Omit<Supply, 'id'>>) => {
-      if (!firestore) return;
-      updateDocumentNonBlocking(doc(firestore, 'supplies', supplyId), updatedSupply);
+  const handleAddConsumable = (siteId: string, consumableData: Omit<Consumable, 'id'>) => {
+    if (!firestore) return;
+    const consumablesCollection = collection(firestore, 'sites', siteId, 'consumables');
+    addDocumentNonBlocking(consumablesCollection, consumableData);
   };
 
-  const handleRemoveSupply = (supplyId: string) => {
-      if (!firestore) return;
-      deleteDocumentNonBlocking(doc(firestore, 'supplies', supplyId));
+  const handleEditConsumable = (siteId: string, consumableId: string, consumableData: Partial<Omit<Consumable, 'id'>>) => {
+    if (!firestore) return;
+    const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
+    updateDocumentNonBlocking(consumableDocRef, consumableData);
   };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || suppliesLoading;
+  const handleRemoveConsumable = (siteId: string, consumableId: string) => {
+    if (!firestore) return;
+    const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
+    deleteDocumentNonBlocking(consumableDocRef);
+  };
+
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
-  const sortedSupplies = useMemo(() => supplies ? [...supplies].sort((a, b) => a.name.localeCompare(b.name)) : [], [supplies]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -256,7 +281,7 @@ export default function DashboardPage() {
               <TabsTrigger value="cleaners" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
               <TabsTrigger value="leave-calendar" className="data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
-              <TabsTrigger value="supplies" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supplies</TabsTrigger>
+              <TabsTrigger value="supplies" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supply Orders</TabsTrigger>
               <TabsTrigger value="audits" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
               <TabsTrigger value="audit-history" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
               <TabsTrigger value="risk" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
@@ -329,19 +354,15 @@ export default function DashboardPage() {
             </TabsContent>
             
              <TabsContent value="supplies">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Supply Inventory</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <SuppliesTab 
-                            supplies={sortedSupplies}
-                            onAdd={handleAddSupply}
-                            onUpdate={handleUpdateSupply}
-                            onRemove={handleRemoveSupply}
-                        />
-                    </CardContent>
-                </Card>
+                <SuppliesTab
+                    sites={sortedSites}
+                    firestore={firestore}
+                    supplyOrders={supplyOrders || []}
+                    onSetOrder={handleSetSupplyOrder}
+                    onAddConsumable={handleAddConsumable}
+                    onEditConsumable={handleEditConsumable}
+                    onRemoveConsumable={handleRemoveConsumable}
+                />
             </TabsContent>
 
             <TabsContent value="audits">
@@ -381,5 +402,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

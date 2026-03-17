@@ -259,12 +259,17 @@ export type Leave = {
     coverAssignments: CoverAssignment[];
 }
 
-export type Supply = {
+export type Consumable = {
   id: string;
   name: string;
-  quantity: number;
-  unit: string;
-  reorderLevel: number;
+  orderingCode: string;
 };
 
-    
+export type MonthlySupplyOrder = {
+  id: string; // Composite key: {siteId}-{consumableId}-{yyyy-MM}
+  siteId: string;
+  consumableId: string;
+  month: number;
+  year: number;
+  quantity: number;
+};

@@ -284,34 +284,57 @@
         "finish"
       ]
     },
-    "Supply": {
+    "Consumable": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Supply",
+      "title": "Consumable",
       "type": "object",
-      "description": "Represents a single cleaning supply item, used for inventory management.",
+      "description": "A consumable supply item for a site, including its name and ordering code.",
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the supply item, e.g., 'Bleach' or 'Paper Towels'."
+          "description": "The name of the supply item."
         },
-        "quantity": {
-          "type": "number",
-          "description": "The current quantity in stock."
-        },
-        "unit": {
+        "orderingCode": {
           "type": "string",
-          "description": "The unit of measurement for the quantity, e.g., 'bottles', 'rolls', 'litres'."
-        },
-        "reorderLevel": {
-          "type": "number",
-          "description": "The stock quantity at which a reorder is triggered."
+          "description": "The ordering code for the item."
         }
       },
       "required": [
         "name",
-        "quantity",
-        "unit",
-        "reorderLevel"
+        "orderingCode"
+      ]
+    },
+    "MonthlySupplyOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MonthlySupplyOrder",
+      "type": "object",
+      "description": "Represents the quantity of a consumable ordered for a specific site in a given month.",
+      "properties": {
+        "siteId": {
+          "type": "string"
+        },
+        "consumableId": {
+          "type": "string"
+        },
+        "month": {
+          "type": "number",
+          "description": "The month of the order (1-12)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year of the order."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity ordered for the month."
+        }
+      },
+      "required": [
+        "siteId",
+        "consumableId",
+        "month",
+        "year",
+        "quantity"
       ]
     }
   },
@@ -384,17 +407,25 @@
         }
       },
       {
-        "path": "/supplies/{supplyId}",
+        "path": "/sites/{siteId}/consumables/{consumableId}",
         "definition": {
-          "entityName": "Supply",
+          "entityName": "Consumable",
           "schema": {
-            "$ref": "#/backend/entities/Supply"
+            "$ref": "#/backend/entities/Consumable"
           },
-          "description": "Top-level collection for managing inventory of cleaning supplies."
+          "description": "Sub-collection storing consumable items specific to a site."
+        }
+      },
+      {
+        "path": "/supplyOrders/{orderId}",
+        "definition": {
+          "entityName": "MonthlySupplyOrder",
+          "schema": {
+            "$ref": "#/backend/entities/MonthlySupplyOrder"
+          },
+          "description": "Collection storing monthly supply order records for all sites. The document ID is a composite key: {siteId}-{consumableId}-{yyyy}-{MM}."
         }
       }
     ]
   }
 }
-
-    

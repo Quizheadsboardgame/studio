@@ -1,62 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import type { Supply } from '@/lib/data';
+import { useState, useMemo } from 'react';
+import type { Site, Consumable, MonthlySupplyOrder } from '@/lib/data';
+import { useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, type Firestore } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, Pencil } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface SuppliesTabProps {
-  supplies: Supply[];
-  onAdd: (entry: Omit<Supply, 'id'>) => void;
-  onUpdate: (id: string, entry: Partial<Omit<Supply, 'id'>>) => void;
-  onRemove: (id: string) => void;
+interface ConsumableDialogProps {
+  siteId: string;
+  consumable?: Consumable;
+  onAdd: (siteId: string, data: Omit<Consumable, 'id'>) => void;
+  onEdit: (siteId: string, consumableId: string, data: Partial<Omit<Consumable, 'id'>>) => void;
+  children: React.ReactNode;
 }
 
-function SupplyDialog({ onSave, supply, children }: { onSave: (entry: Omit<Supply, 'id'>) => void; supply?: Supply; children: React.ReactNode }) {
+function ConsumableDialog({ siteId, consumable, onAdd, onEdit, children }: ConsumableDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [name, setName] = useState(supply?.name || '');
-    const [quantity, setQuantity] = useState(supply?.quantity?.toString() || '0');
-    const [unit, setUnit] = useState(supply?.unit || '');
-    const [reorderLevel, setReorderLevel] = useState(supply?.reorderLevel?.toString() || '0');
+    const [name, setName] = useState(consumable?.name || '');
+    const [orderingCode, setOrderingCode] = useState(consumable?.orderingCode || '');
     const { toast } = useToast();
-
+    
     const handleSave = () => {
-        const numQuantity = parseInt(quantity, 10);
-        const numReorderLevel = parseInt(reorderLevel, 10);
-
-        if (!name || !unit || isNaN(numQuantity) || isNaN(numReorderLevel)) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields correctly.' });
+        if (!name || !orderingCode) {
+            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and ordering code.' });
             return;
         }
-
-        onSave({ name, unit, quantity: numQuantity, reorderLevel: numReorderLevel });
+        if (consumable) {
+            onEdit(siteId, consumable.id, { name, orderingCode });
+        } else {
+            onAdd(siteId, { name, orderingCode });
+        }
         setIsOpen(false);
-        toast({ title: 'Supply Saved', description: `Supply '${name}' has been saved.` });
-    };
-
+    }
+    
     const handleOpenChange = (open: boolean) => {
         if (open) {
-            setName(supply?.name || '');
-            setQuantity(supply?.quantity?.toString() || '0');
-            setUnit(supply?.unit || '');
-            setReorderLevel(supply?.reorderLevel?.toString() || '0');
+            setName(consumable?.name || '');
+            setOrderingCode(consumable?.orderingCode || '');
         }
         setIsOpen(open);
     }
@@ -66,7 +57,7 @@ function SupplyDialog({ onSave, supply, children }: { onSave: (entry: Omit<Suppl
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{supply ? 'Edit' : 'Add'} Supply</DialogTitle>
+                    <DialogTitle>{consumable ? 'Edit' : 'Add'} Consumable</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -74,16 +65,8 @@ function SupplyDialog({ onSave, supply, children }: { onSave: (entry: Omit<Suppl
                         <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="quantity" className="text-right">Quantity</Label>
-                        <Input id="quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} className="col-span-3" />
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="unit" className="text-right">Unit</Label>
-                        <Input id="unit" value={unit} onChange={e => setUnit(e.target.value)} placeholder="e.g. bottles, rolls" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="reorder" className="text-right">Re-order Level</Label>
-                        <Input id="reorder" type="number" value={reorderLevel} onChange={e => setReorderLevel(e.target.value)} className="col-span-3" />
+                        <Label htmlFor="code" className="text-right">Order Code</Label>
+                        <Input id="code" value={orderingCode} onChange={e => setOrderingCode(e.target.value)} className="col-span-3" />
                     </div>
                 </div>
                 <DialogFooter>
@@ -92,89 +75,151 @@ function SupplyDialog({ onSave, supply, children }: { onSave: (entry: Omit<Suppl
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    );
+    )
 }
 
 
-export default function SuppliesTab({ supplies, onAdd, onUpdate, onRemove }: SuppliesTabProps) {
-    const { toast } = useToast();
-
-    const handleQuantityChange = (id: string, currentQuantity: number, change: number) => {
-        const newQuantity = Math.max(0, currentQuantity + change);
-        onUpdate(id, { quantity: newQuantity });
-    }
-
-  return (
-    <div className="space-y-4">
-        <div className="flex justify-end">
-            <SupplyDialog onSave={onAdd}>
-                 <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Supply</Button>
-            </SupplyDialog>
-        </div>
-        <div className="border rounded-lg overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Supply Item</TableHead>
-                        <TableHead className="w-[200px]">Current Quantity</TableHead>
-                        <TableHead className="w-[150px]">Re-order Level</TableHead>
-                        <TableHead className="w-[120px] text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {supplies.length > 0 ? (
-                        supplies.map((supply) => (
-                            <TableRow key={supply.id} className={cn({ 'bg-destructive/10 hover:bg-destructive/20': supply.quantity <= supply.reorderLevel })}>
-                                <TableCell className="font-medium">{supply.name}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(supply.id, supply.quantity, -1)}>-</Button>
-                                        <span className="font-bold text-center w-12">{supply.quantity}</span>
-                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(supply.id, supply.quantity, 1)}>+</Button>
-                                        <span className="text-muted-foreground">{supply.unit}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>{supply.reorderLevel}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <SupplyDialog onSave={(updatedSupply) => onUpdate(supply.id, updatedSupply)} supply={supply}>
-                                            <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
-                                        </SupplyDialog>
-
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                             <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-                                          </AlertDialogTrigger>
-                                          <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle>Delete Supply?</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                This will permanently delete '{supply.name}'. This action cannot be undone.
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction onClick={() => onRemove(supply.id)}>Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
-
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                No supplies found. Click "Add Supply" to create one.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </div>
-    </div>
-  );
+interface SuppliesTabProps {
+  sites: Site[];
+  supplyOrders: MonthlySupplyOrder[];
+  firestore: Firestore | null;
+  onSetOrder: (siteId: string, consumableId: string, date: Date, quantity: number) => void;
+  onAddConsumable: (siteId: string, data: Omit<Consumable, 'id'>) => void;
+  onEditConsumable: (siteId: string, consumableId: string, data: Partial<Omit<Consumable, 'id'>>) => void;
+  onRemoveConsumable: (siteId: string, consumableId: string) => void;
 }
 
+export default function SuppliesTab({ sites, supplyOrders, firestore, onSetOrder, onAddConsumable, onEditConsumable, onRemoveConsumable }: SuppliesTabProps) {
+    const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
+    const [currentDate, setCurrentDate] = useState(new Date());
+
+    const consumablesCollection = useMemoFirebase(() => (firestore && selectedSiteId) ? collection(firestore, 'sites', selectedSiteId, 'consumables') : null, [firestore, selectedSiteId]);
+    const { data: consumables, isLoading: consumablesLoading } = useCollection<Consumable>(consumablesCollection);
     
+    const ordersForMonth = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        return supplyOrders.filter(order => order.siteId === selectedSiteId && order.year === year && order.month === month);
+    }, [supplyOrders, selectedSiteId, currentDate]);
+
+    const handleQuantityChange = (consumableId: string, quantityStr: string) => {
+        if (!selectedSiteId) return;
+        const quantity = parseInt(quantityStr, 10);
+        onSetOrder(selectedSiteId, consumableId, currentDate, isNaN(quantity) ? 0 : quantity);
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Monthly Supply Orders</CardTitle>
+                <CardDescription>Track monthly consumable orders for each site.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                    <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
+                        <SelectTrigger className="w-full sm:w-[300px]">
+                            <SelectValue placeholder="Select a site to view supplies" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sites.map(site => <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    
+                    <div className="flex items-center justify-center gap-2">
+                        <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="font-medium text-center w-32">{format(currentDate, 'MMMM yyyy')}</span>
+                        <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                {!selectedSiteId ? (
+                    <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                        <p className="text-muted-foreground">Please select a site to manage consumables.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="flex justify-end">
+                            <ConsumableDialog siteId={selectedSiteId} onAdd={onAddConsumable} onEdit={onEditConsumable}>
+                                <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Consumable</Button>
+                            </ConsumableDialog>
+                        </div>
+                        <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Consumable</TableHead>
+                                        <TableHead>Ordering Code</TableHead>
+                                        <TableHead className="w-[150px]">Quantity Ordered</TableHead>
+                                        <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {consumablesLoading && (
+                                        <>
+                                            <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                        </>
+                                    )}
+                                    {!consumablesLoading && consumables && consumables.length > 0 ? (
+                                        consumables.map(consumable => {
+                                            const order = ordersForMonth.find(o => o.consumableId === consumable.id);
+                                            return (
+                                                <TableRow key={consumable.id}>
+                                                    <TableCell className="font-medium">{consumable.name}</TableCell>
+                                                    <TableCell>{consumable.orderingCode}</TableCell>
+                                                    <TableCell>
+                                                        <Input 
+                                                            type="number" 
+                                                            value={order?.quantity || ''}
+                                                            onChange={e => handleQuantityChange(consumable.id, e.target.value)}
+                                                            placeholder="0"
+                                                            className="w-24"
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end items-center">
+                                                            <ConsumableDialog siteId={selectedSiteId} consumable={consumable} onAdd={onAddConsumable} onEdit={onEditConsumable}>
+                                                                <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
+                                                            </ConsumableDialog>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Delete {consumable.name}?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>This will permanently delete this consumable for this site. This action cannot be undone.</AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => onRemoveConsumable(selectedSiteId, consumable.id)}>Delete</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                    ) : (
+                                        !consumablesLoading && (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                                                    No consumables added for this site yet.
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
