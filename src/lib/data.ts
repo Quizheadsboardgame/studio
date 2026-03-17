@@ -28,7 +28,7 @@ export type Site = {
   status: SiteStatus;
   notes?: string;
   auditStatus?: AuditStatus;
-  auditBookedDate?: string; // YYYY-MM-DD
+  auditScore?: number;
   auditCompletedDate?: string; // YYYY-MM-DD
   auditNotes?: string;
 };

@@ -1,27 +1,59 @@
 'use client';
 
-import type { Site, AuditStatus } from '@/lib/data';
+import type { Site, AuditStatus, SiteStatus } from '@/lib/data';
 import { auditStatuses } from '@/lib/data';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from '@/components/ui/date-picker';
+import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { format, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface AuditsTabProps {
   sites: Site[];
-  onUpdateAudit: (siteId: string, auditData: Partial<Pick<Site, 'auditStatus' | 'auditBookedDate' | 'auditCompletedDate' | 'auditNotes'>>) => void;
+  onUpdateAudit: (siteId: string, auditData: Partial<Site>) => void;
 }
 
 export default function AuditsTab({ sites, onUpdateAudit }: AuditsTabProps) {
+
+  const handleScoreChange = (siteId: string, scoreString: string) => {
+    const score = scoreString === '' ? undefined : parseInt(scoreString, 10);
+
+    if (score !== undefined && (score < 0 || score > 100)) return;
+
+    const updateData: Partial<Site> = { auditScore: score };
+
+    if (score !== undefined) {
+      updateData.auditStatus = 'Completed';
+      updateData.auditCompletedDate = format(new Date(), 'yyyy-MM-dd');
+      
+      if (score <= 95) {
+        updateData.status = 'Site under action plan';
+      } else if (score >= 96 && score <= 98) {
+        updateData.status = 'Client concerns';
+      } else if (score >= 99 && score <= 100) {
+        updateData.status = 'Client happy';
+      }
+    }
+    
+    onUpdateAudit(siteId, updateData);
+  };
+  
+  const handleStatusChange = (siteId: string, newStatus: AuditStatus) => {
+    const updateData: Partial<Site> = { auditStatus: newStatus };
+    if (newStatus !== 'Completed') {
+      updateData.auditScore = undefined;
+      updateData.auditCompletedDate = undefined;
+    }
+    onUpdateAudit(siteId, updateData);
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Site Audits</CardTitle>
-        <CardDescription>Track booked and completed audits for each site.</CardDescription>
+        <CardDescription>Track and score audits for each site. Site status will be updated based on the score.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border rounded-lg overflow-hidden">
@@ -30,7 +62,7 @@ export default function AuditsTab({ sites, onUpdateAudit }: AuditsTabProps) {
               <TableRow>
                 <TableHead className="w-[25%]">Site</TableHead>
                 <TableHead className="w-[20%]">Audit Status</TableHead>
-                <TableHead className="w-[15%]">Booked Date</TableHead>
+                <TableHead className="w-[15%]">Audit Score (%)</TableHead>
                 <TableHead className="w-[15%]">Completed Date</TableHead>
                 <TableHead>Notes</TableHead>
               </TableRow>
@@ -42,7 +74,7 @@ export default function AuditsTab({ sites, onUpdateAudit }: AuditsTabProps) {
                   <TableCell className="align-top py-4">
                     <Select
                       value={site.auditStatus || 'Not Booked'}
-                      onValueChange={(newStatus: AuditStatus) => onUpdateAudit(site.id, { auditStatus: newStatus })}
+                      onValueChange={(newStatus: AuditStatus) => handleStatusChange(site.id, newStatus)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -57,19 +89,18 @@ export default function AuditsTab({ sites, onUpdateAudit }: AuditsTabProps) {
                     </Select>
                   </TableCell>
                   <TableCell className="align-top py-4">
-                    <DatePicker
-                      date={site.auditBookedDate ? parseISO(site.auditBookedDate) : undefined}
-                      onDateChange={(date) => onUpdateAudit(site.id, { auditBookedDate: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                      placeholder="Set date"
-                    />
+                     <Input
+                        type="number"
+                        placeholder="Score"
+                        value={site.auditScore ?? ''}
+                        onChange={(e) => handleScoreChange(site.id, e.target.value)}
+                        min="0"
+                        max="100"
+                        className="w-24"
+                      />
                   </TableCell>
-                   <TableCell className="align-top py-4">
-                    <DatePicker
-                      date={site.auditCompletedDate ? parseISO(site.auditCompletedDate) : undefined}
-                      onDateChange={(date) => onUpdateAudit(site.id, { auditCompletedDate: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                      placeholder="Set date"
-                      disabled={site.auditStatus !== 'Completed'}
-                    />
+                   <TableCell className="align-top py-4 text-sm text-muted-foreground">
+                    {site.auditCompletedDate ? format(parseISO(site.auditCompletedDate), 'PPP') : 'N/A'}
                   </TableCell>
                   <TableCell className="py-2 align-top">
                      <Accordion type="single" collapsible className="w-full">

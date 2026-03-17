@@ -27,10 +27,9 @@
           ],
           "description": "The current status of the audit for the site."
         },
-        "auditBookedDate": {
-          "type": "string",
-          "format": "date",
-          "description": "The date the audit is booked for."
+        "auditScore": {
+          "type": "number",
+          "description": "The score of the audit, from 0 to 100."
         },
         "auditCompletedDate": {
           "type": "string",
