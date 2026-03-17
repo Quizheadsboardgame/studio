@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { Cleaner, Leave, ScheduleEntry, CoverAssignment } from '@/lib/data';
-import { type DateRange } from 'react-day-picker';
+import { type DateRange, type DayContentProps } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -93,13 +93,40 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
     return leave.filter(l => isSameDay(parseISO(l.date), selectedDay));
   }, [leave, selectedDay]);
 
-  const holidays = useMemo(() => leave.filter(l => l.type === 'holiday').map(l => parseISO(l.date)), [leave]);
-  const sickDays = useMemo(() => leave.filter(l => l.type === 'sick').map(l => parseISO(l.date)), [leave]);
-
-  const modifiers = {
-      holiday: holidays,
-      sick: sickDays,
+  const leaveByDate = useMemo(() => {
+    const map = new Map<string, Leave[]>();
+    if (!leave) return map;
+    leave.forEach(l => {
+      const dateKey = format(parseISO(l.date), 'yyyy-MM-dd');
+      const existing = map.get(dateKey) || [];
+      map.set(dateKey, [...existing, l]);
+    });
+    return map;
+  }, [leave]);
+  
+  const CustomDayContent = (props: DayContentProps) => {
+    const dayLeave = leaveByDate.get(format(props.date, 'yyyy-MM-dd'));
+    
+    // Check if the day is outside the current month
+    const isOutside = props.date.getMonth() !== props.displayMonth.getMonth();
+    
+    return (
+      <div className="relative w-full h-full flex items-center justify-center">
+        {format(props.date, 'd')}
+        {dayLeave && dayLeave.length > 0 && !isOutside && (
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+            {dayLeave.slice(0, 4).map((l) => (
+              <div
+                key={l.id}
+                className={`h-1.5 w-1.5 rounded-full ${l.type === 'holiday' ? 'bg-chart-4' : 'bg-destructive'}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
+
   
   const getRemainingHolidays = (cleaner: Cleaner) => {
     if (!cleaner) return 'N/A';
@@ -206,10 +233,8 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                     onDayClick={handleDayClick}
                     month={month}
                     onMonthChange={setMonth}
-                    modifiers={modifiers}
-                    modifiersClassNames={{
-                      holiday: 'font-semibold',
-                      sick: 'font-semibold'
+                    components={{
+                        DayContent: CustomDayContent
                     }}
                     className="rounded-md border"
                 />
