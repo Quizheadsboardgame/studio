@@ -90,13 +90,12 @@
           "format": "date",
           "description": "The date of the leave (YYYY-MM-DD)."
         },
-        "coverCleanerName": {
-          "type": "string",
-          "description": "The name of the cleaner providing cover."
-        },
-        "isCovered": {
-          "type": "boolean",
-          "description": "Indicates whether cover has been arranged for this absence."
+        "coverAssignments": {
+          "type": "array",
+          "description": "A list of cover assignments for the leave day.",
+          "items": {
+            "$ref": "#/backend/entities/CoverAssignment"
+          }
         }
       },
       "required": [
@@ -104,6 +103,26 @@
         "cleanerName",
         "type",
         "date"
+      ]
+    },
+    "CoverAssignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CoverAssignment",
+      "type": "object",
+      "description": "Represents the assignment of a cover cleaner to a specific shift.",
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The site of the shift being covered."
+        },
+        "coverCleanerName": {
+          "type": "string",
+          "description": "The name of the cleaner providing cover."
+        }
+      },
+      "required": [
+        "site",
+        "coverCleanerName"
       ]
     },
     "ActionPlanTask": {

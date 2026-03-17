@@ -153,9 +153,9 @@ export default function DashboardPage() {
     setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
   
-  const handleAddLeave = (newLeaveData: Omit<Leave, 'id'>) => {
+  const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
     if (!leaveCollection || !firestore) return;
-    addDocumentNonBlocking(leaveCollection, { ...newLeaveData, isCovered: false, coverCleanerName: '' });
+    addDocumentNonBlocking(leaveCollection, { ...newLeaveData, coverAssignments: [] });
 
     if (!cleaners) {
       console.warn("Cannot update leave counts: cleaners data not available yet.");

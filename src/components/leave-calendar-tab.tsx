@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Cleaner, Leave, ScheduleEntry } from '@/lib/data';
+import type { Cleaner, Leave, ScheduleEntry, CoverAssignment } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -17,7 +17,7 @@ interface LeaveCalendarTabProps {
   cleaners: Cleaner[];
   leave: Leave[];
   schedule: ScheduleEntry[];
-  onAddLeave: (leaveData: Omit<Leave, 'id'>) => void;
+  onAddLeave: (leaveData: Omit<Leave, 'id' | 'coverAssignments'>) => void;
   onDeleteLeave: (leave: Leave) => void;
   onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
 }
@@ -136,22 +136,35 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
         return a.cleanerName.localeCompare(b.cleanerName);
     });
   }, [leave, schedule]);
+  
+  const scheduledCleaners = useMemo(() => new Set(schedule.map(s => s.cleaner)), [schedule]);
 
-  const handleAssignCover = (leaveId: string, coverCleanerName: string) => {
+  const handleAssignCover = (leaveId: string, site: string, coverCleanerName: string) => {
+    const leaveDoc = leave.find(l => l.id === leaveId);
+    if (!leaveDoc) return;
+
     const isActuallyCovered = coverCleanerName && coverCleanerName !== '__NONE__';
-    const finalCoverName = isActuallyCovered ? coverCleanerName : '';
+    
+    let existingAssignments = leaveDoc.coverAssignments || [];
+    // Remove any existing assignment for this site
+    existingAssignments = existingAssignments.filter(a => a.site !== site);
 
-    onUpdateLeave(leaveId, { coverCleanerName: finalCoverName, isCovered: isActuallyCovered });
+    // If a new cover cleaner is assigned, add the new assignment
+    if (isActuallyCovered) {
+        existingAssignments.push({ site: site, coverCleanerName: coverCleanerName });
+    }
+
+    onUpdateLeave(leaveId, { coverAssignments: existingAssignments });
     
     if (isActuallyCovered) {
         toast({
           title: 'Cover Assigned',
-          description: `${finalCoverName} is now covering this shift.`,
+          description: `${coverCleanerName} is now covering at ${site}.`,
         });
     } else {
         toast({
           title: 'Cover Removed',
-          description: `The shift is now marked as uncovered.`,
+          description: `The shift at ${site} is now marked as uncovered.`,
         });
     }
   };
@@ -214,40 +227,59 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
         <CardContent>
           {upcomingAbsences.length > 0 ? (
             <div className="space-y-4">
-              {upcomingAbsences.map(l => (
-                <div key={l.uniqueId} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4 p-3 border rounded-lg">
-                  <div className="font-medium md:col-span-1">
-                    <p>{l.cleanerName}</p>
-                    <p className="text-sm text-muted-foreground">{format(parseISO(l.date), 'EEE, PPP')}</p>
+              {upcomingAbsences.map(l => {
+                 if (l.site === 'No scheduled shift') return null;
+
+                 const currentCover = l.coverAssignments?.find(a => a.site === l.site)?.coverCleanerName || '__NONE__';
+                 
+                 const cleanersAtThisSite = new Set(
+                    schedule
+                        .filter(s => s.site === l.site)
+                        .map(s => s.cleaner)
+                 );
+
+                return (
+                  <div key={l.uniqueId} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4 p-3 border rounded-lg">
+                    <div className="font-medium md:col-span-1">
+                      <p>{l.cleanerName}</p>
+                      <p className="text-sm text-muted-foreground">{format(parseISO(l.date), 'EEE, PPP')}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                       <p className="font-medium">{l.site}</p>
+                       <p className="text-sm text-muted-foreground">{l.time}</p>
+                    </div>
+                    <div>
+                      <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
+                    </div>
+                    <div className="md:col-span-1">
+                      <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
+                      <Select
+                        value={currentCover}
+                        onValueChange={(cleanerName) => handleAssignCover(l.id, l.site, cleanerName)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a cleaner to cover..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__NONE__">
+                            <span className="text-muted-foreground">None (Uncovered)</span>
+                          </SelectItem>
+                          {cleaners
+                            .filter(c => c.name !== l.cleanerName)
+                            .map(c => {
+                                const isSuitable = cleanersAtThisSite.has(c.name) || !scheduledCleaners.has(c.name);
+                                return (
+                                    <SelectItem key={c.id} value={c.name}>
+                                        {c.name} {isSuitable && '⭐'}
+                                    </SelectItem>
+                                )
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="md:col-span-2">
-                     <p className="font-medium">{l.site}</p>
-                     <p className="text-sm text-muted-foreground">{l.time}</p>
-                  </div>
-                  <div>
-                    <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
-                  </div>
-                  <div className="md:col-span-1">
-                    <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
-                    <Select
-                      value={l.coverCleanerName || '__NONE__'}
-                      onValueChange={(cleanerName) => handleAssignCover(l.id, cleanerName)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a cleaner to cover..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__NONE__">
-                          <span className="text-muted-foreground">None (Uncovered)</span>
-                        </SelectItem>
-                        {cleaners
-                          .filter(c => c.name !== l.cleanerName)
-                          .map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No upcoming absences.</p>
@@ -257,7 +289,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
 
       {selectedDay && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent>
+            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>Absences for {format(selectedDay, 'PPP')}</DialogTitle>
                 </DialogHeader>

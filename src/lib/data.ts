@@ -232,12 +232,16 @@ export type ActionPlan = {
   notes?: string;
 };
 
+export type CoverAssignment = {
+  site: string;
+  coverCleanerName: string;
+};
+
 export type Leave = {
     id: string;
     cleanerId: string;
     cleanerName: string;
     type: 'holiday' | 'sick';
     date: string; // YYYY-MM-DD
-    coverCleanerName?: string;
-    isCovered?: boolean;
+    coverAssignments: CoverAssignment[];
 }
