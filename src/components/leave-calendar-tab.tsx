@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { Cleaner, Leave, ScheduleEntry, CoverAssignment } from '@/lib/data';
+import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,6 +13,7 @@ import { Trash2 } from 'lucide-react';
 import { format, parseISO, isSameDay, isFuture, startOfToday, isToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 interface LeaveCalendarTabProps {
   cleaners: Cleaner[];
@@ -78,6 +80,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   const [month, setMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { toast } = useToast();
   
   const handleDayClick = (day: Date) => {
@@ -104,11 +107,29 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   }
 
   const upcomingAbsences = useMemo(() => {
-    const today = startOfToday();
-    const upcoming = leave
-      .filter(l => isFuture(parseISO(l.date)) || isToday(parseISO(l.date)));
+    const absences = leave
+      .filter(l => {
+        const leaveDate = parseISO(l.date);
+        
+        if (!dateRange?.from) {
+          return isFuture(leaveDate) || isToday(leaveDate);
+        }
 
-    const detailedAbsences = upcoming.flatMap(l => {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0,0,0,0);
+
+        let toDate: Date;
+        if (dateRange.to) {
+            toDate = new Date(dateRange.to);
+        } else {
+            toDate = new Date(dateRange.from);
+        }
+        toDate.setHours(23, 59, 59, 999);
+        
+        return leaveDate >= fromDate && leaveDate <= toDate;
+      });
+
+    const detailedAbsences = absences.flatMap(l => {
       const cleanerSchedule = schedule.filter(s => s.cleaner === l.cleanerName);
       
       if (cleanerSchedule.length > 0) {
@@ -135,7 +156,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
         if (dateA !== dateB) return dateA - dateB;
         return a.cleanerName.localeCompare(b.cleanerName);
     });
-  }, [leave, schedule]);
+  }, [leave, schedule, dateRange]);
   
   const scheduledCleaners = useMemo(() => new Set(schedule.map(s => s.cleaner)), [schedule]);
 
@@ -222,7 +243,10 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Upcoming Absences & Cover</CardTitle>
-          <CardDescription>Assign cover for upcoming holidays and sickness.</CardDescription>
+          <CardDescription>Assign cover for upcoming holidays and sickness. Use the date picker to search for specific dates.</CardDescription>
+          <div className="pt-4">
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          </div>
         </CardHeader>
         <CardContent>
           {upcomingAbsences.length > 0 ? (
@@ -282,7 +306,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-4">No upcoming absences.</p>
+            <p className="text-muted-foreground text-center py-4">No upcoming absences found for the selected date range.</p>
           )}
         </CardContent>
       </Card>
