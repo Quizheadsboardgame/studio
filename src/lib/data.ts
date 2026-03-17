@@ -31,6 +31,11 @@ export type Site = {
   auditScore?: number;
   auditCompletedDate?: string; // YYYY-MM-DD
   auditNotes?: string;
+  auditHistory?: {
+    date: string; // YYYY-MM-DD
+    score: number;
+    notes?: string;
+  }[];
 };
 
 
@@ -253,3 +258,5 @@ export type Leave = {
     date: string; // YYYY-MM-DD
     coverAssignments: CoverAssignment[];
 }
+
+    

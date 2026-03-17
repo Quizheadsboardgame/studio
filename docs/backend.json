@@ -29,16 +29,42 @@
         },
         "auditScore": {
           "type": "number",
-          "description": "The score of the audit, from 0 to 100."
+          "description": "The score of the most recent audit, from 0 to 100."
         },
         "auditCompletedDate": {
           "type": "string",
           "format": "date",
-          "description": "The date the audit was completed."
+          "description": "The date the most recent audit was completed."
         },
         "auditNotes": {
           "type": "string",
-          "description": "Notes related to the site audit."
+          "description": "Notes related to the most recent site audit."
+        },
+        "auditHistory": {
+          "type": "array",
+          "description": "A historical record of past audits for the site.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "The completion date of the historical audit."
+              },
+              "score": {
+                "type": "number",
+                "description": "The score of the historical audit."
+              },
+              "notes": {
+                "type": "string",
+                "description": "Notes from the historical audit."
+              }
+            },
+            "required": [
+              "date",
+              "score"
+            ]
+          }
         }
       },
       "required": [
@@ -330,3 +356,5 @@
     ]
   }
 }
+
+    
