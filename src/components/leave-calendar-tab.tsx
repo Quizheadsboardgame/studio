@@ -107,13 +107,10 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   const CustomDayContent = (props: DayContentProps) => {
     const dayLeave = leaveByDate.get(format(props.date, 'yyyy-MM-dd'));
     
-    // Check if the day is outside the current month
-    const isOutside = props.date.getMonth() !== props.displayMonth.getMonth();
-    
     return (
       <div className="relative w-full h-full flex items-center justify-center">
         {format(props.date, 'd')}
-        {dayLeave && dayLeave.length > 0 && !isOutside && (
+        {dayLeave && dayLeave.length > 0 && (
           <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
             {dayLeave.slice(0, 4).map((l) => (
               <div
@@ -237,6 +234,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                         DayContent: CustomDayContent
                     }}
                     className="rounded-md border"
+                    showOutsideDays={false}
                 />
             </div>
             <div className="w-full md:w-1/3">
