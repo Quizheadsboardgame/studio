@@ -19,8 +19,8 @@ export const siteStatuses: SiteStatus[] = [
   'Site requires action plan',
 ];
 
-export type AuditStatus = 'Not Booked' | 'Booked' | 'Completed';
-export const auditStatuses: AuditStatus[] = ['Not Booked', 'Booked', 'Completed'];
+export type AuditStatus = 'Not Booked' | 'Emailed Client' | 'Booked' | 'Completed';
+export const auditStatuses: AuditStatus[] = ['Not Booked', 'Emailed Client', 'Booked', 'Completed'];
 
 export type Site = {
   id: string;

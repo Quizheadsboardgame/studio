@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Progress } from '@/components/ui/progress';
 
 
 interface AuditsTabProps {
@@ -29,6 +30,13 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     const month = currentDate.getMonth() + 1;
     return monthlyAudits.filter(audit => audit.year === year && audit.month === month);
   }, [monthlyAudits, currentDate]);
+
+  const completedAuditsCount = useMemo(() => {
+    return auditsForMonth.filter(a => a.status === 'Completed').length;
+  }, [auditsForMonth]);
+
+  const totalSites = sites.length;
+  const completionPercentage = totalSites > 0 ? (completedAuditsCount / totalSites) * 100 : 0;
 
 
   const handleScoreChange = (siteId: string, scoreString: string) => {
@@ -95,6 +103,13 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
+        </div>
+        <div className="pt-4 space-y-2">
+            <div className="flex justify-between text-sm font-medium">
+                <span className="text-muted-foreground">Monthly Completion</span>
+                <span>{Math.round(completionPercentage)}% ({completedAuditsCount} / {totalSites})</span>
+            </div>
+            <Progress value={completionPercentage} className="h-2" />
         </div>
       </CardHeader>
       <CardContent>
