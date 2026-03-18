@@ -269,3 +269,12 @@ export type MonthlyAudit = {
   bookedDate?: string | null;
   bookedTime?: string;
 };
+
+export type Appointment = {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
+};

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck, FileClock, Package } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -15,6 +15,7 @@ import LeaveCalendarTab from '@/components/leave-calendar-tab';
 import AuditsTab from '@/components/audits-tab';
 import AuditHistoryTab from '@/components/audit-history-tab';
 import SuppliesTab from '@/components/supplies-tab';
+import DiaryTab from '@/components/diary-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -52,6 +53,9 @@ export default function DashboardPage() {
   
   const monthlyAuditsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'monthlyAudits') : null, [firestore, user]);
   const { data: monthlyAudits, isLoading: monthlyAuditsLoading } = useCollection<MonthlyAudit>(monthlyAuditsCollection);
+  
+  const appointmentsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'appointments') : null, [firestore, user]);
+  const { data: appointments, isLoading: appointmentsLoading } = useCollection<Appointment>(appointmentsCollection);
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
@@ -235,9 +239,24 @@ export default function DashboardPage() {
     const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
     deleteDocumentNonBlocking(consumableDocRef);
   };
+  
+  const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
+    if (!appointmentsCollection) return;
+    addDocumentNonBlocking(appointmentsCollection, newAppointment);
+  };
+
+  const handleUpdateAppointment = (appointmentId: string, updatedData: Partial<Omit<Appointment, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'appointments', appointmentId), updatedData);
+  };
+
+  const handleRemoveAppointment = (appointmentId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'appointments', appointmentId));
+  };
 
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
@@ -247,7 +266,7 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-black px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-4">
               <div className="bg-excellerate-lime p-3 rounded-lg">
-                  <ClipboardCheck className="h-6 w-6 text-black" />
+                  <BookOpenCheck className="h-6 w-6 text-black" />
               </div>
               <div>
                 <h1 className="bg-black px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-white font-headline">
@@ -269,13 +288,14 @@ export default function DashboardPage() {
             </div>
         ) : (
           <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 h-auto flex-wrap bg-transparent p-0 gap-2">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-6 h-auto flex-wrap bg-transparent p-0 gap-2">
               <TabsTrigger value="action-plan" className="text-white border border-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
               <TabsTrigger value="audits" className="text-white border border-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
               <TabsTrigger value="audit-history" className="text-white border border-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
               <TabsTrigger value="cleaners" className="text-white border border-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
               <TabsTrigger value="company-schedule" className="text-white border border-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
               <TabsTrigger value="summary" className="text-white border border-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
+              <TabsTrigger value="diary" className="text-white border border-excellerate-teal data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><BookOpenCheck className="mr-2 h-4 w-4" />Diary</TabsTrigger>
               <TabsTrigger value="leave-calendar" className="text-white border border-excellerate-teal data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
               <TabsTrigger value="risk" className="text-white border border-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
               <TabsTrigger value="sites" className="text-white border border-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
@@ -379,6 +399,17 @@ export default function DashboardPage() {
 
             <TabsContent value="summary">
               <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />
+            </TabsContent>
+            
+            <TabsContent value="diary">
+              <DiaryTab
+                sites={sortedSites}
+                appointments={appointments || []}
+                monthlyAudits={monthlyAudits || []}
+                onAddAppointment={handleAddAppointment}
+                onUpdateAppointment={handleUpdateAppointment}
+                onRemoveAppointment={handleRemoveAppointment}
+              />
             </TabsContent>
 
             <TabsContent value="action-plan">
