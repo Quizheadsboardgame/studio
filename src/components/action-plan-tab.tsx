@@ -12,8 +12,6 @@ import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, FileDown, RefreshCw } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface ActionPlanTabProps {
   sites: Site[];
@@ -114,6 +112,9 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
     setIsGeneratingPdf(true);
 
     try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+      
       const canvas = await html2canvas(printableRef.current, {
         scale: 2,
       });
