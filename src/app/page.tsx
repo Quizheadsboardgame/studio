@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo } from 'lucide-react';
@@ -19,7 +19,7 @@ import DiaryTab from '@/components/diary-tab';
 import TasksTab from '@/components/tasks-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
@@ -54,6 +54,96 @@ export default function DashboardPage() {
       initiateAnonymousSignIn(auth);
     }
   }, [isUserLoading, user, auth]);
+
+  // Seeding effect
+  useEffect(() => {
+    if (!firestore || !user) return;
+
+    const seedDatabase = async () => {
+      if (sessionStorage.getItem('db_seeded')) {
+        return;
+      }
+
+      const sitesQuery = query(collection(firestore, 'sites'), limit(1));
+      const sitesSnapshot = await getDocs(sitesQuery);
+
+      if (sitesSnapshot.empty) {
+        console.log('Database appears empty. Seeding data...');
+        toast({ title: "Setting up your app", description: "Please wait while we populate some initial data." });
+
+        const batch = writeBatch(firestore);
+
+        const sitesCollectionRef = collection(firestore, 'sites');
+        initialSites.forEach(siteData => {
+          const siteRef = doc(sitesCollectionRef);
+          batch.set(siteRef, siteData);
+        });
+        
+        const cleanersCollectionRef = collection(firestore, 'cleaners');
+        const cleanerNameToIdMap = new Map<string, string>();
+        initialCleaners.forEach(cleanerData => {
+          const cleanerRef = doc(cleanersCollectionRef);
+          cleanerNameToIdMap.set(cleanerData.name, cleanerRef.id);
+          batch.set(cleanerRef, cleanerData);
+        });
+        
+        const scheduleCollectionRef = collection(firestore, 'schedule');
+        initialSchedule.forEach(scheduleData => {
+          const scheduleRef = doc(scheduleCollectionRef);
+          batch.set(scheduleRef, scheduleData);
+        });
+
+        const leaveCollectionRef = collection(firestore, 'leave');
+        const cleanerUpdates: { [key: string]: { holidayTaken: number; sickDaysTaken: number } } = {};
+        initialLeave.forEach(leaveData => {
+          const cleanerId = cleanerNameToIdMap.get(leaveData.cleanerName);
+          if (cleanerId) {
+            const leaveRef = doc(leaveCollectionRef);
+            batch.set(leaveRef, {
+              ...leaveData,
+              cleanerId,
+              coverAssignments: []
+            });
+
+            if (!cleanerUpdates[cleanerId]) {
+              cleanerUpdates[cleanerId] = { holidayTaken: 0, sickDaysTaken: 0 };
+            }
+            if (leaveData.type === 'holiday') {
+              cleanerUpdates[cleanerId].holidayTaken++;
+            } else if (leaveData.type === 'sick') {
+              cleanerUpdates[cleanerId].sickDaysTaken++;
+            }
+          }
+        });
+        
+        for (const cleanerId in cleanerUpdates) {
+          const cleanerRef = doc(firestore, 'cleaners', cleanerId);
+          const originalCleanerData = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
+          if (originalCleanerData) {
+            batch.update(cleanerRef, {
+              holidayTaken: (originalCleanerData.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
+              sickDaysTaken: (originalCleanerData.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
+            });
+          }
+        }
+        
+        try {
+          await batch.commit();
+          toast({ title: "Setup Complete", description: "Your application data has been loaded." });
+          console.log('Database seeding complete.');
+          sessionStorage.setItem('db_seeded', 'true');
+        } catch (error) {
+          console.error('Error seeding database:', error);
+          toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
+        }
+      } else {
+        sessionStorage.setItem('db_seeded', 'true');
+      }
+    };
+
+    seedDatabase();
+
+  }, [firestore, user, toast]);
 
   const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
   const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);

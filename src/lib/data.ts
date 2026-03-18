@@ -244,6 +244,43 @@ export type Leave = {
     coverAssignments: CoverAssignment[];
 }
 
+export const initialLeave: Omit<Leave, 'id' | 'coverAssignments' | 'cleanerId'>[] = [
+  // July 2024
+  { cleanerName: 'Courtney Kendell', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Courtney Kendell', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Courtney Kendell', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'Ben Heron', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Ben Heron', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Ben Heron', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'David Gibson', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'David Gibson', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'David Gibson', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'Joyce Howard', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Joyce Howard', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Joyce Howard', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'Thomas Boltasiu', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Thomas Boltasiu', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Thomas Boltasiu', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'Veronica Smintina', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Veronica Smintina', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Veronica Smintina', type: 'holiday', date: '2024-07-31' },
+  { cleanerName: 'Shakila Soloman', type: 'holiday', date: '2024-07-29' },
+  { cleanerName: 'Shakila Soloman', type: 'holiday', date: '2024-07-30' },
+  { cleanerName: 'Shakila Soloman', type: 'holiday', date: '2024-07-31' },
+
+  // August 2024
+  { cleanerName: 'Bozena Pluskota', type: 'holiday', date: '2024-08-01' },
+  { cleanerName: 'Bozena Pluskota', type: 'holiday', date: '2024-08-02' },
+  { cleanerName: 'Grzegorz Pluskota', type: 'holiday', date: '2024-08-01' },
+  { cleanerName: 'Grzegorz Pluskota', type: 'holiday', date: '2024-08-02' },
+  { cleanerName: 'Piotr Skrzypczyk', type: 'holiday', date: '2024-08-05' },
+  { cleanerName: 'Piotr Skrzypczyk', type: 'holiday', date: '2024-08-06' },
+  { cleanerName: 'Piotr Skrzypczyk', type: 'holiday', date: '2024-08-07' },
+  { cleanerName: 'Piotr Skrzypczyk', type: 'holiday', date: '2024-08-08' },
+  { cleanerName: 'Piotr Skrzypczyk', type: 'holiday', date: '2024-08-09' },
+];
+
+
 export type Consumable = {
   id: string;
   name: string;
