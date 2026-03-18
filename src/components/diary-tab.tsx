@@ -372,7 +372,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
     };
 
 
-    const renderEvents = (eventsToRender: DiaryEvent[]): ReactNode => {
+    const renderEvents = (eventsToRender: DiaryEvent[], isStaffCoverView = false): ReactNode => {
         const groupedEvents = eventsToRender.reduce((acc, event) => {
             const day = format(event.date, 'yyyy-MM-dd');
             if (!acc[day]) acc[day] = [];
@@ -410,6 +410,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                     <div className="flex-grow">
                                         <p className="font-semibold">{event.title}</p>
                                         <p className="text-sm text-muted-foreground">{event.details}</p>
+                                        {isStaffCoverView && (
+                                            <p className="text-sm font-medium mt-1">Cover provided by: <span className="font-bold">{event.assignee}</span></p>
+                                        )}
                                         {event.notes && <p className="text-sm text-muted-foreground mt-1 italic">"{event.notes}"</p>}
                                     </div>
                                     {event.type === 'appointment' && (
@@ -502,7 +505,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                 {renderEvents(carlaEvents)}
                             </TabsContent>
                              <TabsContent value="Staff Cover" className="mt-0">
-                                {renderEvents(staffCoverEvents)}
+                                {renderEvents(staffCoverEvents, true)}
                             </TabsContent>
                         </div>
                     </Tabs>
