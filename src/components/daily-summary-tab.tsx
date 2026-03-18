@@ -1,10 +1,10 @@
 'use client';
 
-import { useReducer, useMemo } from 'react';
+import { useReducer, useMemo, useRef, useState } from 'react';
 import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan, ScheduleEntry, Leave } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RefreshCw, FileDown } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isToday } from 'date-fns';
@@ -39,8 +39,159 @@ const getCleanerColor = (rating: CleanerPerformance) => {
 }
 
 
+function PrintableSummary({ 
+  groupedSites, 
+  groupedCleaners, 
+  todaysTasks, 
+  todaysShiftsToCover,
+  schedule,
+  forwardedRef 
+}: { 
+  groupedSites: GroupedItems<Site>,
+  groupedCleaners: GroupedItems<Cleaner>,
+  todaysTasks: any[],
+  todaysShiftsToCover: any[],
+  schedule: ScheduleEntry[],
+  forwardedRef: React.Ref<HTMLDivElement> 
+}) {
+  return (
+    <div ref={forwardedRef} className="p-8 bg-white text-black" style={{ width: '794px', minHeight: '1123px' }}>
+        <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">Daily Operations Report</h1>
+        <p className="text-lg mb-6">{format(new Date(), 'PPP')}</p>
+
+        <div className="space-y-8">
+            {/* COVER SUMMARY */}
+            {todaysShiftsToCover.length > 0 && (
+                <div>
+                    <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Absences & Cover Today</h3>
+                    <div className="space-y-4">
+                        {todaysShiftsToCover.map(shift => (
+                        <div key={shift.id} className="pl-4">
+                            <p className="font-semibold">{shift.cleanerName} is off ({shift.type}) - Shift: {shift.site}</p>
+                            {shift.isCovered ? (
+                                <p className="text-gray-700">Covered by: {shift.coverCleanerName}</p>
+                            ) : (
+                                <p className="text-red-700 font-bold">NOT COVERED</p>
+                            )}
+                        </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            
+            {/* ACTION PLAN TASKS FOR TODAY */}
+            {todaysTasks.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Action Plan Tasks Due Today</h3>
+                <div className="space-y-2">
+                  {todaysTasks.map(task => (
+                    <div key={task.id} className="pl-4">
+                      <p className="font-semibold">{task.description}</p>
+                      <p className="text-gray-700">For: {task.targetName} ({task.targetType})</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* SITE SUMMARY */}
+            <div>
+                <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Site Status Summary</h3>
+                <div className="space-y-4">
+                     {groupedSites.red.map(site => (
+                        <div key={site.id} className="pl-4">
+                            <p className="font-semibold">{site.name} - <span className="font-normal text-red-700">{site.status}</span></p>
+                            {site.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{site.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedSites.amber.map(site => (
+                         <div key={site.id} className="pl-4">
+                            <p className="font-semibold">{site.name} - <span className="font-normal text-yellow-700">{site.status}</span></p>
+                            {site.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{site.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedSites.green.map(site => (
+                         <div key={site.id} className="pl-4">
+                            <p className="font-semibold">{site.name} - <span className="font-normal text-green-700">{site.status}</span></p>
+                            {site.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{site.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedSites.other.map(site => (
+                        <div key={site.id} className="pl-4">
+                           <p className="font-semibold">{site.name} - <span className="font-normal">{site.status}</span></p>
+                           {site.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{site.notes}"</p>}
+                       </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* CLEANER SUMMARY */}
+            <div>
+                <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Cleaner Performance Summary</h3>
+                 <div className="space-y-4">
+                    {groupedCleaners.red.map(cleaner => (
+                         <div key={cleaner.id} className="pl-4">
+                            <p className="font-semibold">{cleaner.name} - <span className="font-normal text-red-700">{cleaner.rating}</span></p>
+                            {cleaner.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{cleaner.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedCleaners.amber.map(cleaner => (
+                         <div key={cleaner.id} className="pl-4">
+                            <p className="font-semibold">{cleaner.name} - <span className="font-normal text-yellow-700">{cleaner.rating}</span></p>
+                            {cleaner.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{cleaner.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedCleaners.green.map(cleaner => (
+                         <div key={cleaner.id} className="pl-4">
+                            <p className="font-semibold">{cleaner.name} - <span className="font-normal text-green-700">{cleaner.rating}</span></p>
+                            {cleaner.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{cleaner.notes}"</p>}
+                        </div>
+                    ))}
+                     {groupedCleaners.other.map(cleaner => (
+                         <div key={cleaner.id} className="pl-4">
+                           <p className="font-semibold">{cleaner.name} - <span className="font-normal">{cleaner.rating}</span></p>
+                           {cleaner.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{cleaner.notes}"</p>}
+                       </div>
+                    ))}
+                </div>
+            </div>
+            
+            {/* SCHEDULE SUMMARY */}
+            <div>
+                 <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Today's Schedule</h3>
+                 <table className="w-full text-left">
+                     <thead>
+                         <tr className="border-b-2 border-black">
+                             <th className="py-2 w-1/3">Site</th>
+                             <th className="py-2 w-1/3">Cleaner</th>
+                             <th className="py-2 w-1/3">Time</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         {schedule.map((entry) => (
+                             <tr key={entry.id} className="border-b border-gray-300">
+                                 <td className="py-2">{entry.site}</td>
+                                 <td className="py-2">{entry.cleaner}</td>
+                                 <td className="py-2">{entry.start} - {entry.finish}</td>
+                             </tr>
+                         ))}
+                     </tbody>
+                 </table>
+            </div>
+        </div>
+
+        <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', textAlign: 'center', fontSize: '10px', color: '#888' }}>
+          Report Generated by Excellerate Services on {format(new Date(), 'PPP')}
+        </div>
+    </div>
+  );
+}
+
+
 export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule, leave }: DailySummaryTabProps) {
   const [key, forceUpdate] = useReducer((x) => x + 1, 0);
+  const printableRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const groupedSites = sites.reduce((acc, site) => {
     if (site.status === 'N/A' && (!site.notes || site.notes.trim() === '')) return acc;
@@ -58,7 +209,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
   
   const todaysTasks = actionPlans
     .flatMap(plan => plan.tasks.map(task => ({ ...task, targetName: plan.targetName, targetType: plan.targetType })))
-    .filter(task => isToday(parseISO(task.dueDate)) && !task.completed);
+    .filter(task => task.dueDate && isToday(parseISO(task.dueDate)) && !task.completed);
 
   const todaysAbsences = useMemo(() => {
     return leave.filter(l => isToday(parseISO(l.date)));
@@ -102,21 +253,80 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
           'bg-muted': color ==='other',
       })} />
   }
+  
+  const handleGeneratePdf = async () => {
+    if (!printableRef.current) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+      
+      const canvas = await html2canvas(printableRef.current, {
+        scale: 2,
+      });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      
+      let imgWidthInPdf = pdfWidth - 20;
+      let imgHeightInPdf = imgWidthInPdf / ratio;
+      
+      if (imgHeightInPdf > pdfHeight - 20) {
+        imgHeightInPdf = pdfHeight - 20;
+        imgWidthInPdf = imgHeightInPdf * ratio;
+      }
+
+      const x = (pdfWidth - imgWidthInPdf) / 2;
+      const y = 10;
+
+      pdf.addImage(imgData, 'PNG', x, y, imgWidthInPdf, imgHeightInPdf);
+      pdf.save(`Daily_Summary_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
 
   return (
     <div className="space-y-4" key={key}>
+       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <PrintableSummary
+              forwardedRef={printableRef}
+              groupedSites={groupedSites}
+              groupedCleaners={groupedCleaners}
+              todaysTasks={todaysTasks}
+              todaysShiftsToCover={todaysShiftsToCover}
+              schedule={schedule}
+          />
+      </div>
        <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>Daily Operations Report</CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <CardDescription>
                         A summary of all site statuses, cleaner performance, and notes.
-                    </p>
+                    </CardDescription>
                 </div>
-                <Button onClick={forceUpdate} variant="outline" size="sm">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refresh Summary
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={forceUpdate} variant="outline" size="sm">
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Refresh
+                    </Button>
+                    <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} size="sm">
+                        {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                        {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 {hasContent ? (
