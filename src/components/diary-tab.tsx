@@ -9,7 +9,6 @@ import { PlusCircle, Pencil, Trash2, Calendar, Briefcase, FileDown, RefreshCw, U
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -80,13 +79,13 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
     const { toast } = useToast();
     
     const [title, setTitle] = useState(appointment?.title || '');
-    const [date, setDate] = useState<Date | undefined>(appointment ? parseISO(appointment.date) : undefined);
+    const [date, setDate] = useState<string>('');
     const [assignee, setAssignee] = useState(appointment?.assignee || defaultAssignee || 'Owen Newton');
     const [startTime, setStartTime] = useState(appointment?.startTime || '');
     const [endTime, setEndTime] = useState(appointment?.endTime || '');
     const [notes, setNotes] = useState(appointment?.notes || '');
     const [recurrence, setRecurrence] = useState<RecurrenceType>(appointment?.recurrence || 'none');
-    const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(appointment?.recurrenceEndDate ? parseISO(appointment.recurrenceEndDate) : undefined);
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
 
     const handleSave = () => {
         if (!title || !date || !assignee) {
@@ -101,13 +100,13 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
 
         const appointmentData = {
             title,
-            date: format(date, 'yyyy-MM-dd'),
+            date,
             assignee,
             startTime,
             endTime,
             notes,
             recurrence,
-            recurrenceEndDate: recurrence !== 'none' && recurrenceEndDate ? format(recurrenceEndDate, 'yyyy-MM-dd') : undefined
+            recurrenceEndDate: (recurrence !== 'none' && recurrenceEndDate) ? recurrenceEndDate : undefined
         };
 
         if (appointment) {
@@ -122,13 +121,13 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
     const handleOpenChange = (open: boolean) => {
         if (open) {
             setTitle(appointment?.title || '');
-            setDate(appointment ? parseISO(appointment.date) : new Date());
+            setDate(appointment ? appointment.date : format(new Date(), 'yyyy-MM-dd'));
             setAssignee(appointment?.assignee || defaultAssignee || 'Owen Newton');
             setStartTime(appointment?.startTime || '');
             setEndTime(appointment?.endTime || '');
             setNotes(appointment?.notes || '');
             setRecurrence(appointment?.recurrence || 'none');
-            setRecurrenceEndDate(appointment?.recurrenceEndDate ? parseISO(appointment.recurrenceEndDate) : undefined);
+            setRecurrenceEndDate(appointment?.recurrenceEndDate || '');
         }
         setIsOpen(open);
     }
@@ -146,7 +145,7 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="date">Date</Label>
-                            <DatePicker date={date} onDateChange={setDate} modal={true} />
+                            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                              <Label htmlFor="assignee">Assign To</Label>
@@ -187,7 +186,7 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
                                 </SelectContent>
                              </Select>
                              {recurrence !== 'none' && (
-                                <DatePicker date={recurrenceEndDate} onDateChange={setRecurrenceEndDate} modal={true} placeholder="End date" />
+                                <Input type="date" value={recurrenceEndDate} onChange={e => setRecurrenceEndDate(e.target.value)} placeholder="End date" />
                              )}
                         </div>
                     </div>
