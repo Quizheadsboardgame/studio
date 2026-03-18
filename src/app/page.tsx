@@ -442,7 +442,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
               <div className="p-2 relative">
                   <svg
-                      className="h-8 w-8 text-white"
+                      className="h-8 w-8 text-excellerate-orange"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -457,14 +457,14 @@ export default function DashboardPage() {
                   )}
               </div>
               <div className='flex flex-col justify-center'>
-                <h1 className="text-xl font-bold tracking-tight text-white font-headline">
+                <h1 className="text-xl font-bold tracking-tight text-excellerate-orange font-headline">
                     Excellerate Services
                 </h1>
                 <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
               </div>
           </div>
           <div className="text-right">
-            <p className="font-semibold text-white text-sm sm:text-base">Manager: Owen Newton</p>
+            <p className="font-semibold text-excellerate-orange text-sm sm:text-base">Manager: Owen Newton</p>
             <p className="text-xs text-muted-foreground sm:text-sm">Assistant Manager: Nick Miller</p>
           </div>
       </header>
