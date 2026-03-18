@@ -29,7 +29,7 @@ import React from 'react';
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('sites');
+  const [activeTab, setActiveTab] = useState('diary');
 
   const tabs = useMemo(() => [
     { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
@@ -286,14 +286,22 @@ export default function DashboardPage() {
     <div className="flex min-h-screen w-full flex-col bg-black">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-black px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-4">
-              <div className="bg-excellerate-lime p-3 rounded-lg">
-                  <BookOpenCheck className="h-6 w-6 text-black" />
+              <div className="p-2">
+                  <svg
+                      className="h-6 w-6 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                  >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
               </div>
-              <div className='flex flex-col'>
-                <h1 className="text-2xl font-bold tracking-tight text-white font-headline">
+              <div className='flex flex-col justify-center'>
+                <h1 className="text-xl font-bold tracking-tight text-white font-headline">
                     Excellerate Services
                 </h1>
-                <p className="text-sm text-muted-foreground">Lot 4. Addenbrooke’s</p>
+                <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
               </div>
           </div>
           <div className="text-right hidden sm:block">
