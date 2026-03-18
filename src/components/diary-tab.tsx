@@ -33,7 +33,7 @@ type DiaryEvent = {
 
 type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly';
 
-function PrintableDiary({ events, assignee, forwardedRef }: { events: DiaryEvent[], assignee: string, forwardedRef: React.Ref<HTMLDivElement> }) {
+function PrintableDiary({ events, title, forwardedRef }: { events: DiaryEvent[], title: string, forwardedRef: React.Ref<HTMLDivElement> }) {
   const groupedEvents = events.reduce((acc, event) => {
       const day = format(event.date, 'yyyy-MM-dd');
       if (!acc[day]) acc[day] = [];
@@ -44,7 +44,7 @@ function PrintableDiary({ events, assignee, forwardedRef }: { events: DiaryEvent
 
   return (
       <div ref={forwardedRef} className="p-8 bg-white text-black" style={{ width: '794px', minHeight: '1123px' }}>
-          <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">Diary for {assignee}</h1>
+          <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">{title}</h1>
           <p className="text-lg mb-6">{format(new Date(), 'PPP')}</p>
 
           {sortedDays.length > 0 ? sortedDays.map(day => (
@@ -320,6 +320,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
     const owenEvents = useMemo(() => events.filter(e => e.assignee === 'Owen Newton'), [events]);
     const nickEvents = useMemo(() => events.filter(e => e.assignee === 'Nick Miller'), [events]);
     const carlaEvents = useMemo(() => events.filter(e => e.assignee === 'Mircalla Bond (Carla)'), [events]);
+    const staffCoverEvents = useMemo(() => events.filter(e => e.type === 'cover' && e.assignee !== 'Mircalla Bond (Carla)'), [events]);
 
     const handleSaveAppointment = (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => {
         if ('id' in data) {
@@ -442,12 +443,19 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
         )
     };
     
-    const eventsForPdf = activeDiary === 'Owen Newton' ? owenEvents : activeDiary === 'Nick Miller' ? nickEvents : carlaEvents;
+    const eventsForPdf = 
+        activeDiary === 'Owen Newton' ? owenEvents :
+        activeDiary === 'Nick Miller' ? nickEvents :
+        activeDiary === 'Mircalla Bond (Carla)' ? carlaEvents :
+        activeDiary === 'Staff Cover' ? staffCoverEvents :
+        [];
+
+    const diaryTitleForPdf = activeDiary === 'Staff Cover' ? 'Staff Cover Diary' : `Diary for ${activeDiary}`;
 
     return (
         <>
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                <PrintableDiary events={eventsForPdf} assignee={activeDiary} forwardedRef={printableRef} />
+                <PrintableDiary events={eventsForPdf} title={diaryTitleForPdf} forwardedRef={printableRef} />
             </div>
             <Card>
                 <CardHeader>
@@ -461,9 +469,11 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                 {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                                 {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
                             </Button>
-                             <AppointmentDialog onSave={handleSaveAppointment} defaultAssignee={activeDiary}>
-                                <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Appointment</Button>
-                            </AppointmentDialog>
+                            {activeDiary !== 'Staff Cover' && (
+                                <AppointmentDialog onSave={handleSaveAppointment} defaultAssignee={activeDiary === 'Staff Cover' ? 'Owen Newton' : activeDiary}>
+                                    <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Appointment</Button>
+                                </AppointmentDialog>
+                            )}
                         </div>
                     </div>
                      <div className="pt-4">
@@ -478,6 +488,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                 <TabsTrigger value="Owen Newton" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Owen's Diary</TabsTrigger>
                                 <TabsTrigger value="Nick Miller" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Nick's Diary</TabsTrigger>
                                 <TabsTrigger value="Mircalla Bond (Carla)" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Carla's Diary</TabsTrigger>
+                                <TabsTrigger value="Staff Cover" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Staff Cover</TabsTrigger>
                             </TabsList>
                         </div>
                         <div className="p-6">
@@ -489,6 +500,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                             </TabsContent>
                             <TabsContent value="Mircalla Bond (Carla)" className="mt-0">
                                 {renderEvents(carlaEvents)}
+                            </TabsContent>
+                             <TabsContent value="Staff Cover" className="mt-0">
+                                {renderEvents(staffCoverEvents)}
                             </TabsContent>
                         </div>
                     </Tabs>
