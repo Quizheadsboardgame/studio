@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -16,7 +16,6 @@ import AuditsTab from '@/components/audits-tab';
 import AuditHistoryTab from '@/components/audit-history-tab';
 import SuppliesTab from '@/components/supplies-tab';
 import DiaryTab from '@/components/diary-tab';
-import GeneratedReportTab from '@/components/generated-report-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -40,7 +39,6 @@ export default function DashboardPage() {
     { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
     { value: 'summary', label: 'Daily Summary', icon: FileText },
     { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-    { value: 'generated-report', label: 'Generated Report', icon: Bot },
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Sites', icon: LayoutDashboard },
@@ -450,10 +448,6 @@ export default function DashboardPage() {
                 onUpdateActionPlan={handleUpdateActionPlan}
               />
             </TabsContent>
-            
-            <TabsContent value="generated-report">
-              <GeneratedReportTab sites={sites || []} />
-            </TabsContent>
 
           </Tabs>
         )}
@@ -462,5 +456,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
