@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useMemo, ReactNode, useRef } from 'react';
-import type { Site, MonthlyAudit, Appointment } from '@/lib/data';
+import type { Site, MonthlyAudit, Appointment, Leave, ScheduleEntry } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, parseISO, addDays, addWeeks, addMonths, addYears } from 'date-fns';
-import { PlusCircle, Pencil, Trash2, Calendar, Briefcase, FileDown, RefreshCw } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Calendar, Briefcase, FileDown, RefreshCw, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,13 +22,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Event type for combined view
 type DiaryEvent = {
     id: string;
-    type: 'audit' | 'appointment';
+    type: 'audit' | 'appointment' | 'cover';
     date: Date;
     title: string;
     details: string;
     notes?: string;
     assignee: string;
-    raw: Appointment | MonthlyAudit;
+    raw: Appointment | MonthlyAudit | (Leave & { site: string });
 };
 
 type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly';
@@ -159,6 +159,7 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
                                 <SelectContent>
                                     <SelectItem value="Owen Newton">Owen Newton</SelectItem>
                                     <SelectItem value="Nick Miller">Nick Miller</SelectItem>
+                                    <SelectItem value="Mircalla Bond (Carla)">Mircalla Bond (Carla)</SelectItem>
                                 </SelectContent>
                              </Select>
                         </div>
@@ -210,12 +211,14 @@ interface DiaryTabProps {
   sites: Site[];
   appointments: Appointment[];
   monthlyAudits: MonthlyAudit[];
+  leave: Leave[];
+  schedule: ScheduleEntry[];
   onAddAppointment: (data: Omit<Appointment, 'id'>) => void;
   onUpdateAppointment: (id: string, data: Partial<Omit<Appointment, 'id'>>) => void;
   onRemoveAppointment: (id: string) => void;
 }
 
-export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppointment, onUpdateAppointment, onRemoveAppointment }: DiaryTabProps) {
+export default function DiaryTab({ sites, appointments, monthlyAudits, leave, schedule, onAddAppointment, onUpdateAppointment, onRemoveAppointment }: DiaryTabProps) {
     const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
     const [activeDiary, setActiveDiary] = useState('Owen Newton');
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -283,7 +286,23 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
             }
         });
         
-        const allEvents = [...auditEvents, ...expandedAppointments];
+        const coverEvents: DiaryEvent[] = leave.flatMap(leaveItem => {
+            return (leaveItem.coverAssignments || []).map(assignment => {
+                const shift = schedule.find(s => s.site === assignment.site && s.cleaner === leaveItem.cleanerName);
+                return {
+                    id: `${leaveItem.id}-${assignment.site}`,
+                    type: 'cover' as const,
+                    date: parseISO(leaveItem.date),
+                    title: `Cover shift at ${assignment.site}`,
+                    details: `Covering for ${leaveItem.cleanerName}${shift ? ` from ${shift.start} to ${shift.finish}` : ''}`,
+                    notes: `Original leave type: ${leaveItem.type}`,
+                    assignee: assignment.coverCleanerName,
+                    raw: { ...leaveItem, site: assignment.site },
+                };
+            });
+        });
+
+        const allEvents = [...auditEvents, ...expandedAppointments, ...coverEvents];
         
         if (!dateRange?.from) {
           return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -296,10 +315,11 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
 
         return allEvents.filter(event => event.date >= fromDate && event.date <= toDate).sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    }, [monthlyAudits, appointments, sites, dateRange]);
+    }, [monthlyAudits, appointments, sites, leave, schedule, dateRange]);
 
     const owenEvents = useMemo(() => events.filter(e => e.assignee === 'Owen Newton'), [events]);
     const nickEvents = useMemo(() => events.filter(e => e.assignee === 'Nick Miller'), [events]);
+    const carlaEvents = useMemo(() => events.filter(e => e.assignee === 'Mircalla Bond (Carla)'), [events]);
 
     const handleSaveAppointment = (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => {
         if ('id' in data) {
@@ -376,8 +396,15 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                         <div className="space-y-4">
                             {groupedEvents[day].map(event => (
                                 <div key={event.id} className="flex items-start gap-4 p-4 rounded-lg border">
-                                    <div className={cn("mt-1 flex h-8 w-8 items-center justify-center rounded-full", event.type === 'audit' ? 'bg-excellerate-blue' : 'bg-excellerate-teal')}>
-                                        {event.type === 'audit' ? <Briefcase className="h-4 w-4 text-white" /> : <Calendar className="h-4 w-4 text-white" />}
+                                    <div className={cn("mt-1 flex h-8 w-8 items-center justify-center rounded-full",
+                                        event.type === 'audit' ? 'bg-excellerate-blue' :
+                                        event.type === 'appointment' ? 'bg-excellerate-teal' :
+                                        'bg-excellerate-orange'
+                                    )}>
+                                        {event.type === 'audit' ? <Briefcase className="h-4 w-4 text-white" /> :
+                                         event.type === 'appointment' ? <Calendar className="h-4 w-4 text-white" /> :
+                                         <Users className="h-4 w-4 text-white" />
+                                        }
                                     </div>
                                     <div className="flex-grow">
                                         <p className="font-semibold">{event.title}</p>
@@ -415,7 +442,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
         )
     };
     
-    const eventsForPdf = activeDiary === 'Owen Newton' ? owenEvents : nickEvents;
+    const eventsForPdf = activeDiary === 'Owen Newton' ? owenEvents : activeDiary === 'Nick Miller' ? nickEvents : carlaEvents;
 
     return (
         <>
@@ -450,6 +477,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                             <TabsList className="bg-transparent p-0 m-0 rounded-none gap-4 px-6">
                                 <TabsTrigger value="Owen Newton" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Owen's Diary</TabsTrigger>
                                 <TabsTrigger value="Nick Miller" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Nick's Diary</TabsTrigger>
+                                <TabsTrigger value="Mircalla Bond (Carla)" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Carla's Diary</TabsTrigger>
                             </TabsList>
                         </div>
                         <div className="p-6">
@@ -458,6 +486,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                             </TabsContent>
                             <TabsContent value="Nick Miller" className="mt-0">
                                 {renderEvents(nickEvents)}
+                            </TabsContent>
+                            <TabsContent value="Mircalla Bond (Carla)" className="mt-0">
+                                {renderEvents(carlaEvents)}
                             </TabsContent>
                         </div>
                     </Tabs>

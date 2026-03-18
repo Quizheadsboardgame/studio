@@ -310,6 +310,7 @@
             "enum": [
                 "Owen Newton",
                 "Nick Miller",
+                "Mircalla Bond (Carla)",
                 "Unassigned"
             ]
         }
@@ -340,7 +341,8 @@
             "description": "The person this appointment is assigned to.",
             "enum": [
                 "Owen Newton",
-                "Nick Miller"
+                "Nick Miller",
+                "Mircalla Bond (Carla)"
             ]
         },
         "startTime": {

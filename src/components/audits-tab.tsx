@@ -162,6 +162,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                           <SelectItem value="Unassigned">Unassigned</SelectItem>
                           <SelectItem value="Owen Newton">Owen Newton</SelectItem>
                           <SelectItem value="Nick Miller">Nick Miller</SelectItem>
+                          <SelectItem value="Mircalla Bond (Carla)">Mircalla Bond (Carla)</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>

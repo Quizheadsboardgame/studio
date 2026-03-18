@@ -434,6 +434,8 @@ export default function DashboardPage() {
                 sites={sortedSites}
                 appointments={appointments || []}
                 monthlyAudits={monthlyAudits || []}
+                leave={leave || []}
+                schedule={sortedSchedule || []}
                 onAddAppointment={handleAddAppointment}
                 onUpdateAppointment={handleUpdateAppointment}
                 onRemoveAppointment={handleRemoveAppointment}
