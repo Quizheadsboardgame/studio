@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import type { Site, Cleaner, ActionPlan, ActionPlanTask } from '@/lib/data';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -220,6 +220,8 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
 export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan }: ActionPlanTabProps) {
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
+  const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
+  const printableRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const actionItems = useMemo(() => {
     const siteItems = sortedSites
@@ -233,6 +235,63 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
     return [...siteItems, ...cleanerItems].sort((a, b) => a.name.localeCompare(b.name));
   }, [sortedSites, sortedCleaners]);
 
+  const allPlans = useMemo(() => {
+    return actionItems.map(item => {
+        return actionPlans.find(p => p.id === item.id) || { id: item.id, targetName: item.name, targetType: item.type, tasks: [], notes: '' };
+    });
+  }, [actionItems, actionPlans]);
+  
+  useEffect(() => {
+    printableRefs.current = printableRefs.current.slice(0, allPlans.length);
+  }, [allPlans]);
+
+  const handleGenerateAllPdfs = async () => {
+    if (printableRefs.current.length === 0) return;
+    setIsGeneratingAllPdf(true);
+    try {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: html2canvas } = await import('html2canvas');
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        for (let i = 0; i < printableRefs.current.length; i++) {
+            const element = printableRefs.current[i];
+            if (element) {
+                 const canvas = await html2canvas(element, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / canvasHeight;
+                
+                let imgWidthInPdf = pdfWidth - 20;
+                let imgHeightInPdf = imgWidthInPdf / ratio;
+                
+                if (imgHeightInPdf > pdfHeight - 20) {
+                  imgHeightInPdf = pdfHeight - 20;
+                  imgWidthInPdf = imgHeightInPdf * ratio;
+                }
+
+                const x = (pdfWidth - imgWidthInPdf) / 2;
+                const y = 10;
+
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                pdf.addImage(imgData, 'PNG', x, y, imgWidthInPdf, imgHeightInPdf);
+            }
+        }
+        pdf.save('All_Action_Plans.pdf');
+    } catch (error) {
+        console.error("Error generating all PDFs:", error);
+    } finally {
+        setIsGeneratingAllPdf(false);
+    }
+  };
+
+
   if (actionItems.length === 0) {
     return (
       <div className="rounded-lg border bg-card text-card-foreground p-6 min-h-[200px] flex items-center justify-center">
@@ -242,32 +301,51 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Action Plan Management</CardTitle>
-        <p className="text-sm text-muted-foreground">Sites and cleaners that require an action plan.</p>
-      </CardHeader>
-      <CardContent>
-        <Accordion type="multiple" className="w-full space-y-2">
-          {actionItems.map(item => (
-            <AccordionItem key={item.id} value={item.id} className="border rounded-md px-4">
-              <AccordionTrigger className="hover:no-underline">
-                  <div className="flex justify-between items-center w-full pr-2">
-                      <span className="font-medium">{item.name}</span>
-                      <span className="text-sm text-muted-foreground capitalize bg-muted px-2 py-1 rounded-md">{item.type}</span>
-                  </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <ActionPlanDetails
-                  item={item}
-                  plan={actionPlans.find(p => p.id === item.id)}
-                  onUpdateActionPlan={onUpdateActionPlan}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-    </Card>
+    <>
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        {allPlans.map((plan, index) => (
+            <PrintableActionPlan key={plan.id} plan={plan} forwardedRef={el => {
+                if (printableRefs.current) {
+                    printableRefs.current[index] = el;
+                }
+            }} />
+        ))}
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>Action Plan Management</CardTitle>
+              <p className="text-sm text-muted-foreground">Sites and cleaners that require an action plan.</p>
+            </div>
+             <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || actionItems.length === 0}>
+                {isGeneratingAllPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                {isGeneratingAllPdf ? 'Generating...' : 'Download All'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="multiple" className="w-full space-y-2">
+            {actionItems.map(item => (
+              <AccordionItem key={item.id} value={item.id} className="border rounded-md px-4">
+                <AccordionTrigger className="hover:no-underline">
+                    <div className="flex justify-between items-center w-full pr-2">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-sm text-muted-foreground capitalize bg-muted px-2 py-1 rounded-md">{item.type}</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ActionPlanDetails
+                    item={item}
+                    plan={actionPlans.find(p => p.id === item.id)}
+                    onUpdateActionPlan={onUpdateActionPlan}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
+    </>
   );
 }
