@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment } from '@/lib/data';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, Bot } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
@@ -23,10 +23,31 @@ import { collection, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from 'react';
+
 
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('sites');
+
+  const tabs = useMemo(() => [
+    { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+    { value: 'audit-history', label: 'Audit History', icon: FileClock },
+    { value: 'audits', label: 'Audits', icon: FileCheck },
+    { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
+    { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+    { value: 'summary', label: 'Daily Summary', icon: FileText },
+    { value: 'diary', label: 'Diary', icon: BookOpenCheck },
+    { value: 'generated-report', label: 'Generated Report', icon: Bot },
+    { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
+    { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
+    { value: 'sites', label: 'Sites', icon: LayoutDashboard },
+    { value: 'supplies', label: 'Supply Orders', icon: Package },
+  ], []);
+
+  const ActiveIcon = useMemo(() => tabs.find(t => t.value === activeTab)?.icon, [activeTab, tabs]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -284,25 +305,31 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {isLoading ? (
            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-full md:w-[320px]" />
               <Skeleton className="h-96 w-full" />
             </div>
         ) : (
-          <Tabs defaultValue="sites" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-12 h-auto flex-wrap bg-transparent p-0 gap-2">
-              <TabsTrigger value="action-plan" className="text-white border border-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
-              <TabsTrigger value="audit-history" className="text-white border border-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
-              <TabsTrigger value="audits" className="text-white border border-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
-              <TabsTrigger value="cleaners" className="text-white border border-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
-              <TabsTrigger value="company-schedule" className="text-white border border-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
-              <TabsTrigger value="summary" className="text-white border border-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
-              <TabsTrigger value="diary" className="text-white border border-excellerate-teal data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><BookOpenCheck className="mr-2 h-4 w-4" />Diary</TabsTrigger>
-              <TabsTrigger value="generated-report" className="text-white border border-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Bot className="mr-2 h-4 w-4" />Generated Report</TabsTrigger>
-              <TabsTrigger value="leave-calendar" className="text-white border border-excellerate-teal data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
-              <TabsTrigger value="risk" className="text-white border border-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
-              <TabsTrigger value="sites" className="text-white border border-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
-              <TabsTrigger value="supplies" className="text-white border border-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supply Orders</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="mb-4">
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="w-full md:w-[320px] text-base font-medium h-12 bg-card border-border">
+                  <div className="flex items-center gap-3">
+                    {ActiveIcon && <ActiveIcon className="h-5 w-5" />}
+                    <span>{tabs.find(t => t.value === activeTab)?.label}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {tabs.map((tab) => (
+                    <SelectItem key={tab.value} value={tab.value}>
+                      <div className="flex items-center gap-2">
+                        <tab.icon className="h-4 w-4" />
+                        <span>{tab.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             <TabsContent value="sites">
               <Card>
