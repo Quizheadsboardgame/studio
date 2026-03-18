@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardCheck, ClipboardList, CalendarDays, FileCheck, FileClock, Package } from 'lucide-react';
@@ -49,6 +49,9 @@ export default function DashboardPage() {
   
   const supplyOrdersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplyOrders') : null, [firestore, user]);
   const { data: supplyOrders, isLoading: supplyOrdersLoading } = useCollection<MonthlySupplyOrder>(supplyOrdersCollection);
+  
+  const monthlyAuditsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'monthlyAudits') : null, [firestore, user]);
+  const { data: monthlyAudits, isLoading: monthlyAuditsLoading } = useCollection<MonthlyAudit>(monthlyAuditsCollection);
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
@@ -59,57 +62,43 @@ export default function DashboardPage() {
      if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { notes: newNote });
   };
-  
-  const handleUpdateAudit = (siteId: string, auditData: Partial<Site>) => {
-    if (!firestore || !sites) return;
 
-    let finalUpdateData = { ...auditData };
+  const handleSetMonthlyAudit = (siteId: string, date: Date, auditData: Partial<Omit<MonthlyAudit, 'id' | 'siteId' | 'month' | 'year'>>) => {
+    if (!firestore) return;
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const docId = `${siteId}-${format(date, 'yyyy-MM')}`;
 
-    // If a score is being added, it means a new audit is completed.
-    // We should add it to the history.
-    if (auditData.auditScore !== undefined && auditData.auditCompletedDate) {
-      const site = sites.find(s => s.id === siteId);
-      if (site) {
-        const newHistoryEntry = {
-          date: auditData.auditCompletedDate,
-          score: auditData.auditScore,
-          notes: auditData.auditNotes || '',
-        };
-        const existingHistory = site.auditHistory || [];
-        // Avoid adding duplicate history entries for the same date
-        const isAlreadyArchived = existingHistory.some(h => h.date === newHistoryEntry.date);
-        
-        if (!isAlreadyArchived) {
-          finalUpdateData.auditHistory = [...existingHistory, newHistoryEntry];
-        }
+    const fullAuditData = {
+      siteId,
+      year,
+      month,
+      ...auditData,
+    };
+    
+    setDocumentNonBlocking(doc(firestore, 'monthlyAudits', docId), fullAuditData, { merge: true });
+
+    // Update site status if score is provided
+    if (auditData.score !== undefined) {
+      let newSiteStatus: SiteStatus = 'N/A'; // Default case
+      if (auditData.score <= 95) {
+        newSiteStatus = 'Site under action plan';
+      } else if (auditData.score >= 96 && auditData.score <= 98) {
+        newSiteStatus = 'Client concerns';
+      } else if (auditData.score >= 99 && auditData.score <= 100) {
+        newSiteStatus = 'Client happy';
+      }
+      
+      const site = sites?.find(s => s.id === siteId);
+      if (site && site.status !== newSiteStatus && newSiteStatus !== 'N/A') {
+        updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { status: newSiteStatus });
       }
     }
-    
-    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), finalUpdateData);
-  };
-  
-  const handleResetAudits = () => {
-    if (!firestore || !sites) return;
-
-    sites.forEach(site => {
-      const resetData: Partial<Site> = {
-        auditStatus: 'Not Booked',
-        auditScore: undefined,
-        auditCompletedDate: undefined,
-        auditNotes: '',
-      };
-      updateDocumentNonBlocking(doc(firestore, 'sites', site.id), resetData);
-    });
-
-    toast({
-      title: "New Month Started",
-      description: "All site audits have been reset for the new month.",
-    });
   };
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '', auditStatus: 'Not Booked' });
+    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
@@ -248,7 +237,7 @@ export default function DashboardPage() {
   };
 
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
@@ -368,14 +357,15 @@ export default function DashboardPage() {
             <TabsContent value="audits">
               <AuditsTab 
                 sites={sortedSites} 
-                onUpdateAudit={handleUpdateAudit}
+                monthlyAudits={monthlyAudits || []}
+                onSetAudit={handleSetMonthlyAudit}
               />
             </TabsContent>
             
             <TabsContent value="audit-history">
               <AuditHistoryTab
                 sites={sortedSites}
-                onResetAudits={handleResetAudits}
+                monthlyAudits={monthlyAudits || []}
               />
             </TabsContent>
 

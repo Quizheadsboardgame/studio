@@ -27,15 +27,6 @@ export type Site = {
   name: string;
   status: SiteStatus;
   notes?: string;
-  auditStatus?: AuditStatus;
-  auditScore?: number;
-  auditCompletedDate?: string; // YYYY-MM-DD
-  auditNotes?: string;
-  auditHistory?: {
-    date: string; // YYYY-MM-DD
-    score: number;
-    notes?: string;
-  }[];
 };
 
 
@@ -224,12 +215,6 @@ export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = [
   ["UoC - Capella Building /Jeffrey Cheah Biomedical Centre (JCBC)", "Zbigniew Bajor", "4.30am", "8.30am"]
 ].map(([site, cleaner, start, finish]) => ({ site, cleaner, start, finish }));
 
-export type SiteHistoryEntry = {
-  id: string;
-  date: string; // YYYY-MM-DD
-  sites: Site[];
-};
-
 export type ActionPlanTask = {
   id: string;
   description: string;
@@ -272,4 +257,15 @@ export type MonthlySupplyOrder = {
   month: number;
   year: number;
   quantity: number;
+};
+
+export type MonthlyAudit = {
+  id: string; // Composite key: {siteId}-{yyyy-MM}
+  siteId: string;
+  month: number;
+  year: number;
+  status: AuditStatus;
+  score?: number;
+  completedDate?: string; // YYYY-MM-DD
+  notes?: string;
 };

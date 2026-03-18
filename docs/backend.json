@@ -17,54 +17,6 @@
         "notes": {
           "type": "string",
           "description": "Optional notes or comments about the site."
-        },
-        "auditStatus": {
-          "type": "string",
-          "enum": [
-            "Not Booked",
-            "Booked",
-            "Completed"
-          ],
-          "description": "The current status of the audit for the site."
-        },
-        "auditScore": {
-          "type": "number",
-          "description": "The score of the most recent audit, from 0 to 100."
-        },
-        "auditCompletedDate": {
-          "type": "string",
-          "format": "date",
-          "description": "The date the most recent audit was completed."
-        },
-        "auditNotes": {
-          "type": "string",
-          "description": "Notes related to the most recent site audit."
-        },
-        "auditHistory": {
-          "type": "array",
-          "description": "A historical record of past audits for the site.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "date": {
-                "type": "string",
-                "format": "date",
-                "description": "The completion date of the historical audit."
-              },
-              "score": {
-                "type": "number",
-                "description": "The score of the historical audit."
-              },
-              "notes": {
-                "type": "string",
-                "description": "Notes from the historical audit."
-              }
-            },
-            "required": [
-              "date",
-              "score"
-            ]
-          }
         }
       },
       "required": [
@@ -232,28 +184,6 @@
         "tasks"
       ]
     },
-    "SiteHistory": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SiteHistory",
-      "type": "object",
-      "description": "A snapshot of all site statuses on a specific date.",
-      "properties": {
-        "date": {
-          "type": "string",
-          "format": "date"
-        },
-        "sites": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/Site"
-          }
-        }
-      },
-      "required": [
-        "date",
-        "sites"
-      ]
-    },
     "ScheduleEntry": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ScheduleEntry",
@@ -336,6 +266,47 @@
         "year",
         "quantity"
       ]
+    },
+     "MonthlyAudit": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Monthly Audit",
+      "type": "object",
+      "description": "Represents a site audit for a specific month.",
+      "properties": {
+        "siteId": {
+          "type": "string"
+        },
+        "month": {
+          "type": "number"
+        },
+        "year": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Booked",
+            "Booked",
+            "Completed"
+          ],
+          "description": "The current status of the audit for the site."
+        },
+        "score": {
+          "type": "number"
+        },
+        "completedDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "siteId",
+        "month",
+        "year"
+      ]
     }
   },
   "auth": {
@@ -364,16 +335,6 @@
             "$ref": "#/backend/entities/Cleaner"
           },
           "description": "Top-level collection storing profiles and performance ratings for each cleaner."
-        }
-      },
-      {
-        "path": "/history/{historyId}",
-        "definition": {
-          "entityName": "SiteHistory",
-          "schema": {
-            "$ref": "#/backend/entities/SiteHistory"
-          },
-          "description": "Collection storing historical snapshots of site statuses."
         }
       },
       {
@@ -424,6 +385,16 @@
             "$ref": "#/backend/entities/MonthlySupplyOrder"
           },
           "description": "Collection storing monthly supply order records for all sites. The document ID is a composite key: {siteId}-{consumableId}-{yyyy}-{MM}."
+        }
+      },
+      {
+        "path": "/monthlyAudits/{auditId}",
+        "definition": {
+          "entityName": "MonthlyAudit",
+          "schema": {
+            "$ref": "#/backend/entities/MonthlyAudit"
+          },
+          "description": "Collection storing monthly audit records for all sites. The document ID is a composite key: {siteId}-{yyyy}-{MM}."
         }
       }
     ]
