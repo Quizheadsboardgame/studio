@@ -260,7 +260,7 @@ export type MonthlySupplyOrder = {
 };
 
 export type MonthlyAudit = {
-  id: string; // Composite key: {siteId}-{yyyy-MM}
+  id:string; // Composite key: {siteId}-{yyyy-MM}
   siteId: string;
   month: number;
   year: number;
@@ -279,6 +279,8 @@ export type Appointment = {
   startTime?: string;
   endTime?: string;
   notes?: string;
+  recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  recurrenceEndDate?: string; // YYYY-MM-DD
 };
 
     

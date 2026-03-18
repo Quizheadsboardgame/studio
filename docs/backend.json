@@ -354,6 +354,21 @@
         "notes": {
           "type": "string",
           "description": "Optional notes for the appointment."
+        },
+        "recurrence": {
+          "type": "string",
+          "description": "The recurrence frequency of the appointment.",
+          "enum": [
+            "none",
+            "daily",
+            "weekly",
+            "monthly"
+          ]
+        },
+        "recurrenceEndDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The end date for the recurring appointment (YYYY-MM-DD)."
         }
       },
       "required": [
@@ -464,5 +479,3 @@
     ]
   }
 }
-
-    
