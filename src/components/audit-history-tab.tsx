@@ -32,7 +32,7 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
         {sites.length > 0 ? (
           <Accordion type="multiple" className="w-full space-y-2">
             {sites.map(site => {
-                const siteAudits = monthlyAudits.filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== undefined);
+                const siteAudits = monthlyAudits.filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== undefined && a.score !== null);
 
                 return (
                     <AccordionItem key={site.id} value={site.id} className="border rounded-md px-4">
@@ -51,9 +51,15 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {[...siteAudits].sort((a, b) => parseISO(b.completedDate!).getTime() - parseISO(a.completedDate!).getTime()).map((audit, index) => (
+                                        {[...siteAudits].sort((a, b) => {
+                                            if (!a.bookedDate || !b.bookedDate) return 0;
+                                            return parseISO(b.bookedDate).getTime() - parseISO(a.bookedDate).getTime()
+                                        }).map((audit, index) => (
                                             <TableRow key={index}>
-                                                <TableCell>{format(parseISO(audit.completedDate!), 'PPP')}</TableCell>
+                                                <TableCell>
+                                                    {audit.bookedDate ? format(parseISO(audit.bookedDate), 'PPP') : 'N/A'}
+                                                    {audit.bookedTime && <span className="text-muted-foreground text-xs"> at {audit.bookedTime}</span>}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Badge variant={getScoreBadgeVariant(audit.score!)}>{audit.score}%</Badge>
                                                 </TableCell>
@@ -78,3 +84,5 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
     </Card>
   );
 }
+
+    

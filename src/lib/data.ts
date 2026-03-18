@@ -266,6 +266,9 @@ export type MonthlyAudit = {
   year: number;
   status: AuditStatus;
   score?: number | null;
-  completedDate?: string | null;
+  bookedDate?: string | null;
+  bookedTime?: string;
   notes?: string;
 };
+
+    

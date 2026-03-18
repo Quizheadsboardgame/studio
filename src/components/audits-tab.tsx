@@ -48,12 +48,11 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
 
     if (scoreValue !== null) { // A score is being set
         updateData.status = 'Completed';
-        // Only set new completed date if it wasn't completed before
-        if (audit?.status !== 'Completed') {
-            updateData.completedDate = format(new Date(), 'yyyy-MM-dd');
+        // Only set new booked date if it wasn't set before
+        if (!audit?.bookedDate) {
+            updateData.bookedDate = format(new Date(), 'yyyy-MM-dd');
         }
     } else { // Score is being cleared to null
-        updateData.completedDate = null;
         // If it was completed, reset status. Let's use 'Booked'.
         if (audit?.status === 'Completed') {
             updateData.status = 'Booked';
@@ -66,13 +65,10 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     const updateData: Partial<Omit<MonthlyAudit, 'id'>> = { status: newStatus };
     if (newStatus !== 'Completed') {
       updateData.score = null;
-      updateData.completedDate = null;
-    } else {
-      // If user manually sets to 'Completed' without a score, we might need to set a date.
-      const audit = auditsForMonth.find(a => a.siteId === siteId);
-      if (!audit?.completedDate) {
-        updateData.completedDate = format(new Date(), 'yyyy-MM-dd');
-      }
+    }
+    if (newStatus === 'Not Booked') {
+        updateData.bookedDate = null;
+        updateData.bookedTime = '';
     }
     onSetAudit(siteId, currentDate, updateData);
   };
@@ -81,8 +77,12 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     onSetAudit(siteId, currentDate, { notes });
   };
   
-  const handleCompletedDateChange = (siteId: string, date: Date | undefined) => {
-    onSetAudit(siteId, currentDate, { completedDate: date ? format(date, 'yyyy-MM-dd') : null });
+  const handleBookedDateChange = (siteId: string, date: Date | undefined) => {
+    onSetAudit(siteId, currentDate, { bookedDate: date ? format(date, 'yyyy-MM-dd') : null });
+  };
+  
+  const handleBookedTimeChange = (siteId: string, time: string) => {
+    onSetAudit(siteId, currentDate, { bookedTime: time });
   };
 
 
@@ -117,17 +117,17 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[25%]">Site</TableHead>
-                <TableHead className="w-[20%]">Audit Status</TableHead>
+                <TableHead className="w-[20%]">Site</TableHead>
+                <TableHead className="w-[15%]">Audit Status</TableHead>
                 <TableHead className="w-[15%]">Audit Score (%)</TableHead>
-                <TableHead className="w-[15%]">Completed Date</TableHead>
+                <TableHead className="w-[25%]">Booked Date & Time</TableHead>
                 <TableHead>Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sites.length > 0 ? sites.map((site) => {
                 const audit = auditsForMonth.find(a => a.siteId === site.id);
-                const isCompleted = audit?.status === 'Completed';
+                const isEditable = audit?.status && audit.status !== 'Not Booked';
 
                 return (
                   <TableRow key={site.id}>
@@ -161,13 +161,22 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                         />
                     </TableCell>
                     <TableCell className="align-top py-4">
-                       <DatePicker
-                        date={audit?.completedDate ? parseISO(audit.completedDate) : undefined}
-                        onDateChange={(date) => handleCompletedDateChange(site.id, date)}
-                        placeholder="N/A"
-                        className="w-[180px]"
-                        disabled={!isCompleted}
-                      />
+                       <div className="flex items-center gap-2">
+                            <DatePicker
+                                date={audit?.bookedDate ? parseISO(audit.bookedDate) : undefined}
+                                onDateChange={(date) => handleBookedDateChange(site.id, date)}
+                                placeholder="N/A"
+                                className="w-[180px]"
+                                disabled={!isEditable}
+                            />
+                            <Input
+                                type="time"
+                                value={audit?.bookedTime || ''}
+                                onChange={(e) => handleBookedTimeChange(site.id, e.target.value)}
+                                className="w-[100px]"
+                                disabled={!isEditable}
+                            />
+                       </div>
                     </TableCell>
                     <TableCell className="py-2 align-top">
                       <Accordion type="single" collapsible className="w-full">
@@ -202,3 +211,5 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     </Card>
   );
 }
+
+    

@@ -286,6 +286,7 @@
           "type": "string",
           "enum": [
             "Not Booked",
+            "Emailed Client",
             "Booked",
             "Completed"
           ],
@@ -294,9 +295,14 @@
         "score": {
           "type": "number"
         },
-        "completedDate": {
+        "bookedDate": {
           "type": "string",
-          "format": "date"
+          "format": "date",
+          "description": "The date the audit is booked for or was completed on."
+        },
+        "bookedTime": {
+          "type": "string",
+          "description": "The time the audit is booked for."
         },
         "notes": {
           "type": "string"
@@ -400,3 +406,5 @@
     ]
   }
 }
+
+    
