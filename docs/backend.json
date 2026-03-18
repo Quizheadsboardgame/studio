@@ -303,9 +303,6 @@
         "bookedTime": {
           "type": "string",
           "description": "The time the audit is booked for."
-        },
-        "notes": {
-          "type": "string"
         }
       },
       "required": [
@@ -406,5 +403,3 @@
     ]
   }
 }
-
-    

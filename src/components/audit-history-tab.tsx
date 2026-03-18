@@ -45,9 +45,8 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                        <TableHead className="w-[30%]">Date</TableHead>
-                                        <TableHead className="w-[20%]">Score</TableHead>
-                                        <TableHead>Notes</TableHead>
+                                        <TableHead className="w-[50%]">Date</TableHead>
+                                        <TableHead className="w-[50%]">Score</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -63,7 +62,6 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
                                                 <TableCell>
                                                     <Badge variant={getScoreBadgeVariant(audit.score!)}>{audit.score}%</Badge>
                                                 </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">{audit.notes || 'N/A'}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -84,5 +82,3 @@ export default function AuditHistoryTab({ sites, monthlyAudits }: AuditHistoryTa
     </Card>
   );
 }
-
-    

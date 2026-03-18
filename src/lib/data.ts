@@ -268,7 +268,4 @@ export type MonthlyAudit = {
   score?: number | null;
   bookedDate?: string | null;
   bookedTime?: string;
-  notes?: string;
 };
-
-    
