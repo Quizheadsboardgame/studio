@@ -12,6 +12,7 @@ import { format, parseISO, subMonths, addMonths } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
 
 
 interface AuditsTabProps {
@@ -71,6 +72,10 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
   const handleNotesChange = (siteId: string, notes: string) => {
     onSetAudit(siteId, currentDate, { notes });
   };
+  
+  const handleCompletedDateChange = (siteId: string, date: Date | undefined) => {
+    onSetAudit(siteId, currentDate, { completedDate: date ? format(date, 'yyyy-MM-dd') : null });
+  };
 
 
   return (
@@ -107,6 +112,8 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
             <TableBody>
               {sites.length > 0 ? sites.map((site) => {
                 const audit = auditsForMonth.find(a => a.siteId === site.id);
+                const isCompleted = audit?.status === 'Completed';
+
                 return (
                   <TableRow key={site.id}>
                     <TableCell className="font-medium align-top py-4">{site.name}</TableCell>
@@ -138,8 +145,14 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                           className="w-24"
                         />
                     </TableCell>
-                    <TableCell className="align-top py-4 text-sm text-muted-foreground">
-                      {audit?.completedDate ? format(parseISO(audit.completedDate), 'PPP') : 'N/A'}
+                    <TableCell className="align-top py-4">
+                       <DatePicker
+                        date={audit?.completedDate ? parseISO(audit.completedDate) : undefined}
+                        onDateChange={(date) => handleCompletedDateChange(site.id, date)}
+                        placeholder="N/A"
+                        className="w-[180px]"
+                        disabled={!isCompleted}
+                      />
                     </TableCell>
                     <TableCell className="py-2 align-top">
                       <Accordion type="single" collapsible className="w-full">
