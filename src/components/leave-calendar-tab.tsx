@@ -1,19 +1,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Cleaner, Leave, ScheduleEntry, CoverAssignment } from '@/lib/data';
+import type { Cleaner, Leave, ScheduleEntry } from '@/lib/data';
 import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Trash2 } from 'lucide-react';
-import { format, parseISO, isSameDay, isFuture, isToday } from 'date-fns';
+import { format, parseISO, isSameDay, isFuture, isToday, addDays, eachDayOfInterval } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Input } from '@/components/ui/input';
 
 interface LeaveCalendarTabProps {
   cleaners: Cleaner[];
@@ -24,75 +23,123 @@ interface LeaveCalendarTabProps {
   onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
 }
 
-function AddLeaveForm({ cleaners, selectedDate, onAddLeave, onClose }: { cleaners: Cleaner[], selectedDate: Date, onAddLeave: LeaveCalendarTabProps['onAddLeave'], onClose: () => void }) {
+// England & Wales Bank Holidays
+const bankHolidays = [
+    // 2024
+    new Date('2024-01-01'), new Date('2024-03-29'), new Date('2024-04-01'),
+    new Date('2024-05-06'), new Date('2024-05-27'), new Date('2024-08-26'),
+    new Date('2024-12-25'), new Date('2024-12-26'),
+    // 2025
+    new Date('2025-01-01'), new Date('2025-04-18'), new Date('2025-04-21'),
+    new Date('2025-05-05'), new Date('2025-05-26'), new Date('2025-08-25'),
+    new Date('2025-12-25'), new Date('2025-12-26'),
+];
+
+const isWeekend = (date: Date) => {
+    const day = date.getDay();
+    return day === 0 || day === 6; // Sunday or Saturday
+};
+
+const isBankHoliday = (date: Date) => {
+    return bankHolidays.some(bh => isSameDay(bh, date));
+};
+
+const disabledDays = [isWeekend, isBankHoliday];
+
+
+function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeave: LeaveCalendarTabProps['onAddLeave'] }) {
     const [selectedCleanerId, setSelectedCleanerId] = useState<string>('');
     const [leaveType, setLeaveType] = useState<'holiday' | 'sick'>('holiday');
+    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [numberOfDays, setNumberOfDays] = useState(1);
     const { toast } = useToast();
 
     const handleSubmit = () => {
-        if (!selectedCleanerId) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a cleaner.' });
+        if (!selectedCleanerId || !startDate) {
+            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a cleaner and a start date.' });
             return;
         }
 
         const cleanerName = cleaners.find(c => c.id === selectedCleanerId)?.name || 'Unknown Cleaner';
         
-        onAddLeave({
-            cleanerId: selectedCleanerId,
-            cleanerName,
-            type: leaveType,
-            date: format(selectedDate, 'yyyy-MM-dd'),
+        const interval = { start: startDate, end: addDays(startDate, Math.max(0, numberOfDays - 1)) };
+        const daysToBook = eachDayOfInterval(interval);
+        
+        let daysAdded = 0;
+        daysToBook.forEach(day => {
+            if (!isWeekend(day) && !isBankHoliday(day)) {
+                onAddLeave({
+                    cleanerId: selectedCleanerId,
+                    cleanerName,
+                    type: leaveType,
+                    date: format(day, 'yyyy-MM-dd'),
+                });
+                daysAdded++;
+            }
         });
 
-        toast({ title: 'Leave Added', description: `${leaveType} for ${cleanerName} on ${format(selectedDate, 'PPP')} has been logged.` });
-        onClose();
+        if (daysAdded > 0) {
+            toast({ title: 'Leave Booked', description: `${daysAdded} day(s) of ${leaveType} for ${cleanerName} have been logged.` });
+            // Reset form
+            setSelectedCleanerId('');
+            setStartDate(undefined);
+            setNumberOfDays(1);
+        } else {
+            toast({ variant: 'destructive', title: 'No working days selected', description: 'The selected date range only contains weekends or bank holidays.' });
+        }
     };
 
     return (
-        <div className="space-y-4 pt-4 border-t">
-            <h4 className="font-semibold">Add Absence</h4>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="cleaner" className="text-right">Cleaner</Label>
-                <Select value={selectedCleanerId} onValueChange={setSelectedCleanerId}>
-                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a cleaner" /></SelectTrigger>
-                    <SelectContent>{cleaners.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
+        <div className="space-y-4 p-4 border rounded-lg">
+            <h3 className="font-semibold text-lg">Add Absence</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-2">
+                    <Label htmlFor="cleaner">Cleaner</Label>
+                    <Select value={selectedCleanerId} onValueChange={setSelectedCleanerId}>
+                        <SelectTrigger id="cleaner"><SelectValue placeholder="Select a cleaner" /></SelectTrigger>
+                        <SelectContent>{cleaners.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select value={leaveType} onValueChange={(value: 'holiday' | 'sick') => setLeaveType(value)}>
+                        <SelectTrigger id="type"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="holiday">Holiday</SelectItem>
+                            <SelectItem value="sick">Sickness</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="start-date">Start Date</Label>
+                    <DatePicker 
+                        date={startDate} 
+                        onDateChange={setStartDate} 
+                        placeholder="Select start date"
+                        className="w-full"
+                    />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="num-days">Number of Days</Label>
+                    <Input 
+                        id="num-days"
+                        type="number"
+                        value={numberOfDays}
+                        onChange={(e) => setNumberOfDays(parseInt(e.target.value, 10) || 1)}
+                        min="1"
+                    />
+                </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">Type</Label>
-                <Select value={leaveType} onValueChange={(value: 'holiday' | 'sick') => setLeaveType(value)}>
-                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="holiday">Holiday</SelectItem>
-                        <SelectItem value="sick">Sickness</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-                 <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                 <Button onClick={handleSubmit}>Add Absence</Button>
+            <div className="flex justify-end">
+                 <Button onClick={handleSubmit}>Book Absence</Button>
             </div>
         </div>
     );
 }
 
 export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { toast } = useToast();
-  
-  const handleDateSelect = (day: Date | undefined) => {
-      if (day) {
-        setSelectedDay(day);
-        setIsDialogOpen(true);
-      }
-  };
-  
-  const leaveOnSelectedDay = useMemo(() => {
-    if (!selectedDay) return [];
-    return leave.filter(l => isSameDay(parseISO(l.date), selectedDay));
-  }, [leave, selectedDay]);
   
   const getRemainingHolidays = (cleaner: Cleaner) => {
     if (!cleaner) return 'N/A';
@@ -189,19 +236,12 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
       <Card>
         <CardHeader>
             <CardTitle>Leave Management</CardTitle>
-            <CardDescription>Select a date to add holiday or log sickness. View leave balances below.</CardDescription>
+            <CardDescription>Book new absences and view leave balances. Weekends and bank holidays are automatically excluded.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-8">
-            <div className="flex-grow space-y-2">
-                <Label>Select a Date</Label>
-                 <DatePicker
-                    date={undefined}
-                    onDateChange={handleDateSelect}
-                    placeholder="Select a date to view or add absences"
-                    className="w-full md:w-[300px]"
-                />
-            </div>
-            <div className="w-full md:w-1/3">
+        <CardContent className="space-y-8">
+            <AddLeaveForm cleaners={cleaners} onAddLeave={onAddLeave} />
+
+            <div className="w-full">
                 <h3 className="text-lg font-semibold mb-2">Leave Balances</h3>
                  <div className="border rounded-lg max-h-96 overflow-y-auto">
                     <table className="w-full text-sm">
@@ -297,38 +337,6 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
           )}
         </CardContent>
       </Card>
-
-      {selectedDay && (
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-                setSelectedDay(undefined);
-            }
-        }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Absences for {format(selectedDay, 'PPP')}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                    {leaveOnSelectedDay.length > 0 ? (
-                        <div className="space-y-2">
-                           <h4 className="font-semibold">Cleaners on Leave</h4>
-                           {leaveOnSelectedDay.map(l => (
-                               <div key={l.id} className="flex items-center justify-between p-2 border rounded-md">
-                                   <div>
-                                       <p className="font-medium">{l.cleanerName}</p>
-                                       <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
-                                   </div>
-                                   <Button size="icon" variant="ghost" onClick={() => onDeleteLeave(l)}><Trash2 className="w-4 h-4 text-destructive"/></Button>
-                               </div>
-                           ))}
-                        </div>
-                    ) : <p className="text-muted-foreground text-sm text-center py-4">No absences logged for this day.</p>}
-                     <AddLeaveForm cleaners={cleaners} selectedDate={selectedDay} onAddLeave={onAddLeave} onClose={() => setIsDialogOpen(false)} />
-                </div>
-            </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 }
