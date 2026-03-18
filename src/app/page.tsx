@@ -244,21 +244,21 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-gray-800 bg-black px-4 sm:h-20 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-4">
               <div className="bg-excellerate-lime p-3 rounded-lg">
                   <ClipboardCheck className="h-6 w-6 text-black" />
               </div>
               <div>
-                <h1 className="bg-black px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-white font-headline">
+                <h1 className="bg-background px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-foreground font-headline">
                     Excellerate Services
                 </h1>
-                <p className="text-sm text-gray-400">Lot 4. Addenbrooke’s</p>
+                <p className="text-sm text-muted-foreground">Lot 4. Addenbrooke’s</p>
               </div>
           </div>
           <div className="text-right hidden sm:block">
-            <p className="font-semibold text-white">Manager: Owen Newton</p>
-            <p className="text-sm text-gray-400">Assistant Manager: Nick Miller</p>
+            <p className="font-semibold text-foreground">Manager: Owen Newton</p>
+            <p className="text-sm text-muted-foreground">Assistant Manager: Nick Miller</p>
           </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
