@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker';
 import { format, parseISO, isSameDay, isFuture, isToday, addDays, eachDayOfInterval } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +49,7 @@ const disabledDays = [isWeekend, isBankHoliday];
 function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeave: LeaveCalendarTabProps['onAddLeave'] }) {
     const [selectedCleanerId, setSelectedCleanerId] = useState<string>('');
     const [leaveType, setLeaveType] = useState<'holiday' | 'sick'>('holiday');
-    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [startDate, setStartDate] = useState<string>('');
     const [numberOfDays, setNumberOfDays] = useState(1);
     const { toast } = useToast();
 
@@ -62,7 +61,8 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
 
         const cleanerName = cleaners.find(c => c.id === selectedCleanerId)?.name || 'Unknown Cleaner';
         
-        const interval = { start: startDate, end: addDays(startDate, Math.max(0, numberOfDays - 1)) };
+        const startAsDate = parseISO(startDate);
+        const interval = { start: startAsDate, end: addDays(startAsDate, Math.max(0, numberOfDays - 1)) };
         const daysToBook = eachDayOfInterval(interval);
         
         let daysAdded = 0;
@@ -82,7 +82,7 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
             toast({ title: 'Leave Booked', description: `${daysAdded} day(s) of ${leaveType} for ${cleanerName} have been logged.` });
             // Reset form
             setSelectedCleanerId('');
-            setStartDate(undefined);
+            setStartDate('');
             setNumberOfDays(1);
         } else {
             toast({ variant: 'destructive', title: 'No working days selected', description: 'The selected date range only contains weekends or bank holidays.' });
@@ -112,11 +112,11 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="start-date">Start Date</Label>
-                    <DatePicker 
-                        date={startDate} 
-                        onDateChange={setStartDate} 
-                        modal={true}
-                        placeholder="Select start date"
+                    <Input
+                        id="start-date"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                         className="w-full"
                     />
                 </div>
