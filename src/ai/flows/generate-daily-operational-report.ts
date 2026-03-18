@@ -147,6 +147,6 @@ const generateDailyOperationalReportFlow = ai.defineFlow(
       monitorSites,
       issueSites,
     });
-    return output!;
+    return output || '';
   }
 );
