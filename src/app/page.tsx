@@ -55,39 +55,36 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, auth]);
 
-  // Seeding and Migration effect
+  // Seeding effect
   useEffect(() => {
     if (!firestore || !user) return;
 
     const seedDatabase = async () => {
-      // This function now handles both initial seeding and data migration.
-      const setupVersionKey = 'db_setup_version';
-      const currentVersion = 'v1.2'; // Increment to re-run migration
-
-      if (sessionStorage.getItem(setupVersionKey) === currentVersion) {
+      // Using a new key to force re-evaluation for users with old data.
+      const SEED_VERSION = 'db_seeded_with_contacts_v1';
+      if (sessionStorage.getItem(SEED_VERSION)) {
         return;
       }
-      
-      console.log('Running database setup/migration...');
-      toast({ title: "Setting up your app", description: "Please wait while we check for data updates." });
 
-      const sitesQuery = query(collection(firestore, 'sites'), limit(1));
+      // Check if the sites collection is empty.
+      const sitesCollectionRef = collection(firestore, 'sites');
+      const sitesQuery = query(sitesCollectionRef, limit(1));
       const sitesSnapshot = await getDocs(sitesQuery);
-      let didAnything = false;
 
       const batch = writeBatch(firestore);
 
       if (sitesSnapshot.empty) {
-        // --- INITIAL SEEDING for empty database ---
-        console.log('Database appears empty. Seeding all initial data...');
-        didAnything = true;
-        
-        const sitesCollectionRef = collection(firestore, 'sites');
+        // FULL SEED for a new database
+        console.log('Database appears empty. Seeding data...');
+        toast({ title: "Setting up your app", description: "Please wait while we populate some initial data." });
+
+        // Sites
         initialSites.forEach(siteData => {
           const siteRef = doc(sitesCollectionRef);
           batch.set(siteRef, siteData);
         });
         
+        // Cleaners
         const cleanersCollectionRef = collection(firestore, 'cleaners');
         const cleanerNameToIdMap = new Map<string, string>();
         initialCleaners.forEach(cleanerData => {
@@ -96,79 +93,96 @@ export default function DashboardPage() {
           batch.set(cleanerRef, cleanerData);
         });
         
+        // Schedule
         const scheduleCollectionRef = collection(firestore, 'schedule');
         initialSchedule.forEach(scheduleData => {
           const scheduleRef = doc(scheduleCollectionRef);
           batch.set(scheduleRef, scheduleData);
         });
 
+        // Leave
         const leaveCollectionRef = collection(firestore, 'leave');
         const cleanerUpdates: { [key: string]: { holidayTaken: number; sickDaysTaken: number } } = {};
         initialLeave.forEach(leaveData => {
           const cleanerId = cleanerNameToIdMap.get(leaveData.cleanerName);
           if (cleanerId) {
             const leaveRef = doc(leaveCollectionRef);
-            batch.set(leaveRef, { ...leaveData, cleanerId, coverAssignments: [] });
+            batch.set(leaveRef, {
+              ...leaveData,
+              cleanerId,
+              coverAssignments: []
+            });
 
             if (!cleanerUpdates[cleanerId]) {
               cleanerUpdates[cleanerId] = { holidayTaken: 0, sickDaysTaken: 0 };
             }
-            if (leaveData.type === 'holiday') cleanerUpdates[cleanerId].holidayTaken++;
-            else if (leaveData.type === 'sick') cleanerUpdates[cleanerId].sickDaysTaken++;
-          }
-        });
-        
-        for (const cleanerId in cleanerUpdates) {
-          const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-          const originalCleaner = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
-          if (originalCleaner) {
-            batch.update(cleanerRef, {
-              holidayTaken: (originalCleaner.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
-              sickDaysTaken: (originalCleaner.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
-            });
-          }
-        }
-      } else {
-        // --- MIGRATION for existing database ---
-        console.log('Database already has data. Checking for migrations...');
-        const allSitesSnapshot = await getDocs(collection(firestore, 'sites'));
-        allSitesSnapshot.forEach(docSnap => {
-          const existingSite = docSnap.data() as Site;
-          // Check if the site is missing the new fields
-          if (existingSite.contacts === undefined || existingSite.siteCode === undefined) {
-            const initialData = initialSites.find(is => is.name === existingSite.name);
-            if (initialData) {
-              console.log(`Migrating site: ${existingSite.name}`);
-              didAnything = true;
-              batch.update(docSnap.ref, {
-                siteCode: initialData.siteCode,
-                contacts: initialData.contacts
-              });
+            if (leaveData.type === 'holiday') {
+              cleanerUpdates[cleanerId].holidayTaken++;
+            } else if (leaveData.type === 'sick') {
+              cleanerUpdates[cleanerId].sickDaysTaken++;
             }
           }
         });
-      }
+        
+        // Update cleaner leave counts
+        for (const cleanerId in cleanerUpdates) {
+          const cleanerRef = doc(firestore, 'cleaners', cleanerId);
+          const originalCleanerData = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
+          if (originalCleanerData) {
+            batch.update(cleanerRef, {
+              holidayTaken: (originalCleanerData.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
+              sickDaysTaken: (originalCleanerData.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
+            });
+          }
+        }
+        
+        try {
+          await batch.commit();
+          toast({ title: "Setup Complete", description: "Your application data has been loaded." });
+          console.log('Database seeding complete.');
+          sessionStorage.setItem(SEED_VERSION, 'true');
+        } catch (error) {
+          console.error('Error seeding database:', error);
+          toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
+        }
+      } else {
+        // UPDATE existing sites with siteCode and contacts
+        console.log('Database already exists. Checking for site data updates...');
+        
+        const allSitesSnapshot = await getDocs(sitesCollectionRef);
+        let updatesMade = false;
+        allSitesSnapshot.forEach(docSnap => {
+            const existingSiteData = docSnap.data();
+            // Check if data is old (lacks siteCode)
+            if (existingSiteData.siteCode === undefined) {
+                const initialSiteData = initialSites.find(s => s.name === existingSiteData.name);
+                if (initialSiteData) {
+                    batch.update(docSnap.ref, {
+                        siteCode: initialSiteData.siteCode,
+                        contacts: initialSiteData.contacts,
+                    });
+                    updatesMade = true;
+                }
+            }
+        });
 
-      if (!didAnything) {
-        console.log('No data changes or migrations were needed.');
-        sessionStorage.setItem(setupVersionKey, currentVersion);
-        // No need to show a toast if nothing happened.
-        const toasts = document.querySelectorAll('[data-radix-toast-announce-exclude]');
-        toasts.forEach(t => t.remove());
-        return;
-      }
-
-      try {
-        await batch.commit();
-        toast({ title: "Setup Complete", description: "Your application data is up to date." });
-        console.log('Database setup/migration complete.');
-        sessionStorage.setItem(setupVersionKey, currentVersion);
-      } catch (error) {
-        console.error('Error during database setup:', error);
-        toast({ variant: 'destructive', title: "Setup Failed", description: "There was an error setting up your application." });
+        if (updatesMade) {
+            try {
+                await batch.commit();
+                toast({ title: "Data Update", description: "Site contact information has been updated." });
+                console.log('Site data update complete.');
+            } catch (error) {
+                console.error('Error updating site data:', error);
+                toast({ variant: 'destructive', title: "Update Failed", description: "Could not update site contact information." });
+            }
+        } else {
+            console.log('Site data is already up to date.');
+        }
+        
+        // Mark as seeded regardless of whether an update was needed, to prevent re-running this logic.
+        sessionStorage.setItem(SEED_VERSION, 'true');
       }
     };
-
 
     seedDatabase();
 
@@ -247,15 +261,7 @@ export default function DashboardPage() {
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    const initialSiteData = initialSites.find(s => s.name.toLowerCase() === siteName.toLowerCase().trim());
-    const newSite = {
-      name: siteName.trim(),
-      status: 'N/A' as SiteStatus,
-      notes: '',
-      siteCode: initialSiteData?.siteCode || '',
-      contacts: initialSiteData?.contacts || [],
-    };
-    addDocumentNonBlocking(sitesCollection, newSite);
+    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
@@ -290,10 +296,7 @@ export default function DashboardPage() {
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
     if (!firestore || !actionPlansCollection) return;
-    // Ensure the ID is correctly passed for setDocumentNonBlocking
-    const planId = updatedPlan.id || updatedPlan.targetName;
-    const planToSave = { ...updatedPlan, id: planId };
-    setDocumentNonBlocking(doc(actionPlansCollection, planId), planToSave, { merge: true });
+    setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
