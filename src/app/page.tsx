@@ -244,20 +244,20 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background px-4 sm:h-20 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-black px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-4">
               <div className="bg-excellerate-lime p-3 rounded-lg">
                   <ClipboardCheck className="h-6 w-6 text-black" />
               </div>
               <div>
-                <h1 className="bg-background px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-foreground font-headline">
+                <h1 className="bg-black px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-white font-headline">
                     Excellerate Services
                 </h1>
                 <p className="text-sm text-muted-foreground">Lot 4. Addenbrooke’s</p>
               </div>
           </div>
           <div className="text-right hidden sm:block">
-            <p className="font-semibold text-foreground">Manager: Owen Newton</p>
+            <p className="font-semibold text-white">Manager: Owen Newton</p>
             <p className="text-sm text-muted-foreground">Assistant Manager: Nick Miller</p>
           </div>
       </header>
@@ -270,16 +270,16 @@ export default function DashboardPage() {
         ) : (
           <Tabs defaultValue="sites" className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 h-auto flex-wrap">
-              <TabsTrigger value="sites" className="data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
-              <TabsTrigger value="cleaners" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
-              <TabsTrigger value="company-schedule" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
-              <TabsTrigger value="leave-calendar" className="data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
-              <TabsTrigger value="supplies" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supply Orders</TabsTrigger>
-              <TabsTrigger value="audits" className="data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
-              <TabsTrigger value="audit-history" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
-              <TabsTrigger value="risk" className="data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
-              <TabsTrigger value="summary" className="data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
-              <TabsTrigger value="action-plan" className="data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
+              <TabsTrigger value="action-plan" className="text-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><ClipboardList className="mr-2 h-4 w-4" />Action Plans</TabsTrigger>
+              <TabsTrigger value="audits" className="text-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><FileCheck className="mr-2 h-4 w-4" />Audits</TabsTrigger>
+              <TabsTrigger value="audit-history" className="text-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><FileClock className="mr-2 h-4 w-4" />Audit History</TabsTrigger>
+              <TabsTrigger value="cleaners" className="text-excellerate-red data-[state=active]:bg-excellerate-red data-[state=active]:text-white"><Users className="mr-2 h-4 w-4" />Cleaner Performance</TabsTrigger>
+              <TabsTrigger value="company-schedule" className="text-excellerate-blue data-[state=active]:bg-excellerate-blue data-[state=active]:text-white"><Calendar className="mr-2 h-4 w-4" />Company Schedule</TabsTrigger>
+              <TabsTrigger value="summary" className="text-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><FileText className="mr-2 h-4 w-4" />Daily Summary</TabsTrigger>
+              <TabsTrigger value="leave-calendar" className="text-excellerate-teal data-[state=active]:bg-excellerate-teal data-[state=active]:text-white"><CalendarDays className="mr-2 h-4 w-4" />Leave Calendar</TabsTrigger>
+              <TabsTrigger value="risk" className="text-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><ShieldAlert className="mr-2 h-4 w-4" />Site Risk Dashboard</TabsTrigger>
+              <TabsTrigger value="sites" className="text-excellerate-orange data-[state=active]:bg-excellerate-orange data-[state=active]:text-white"><LayoutDashboard className="mr-2 h-4 w-4" />Sites</TabsTrigger>
+              <TabsTrigger value="supplies" className="text-excellerate-lime data-[state=active]:bg-excellerate-lime data-[state=active]:text-black"><Package className="mr-2 h-4 w-4" />Supply Orders</TabsTrigger>
             </TabsList>
             
             <TabsContent value="sites">
