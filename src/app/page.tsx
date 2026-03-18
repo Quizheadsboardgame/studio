@@ -55,24 +55,33 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, auth]);
 
-  // Seeding effect
+  // Seeding and Migration effect
   useEffect(() => {
     if (!firestore || !user) return;
 
     const seedDatabase = async () => {
-      if (sessionStorage.getItem('db_seeded')) {
+      // This function now handles both initial seeding and data migration.
+      const setupVersionKey = 'db_setup_version';
+      const currentVersion = 'v1.2'; // Increment to re-run migration
+
+      if (sessionStorage.getItem(setupVersionKey) === currentVersion) {
         return;
       }
+      
+      console.log('Running database setup/migration...');
+      toast({ title: "Setting up your app", description: "Please wait while we check for data updates." });
 
       const sitesQuery = query(collection(firestore, 'sites'), limit(1));
       const sitesSnapshot = await getDocs(sitesQuery);
+      let didAnything = false;
+
+      const batch = writeBatch(firestore);
 
       if (sitesSnapshot.empty) {
-        console.log('Database appears empty. Seeding data...');
-        toast({ title: "Setting up your app", description: "Please wait while we populate some initial data." });
-
-        const batch = writeBatch(firestore);
-
+        // --- INITIAL SEEDING for empty database ---
+        console.log('Database appears empty. Seeding all initial data...');
+        didAnything = true;
+        
         const sitesCollectionRef = collection(firestore, 'sites');
         initialSites.forEach(siteData => {
           const siteRef = doc(sitesCollectionRef);
@@ -99,47 +108,67 @@ export default function DashboardPage() {
           const cleanerId = cleanerNameToIdMap.get(leaveData.cleanerName);
           if (cleanerId) {
             const leaveRef = doc(leaveCollectionRef);
-            batch.set(leaveRef, {
-              ...leaveData,
-              cleanerId,
-              coverAssignments: []
-            });
+            batch.set(leaveRef, { ...leaveData, cleanerId, coverAssignments: [] });
 
             if (!cleanerUpdates[cleanerId]) {
               cleanerUpdates[cleanerId] = { holidayTaken: 0, sickDaysTaken: 0 };
             }
-            if (leaveData.type === 'holiday') {
-              cleanerUpdates[cleanerId].holidayTaken++;
-            } else if (leaveData.type === 'sick') {
-              cleanerUpdates[cleanerId].sickDaysTaken++;
-            }
+            if (leaveData.type === 'holiday') cleanerUpdates[cleanerId].holidayTaken++;
+            else if (leaveData.type === 'sick') cleanerUpdates[cleanerId].sickDaysTaken++;
           }
         });
         
         for (const cleanerId in cleanerUpdates) {
           const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-          const originalCleanerData = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
-          if (originalCleanerData) {
+          const originalCleaner = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
+          if (originalCleaner) {
             batch.update(cleanerRef, {
-              holidayTaken: (originalCleanerData.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
-              sickDaysTaken: (originalCleanerData.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
+              holidayTaken: (originalCleaner.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
+              sickDaysTaken: (originalCleaner.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
             });
           }
         }
-        
-        try {
-          await batch.commit();
-          toast({ title: "Setup Complete", description: "Your application data has been loaded." });
-          console.log('Database seeding complete.');
-          sessionStorage.setItem('db_seeded', 'true');
-        } catch (error) {
-          console.error('Error seeding database:', error);
-          toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
-        }
       } else {
-        sessionStorage.setItem('db_seeded', 'true');
+        // --- MIGRATION for existing database ---
+        console.log('Database already has data. Checking for migrations...');
+        const allSitesSnapshot = await getDocs(collection(firestore, 'sites'));
+        allSitesSnapshot.forEach(docSnap => {
+          const existingSite = docSnap.data() as Site;
+          // Check if the site is missing the new fields
+          if (existingSite.contacts === undefined || existingSite.siteCode === undefined) {
+            const initialData = initialSites.find(is => is.name === existingSite.name);
+            if (initialData) {
+              console.log(`Migrating site: ${existingSite.name}`);
+              didAnything = true;
+              batch.update(docSnap.ref, {
+                siteCode: initialData.siteCode,
+                contacts: initialData.contacts
+              });
+            }
+          }
+        });
+      }
+
+      if (!didAnything) {
+        console.log('No data changes or migrations were needed.');
+        sessionStorage.setItem(setupVersionKey, currentVersion);
+        // No need to show a toast if nothing happened.
+        const toasts = document.querySelectorAll('[data-radix-toast-announce-exclude]');
+        toasts.forEach(t => t.remove());
+        return;
+      }
+
+      try {
+        await batch.commit();
+        toast({ title: "Setup Complete", description: "Your application data is up to date." });
+        console.log('Database setup/migration complete.');
+        sessionStorage.setItem(setupVersionKey, currentVersion);
+      } catch (error) {
+        console.error('Error during database setup:', error);
+        toast({ variant: 'destructive', title: "Setup Failed", description: "There was an error setting up your application." });
       }
     };
+
 
     seedDatabase();
 
@@ -218,7 +247,15 @@ export default function DashboardPage() {
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
+    const initialSiteData = initialSites.find(s => s.name.toLowerCase() === siteName.toLowerCase().trim());
+    const newSite = {
+      name: siteName.trim(),
+      status: 'N/A' as SiteStatus,
+      notes: '',
+      siteCode: initialSiteData?.siteCode || '',
+      contacts: initialSiteData?.contacts || [],
+    };
+    addDocumentNonBlocking(sitesCollection, newSite);
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
@@ -253,7 +290,10 @@ export default function DashboardPage() {
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
     if (!firestore || !actionPlansCollection) return;
-    setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
+    // Ensure the ID is correctly passed for setDocumentNonBlocking
+    const planId = updatedPlan.id || updatedPlan.targetName;
+    const planToSave = { ...updatedPlan, id: planId };
+    setDocumentNonBlocking(doc(actionPlansCollection, planId), planToSave, { merge: true });
   };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
