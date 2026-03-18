@@ -36,6 +36,9 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
   const totalSites = sites.length;
   const completionPercentage = totalSites > 0 ? (completedAuditsCount / totalSites) * 100 : 0;
 
+  const handleAuditorChange = (siteId: string, auditor: string) => {
+    onSetAudit(siteId, currentDate, { auditor });
+  };
 
   const handleScoreChange = (siteId: string, scoreString: string) => {
     const scoreValue = scoreString.trim() === '' ? null : parseInt(scoreString, 10);
@@ -64,12 +67,11 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     const updateData: Partial<Omit<MonthlyAudit, 'id'>> = { status: newStatus };
     if (newStatus !== 'Completed') {
       updateData.score = null;
-      updateData.bookedDate = null;
-      updateData.bookedTime = '';
     }
     if (newStatus === 'Not Booked') {
         updateData.bookedDate = null;
         updateData.bookedTime = '';
+        updateData.auditor = 'Unassigned';
     }
     onSetAudit(siteId, currentDate, updateData);
   };
@@ -114,10 +116,11 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[25%]">Site</TableHead>
-                <TableHead className="w-[20%]">Audit Status</TableHead>
-                <TableHead className="w-[40%]">Booked Date & Time</TableHead>
-                <TableHead className="w-[15%] text-right">Audit Score (%)</TableHead>
+                <TableHead className="w-[20%]">Site</TableHead>
+                <TableHead className="w-[18%]">Audit Status</TableHead>
+                <TableHead className="w-[17%]">Auditor</TableHead>
+                <TableHead className="w-[35%]">Booked Date & Time</TableHead>
+                <TableHead className="w-[10%] text-right">Score (%)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -146,6 +149,22 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                         </SelectContent>
                       </Select>
                     </TableCell>
+                    <TableCell className="align-top py-4">
+                       <Select
+                        value={audit?.auditor || 'Unassigned'}
+                        onValueChange={(auditor) => handleAuditorChange(site.id, auditor)}
+                        disabled={!isEditable && !isCompleted}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select auditor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Unassigned">Unassigned</SelectItem>
+                          <SelectItem value="Owen Newton">Owen Newton</SelectItem>
+                          <SelectItem value="Nick Miller">Nick Miller</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                      <TableCell className="align-top py-4">
                        <div className="flex items-center gap-2">
                             <DatePicker
@@ -153,14 +172,14 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                                 onDateChange={(date) => handleBookedDateChange(site.id, date)}
                                 modal={true}
                                 placeholder="N/A"
-                                className="w-[180px]"
+                                className="w-full"
                                 disabled={!isEditable && !isCompleted}
                             />
                             <Input
                                 type="time"
                                 value={audit?.bookedTime || ''}
                                 onChange={(e) => handleBookedTimeChange(site.id, e.target.value)}
-                                className="w-[100px]"
+                                className="w-full"
                                 disabled={!isEditable}
                             />
                        </div>
@@ -168,7 +187,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                     <TableCell className="align-top py-4 text-right">
                       <Input
                           type="number"
-                          placeholder="Score"
+                          placeholder="N/A"
                           value={audit?.score ?? ''}
                           onChange={(e) => handleScoreChange(site.id, e.target.value)}
                           min="0"
@@ -180,7 +199,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                 )
               }) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     No sites found.
                   </TableCell>
                 </TableRow>
@@ -192,3 +211,5 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
     </Card>
   );
 }
+
+    

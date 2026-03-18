@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment } from '@/lib/data';
-import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, Bot } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
@@ -45,7 +45,7 @@ export default function DashboardPage() {
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Sites', icon: LayoutDashboard },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
-  ], []);
+  ].sort((a, b) => a.label.localeCompare(b.label)), []);
 
   const ActiveIcon = useMemo(() => tabs.find(t => t.value === activeTab)?.icon, [activeTab, tabs]);
 
@@ -99,6 +99,7 @@ export default function DashboardPage() {
       siteId,
       year,
       month,
+      auditor: 'Unassigned',
       ...auditData,
     };
     
@@ -290,7 +291,7 @@ export default function DashboardPage() {
               <div className="bg-excellerate-lime p-3 rounded-lg">
                   <BookOpenCheck className="h-6 w-6 text-black" />
               </div>
-              <div>
+              <div className='flex flex-col'>
                 <h1 className="text-2xl font-bold tracking-tight text-white font-headline">
                     Excellerate Services
                 </h1>
@@ -461,3 +462,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

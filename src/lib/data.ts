@@ -268,13 +268,17 @@ export type MonthlyAudit = {
   score?: number | null;
   bookedDate?: string | null;
   bookedTime?: string;
+  auditor: string;
 };
 
 export type Appointment = {
   id: string;
   title: string;
   date: string; // YYYY-MM-DD
+  assignee: string;
   startTime?: string;
   endTime?: string;
   notes?: string;
 };
+
+    

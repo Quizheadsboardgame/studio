@@ -303,6 +303,15 @@
         "bookedTime": {
           "type": "string",
           "description": "The time the audit is booked for."
+        },
+        "auditor": {
+            "type": "string",
+            "description": "The person assigned to conduct the audit.",
+            "enum": [
+                "Owen Newton",
+                "Nick Miller",
+                "Unassigned"
+            ]
         }
       },
       "required": [
@@ -326,6 +335,14 @@
           "format": "date",
           "description": "The date of the appointment (YYYY-MM-DD)."
         },
+        "assignee": {
+            "type": "string",
+            "description": "The person this appointment is assigned to.",
+            "enum": [
+                "Owen Newton",
+                "Nick Miller"
+            ]
+        },
         "startTime": {
           "type": "string",
           "description": "The start time of the appointment."
@@ -341,7 +358,8 @@
       },
       "required": [
         "title",
-        "date"
+        "date",
+        "assignee"
       ]
     }
   },
@@ -446,3 +464,5 @@
     ]
   }
 }
+
+    

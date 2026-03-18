@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, ReactNode } from 'react';
 import type { Site, MonthlyAudit, Appointment } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Event type for combined view
 type DiaryEvent = {
@@ -25,34 +27,38 @@ type DiaryEvent = {
     title: string;
     details: string;
     notes?: string;
+    assignee: string;
     raw: Appointment | MonthlyAudit;
 };
 
 interface AppointmentDialogProps {
   onSave: (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => void;
   appointment?: Appointment;
+  defaultAssignee?: string;
   children: React.ReactNode;
 }
 
-function AppointmentDialog({ onSave, appointment, children }: AppointmentDialogProps) {
+function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: AppointmentDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { toast } = useToast();
     
     const [title, setTitle] = useState(appointment?.title || '');
     const [date, setDate] = useState<Date | undefined>(appointment ? parseISO(appointment.date) : undefined);
+    const [assignee, setAssignee] = useState(appointment?.assignee || defaultAssignee || 'Owen Newton');
     const [startTime, setStartTime] = useState(appointment?.startTime || '');
     const [endTime, setEndTime] = useState(appointment?.endTime || '');
     const [notes, setNotes] = useState(appointment?.notes || '');
 
     const handleSave = () => {
-        if (!title || !date) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a title and date.' });
+        if (!title || !date || !assignee) {
+            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a title, date, and assignee.' });
             return;
         }
 
         const appointmentData = {
             title,
             date: format(date, 'yyyy-MM-dd'),
+            assignee,
             startTime,
             endTime,
             notes
@@ -71,6 +77,7 @@ function AppointmentDialog({ onSave, appointment, children }: AppointmentDialogP
         if (open) {
             setTitle(appointment?.title || '');
             setDate(appointment ? parseISO(appointment.date) : new Date());
+            setAssignee(appointment?.assignee || defaultAssignee || 'Owen Newton');
             setStartTime(appointment?.startTime || '');
             setEndTime(appointment?.endTime || '');
             setNotes(appointment?.notes || '');
@@ -88,9 +95,23 @@ function AppointmentDialog({ onSave, appointment, children }: AppointmentDialogP
                         <Label htmlFor="title">Title</Label>
                         <Input id="title" value={title} onChange={e => setTitle(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <DatePicker date={date} onDateChange={setDate} modal={true} />
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="date">Date</Label>
+                            <DatePicker date={date} onDateChange={setDate} modal={true} />
+                        </div>
+                        <div className="space-y-2">
+                             <Label htmlFor="assignee">Assign To</Label>
+                             <Select value={assignee} onValueChange={setAssignee}>
+                                <SelectTrigger id="assignee">
+                                    <SelectValue placeholder="Select person" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Owen Newton">Owen Newton</SelectItem>
+                                    <SelectItem value="Nick Miller">Nick Miller</SelectItem>
+                                </SelectContent>
+                             </Select>
+                        </div>
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -127,10 +148,11 @@ interface DiaryTabProps {
 
 export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppointment, onUpdateAppointment, onRemoveAppointment }: DiaryTabProps) {
     const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
+    const [activeDiary, setActiveDiary] = useState('Owen Newton');
 
     const events = useMemo(() => {
         const auditEvents: DiaryEvent[] = monthlyAudits
-            .filter(audit => audit.bookedDate)
+            .filter(audit => audit.bookedDate && audit.auditor && audit.auditor !== 'Unassigned')
             .map(audit => {
                 const site = sites.find(s => s.id === audit.siteId);
                 return {
@@ -140,6 +162,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                     title: `Audit @ ${site?.name || 'Unknown Site'}`,
                     details: `Status: ${audit.status}${audit.bookedTime ? ` at ${audit.bookedTime}`: ''}`,
                     notes: audit.score ? `Score: ${audit.score}%` : undefined,
+                    assignee: audit.auditor,
                     raw: audit,
                 };
             });
@@ -151,6 +174,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
             title: app.title,
             details: `${app.startTime || ''}${app.endTime ? ` - ${app.endTime}` : ''}`,
             notes: app.notes,
+            assignee: app.assignee,
             raw: app,
         }));
         
@@ -169,18 +193,8 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
 
     }, [monthlyAudits, appointments, sites, dateRange]);
 
-    const groupedEvents = useMemo(() => {
-        return events.reduce((acc, event) => {
-            const day = format(event.date, 'yyyy-MM-dd');
-            if (!acc[day]) {
-                acc[day] = [];
-            }
-            acc[day].push(event);
-            return acc;
-        }, {} as Record<string, DiaryEvent[]>);
-    }, [events]);
-
-    const sortedDays = Object.keys(groupedEvents).sort();
+    const owenEvents = useMemo(() => events.filter(e => e.assignee === 'Owen Newton'), [events]);
+    const nickEvents = useMemo(() => events.filter(e => e.assignee === 'Nick Miller'), [events]);
 
     const handleSaveAppointment = (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => {
         if ('id' in data) {
@@ -189,6 +203,70 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
         } else {
             onAddAppointment(data);
         }
+    };
+    
+    const renderEvents = (eventsToRender: DiaryEvent[]): ReactNode => {
+        const groupedEvents = eventsToRender.reduce((acc, event) => {
+            const day = format(event.date, 'yyyy-MM-dd');
+            if (!acc[day]) acc[day] = [];
+            acc[day].push(event);
+            return acc;
+        }, {} as Record<string, DiaryEvent[]>);
+        const sortedDays = Object.keys(groupedEvents).sort();
+
+        if (eventsToRender.length === 0) {
+            return (
+                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground text-center">No events scheduled for the selected date range.</p>
+                </div>
+            )
+        }
+
+        return (
+            <div className="space-y-6">
+                {sortedDays.map(day => (
+                    <div key={day}>
+                        <h3 className="font-semibold text-lg border-b pb-2 mb-4">{format(parseISO(day), 'EEEE, do MMMM yyyy')}</h3>
+                        <div className="space-y-4">
+                            {groupedEvents[day].map(event => (
+                                <div key={event.id} className="flex items-start gap-4 p-4 rounded-lg border">
+                                    <div className={cn("mt-1 flex h-8 w-8 items-center justify-center rounded-full", event.type === 'audit' ? 'bg-excellerate-blue' : 'bg-excellerate-teal')}>
+                                        {event.type === 'audit' ? <Briefcase className="h-4 w-4 text-white" /> : <Calendar className="h-4 w-4 text-white" />}
+                                    </div>
+                                    <div className="flex-grow">
+                                        <p className="font-semibold">{event.title}</p>
+                                        <p className="text-sm text-muted-foreground">{event.details}</p>
+                                        {event.notes && <p className="text-sm text-muted-foreground mt-1 italic">"{event.notes}"</p>}
+                                    </div>
+                                    {event.type === 'appointment' && (
+                                        <div className="flex items-center gap-1">
+                                            <AppointmentDialog onSave={handleSaveAppointment} appointment={event.raw as Appointment}>
+                                                <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
+                                            </AppointmentDialog>
+                                                <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Delete Appointment?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Are you sure you want to delete "{event.title}"? This action cannot be undone.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => onRemoveAppointment(event.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
     };
 
     return (
@@ -199,7 +277,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                         <CardTitle>Diary</CardTitle>
                         <CardDescription>View upcoming audits and appointments.</CardDescription>
                     </div>
-                     <AppointmentDialog onSave={handleSaveAppointment}>
+                     <AppointmentDialog onSave={handleSaveAppointment} defaultAssignee={activeDiary}>
                         <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Appointment</Button>
                     </AppointmentDialog>
                 </div>
@@ -208,55 +286,26 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, onAddAppo
                     <DateRangePicker date={dateRange} onDateChange={setDateRange} />
                 </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-                {sortedDays.length > 0 ? (
-                    sortedDays.map(day => (
-                        <div key={day}>
-                            <h3 className="font-semibold text-lg border-b pb-2 mb-4">{format(parseISO(day), 'EEEE, do MMMM yyyy')}</h3>
-                            <div className="space-y-4">
-                                {groupedEvents[day].map(event => (
-                                    <div key={event.id} className="flex items-start gap-4 p-4 rounded-lg border">
-                                        <div className={cn("mt-1 flex h-8 w-8 items-center justify-center rounded-full", event.type === 'audit' ? 'bg-excellerate-blue' : 'bg-excellerate-teal')}>
-                                            {event.type === 'audit' ? <Briefcase className="h-4 w-4 text-white" /> : <Calendar className="h-4 w-4 text-white" />}
-                                        </div>
-                                        <div className="flex-grow">
-                                            <p className="font-semibold">{event.title}</p>
-                                            <p className="text-sm text-muted-foreground">{event.details}</p>
-                                            {event.notes && <p className="text-sm text-muted-foreground mt-1 italic">"{event.notes}"</p>}
-                                        </div>
-                                        {event.type === 'appointment' && (
-                                            <div className="flex items-center gap-1">
-                                                <AppointmentDialog onSave={handleSaveAppointment} appointment={event.raw as Appointment}>
-                                                    <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
-                                                </AppointmentDialog>
-                                                 <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete Appointment?</AlertDialogTitle>
-                                                            <AlertDialogDescription>Are you sure you want to delete "{event.title}"? This action cannot be undone.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => onRemoveAppointment(event.id)}>Delete</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                        <p className="text-muted-foreground text-center">No events scheduled for the selected date range.</p>
+            <CardContent className="p-0">
+                 <Tabs value={activeDiary} onValueChange={setActiveDiary} className="w-full">
+                    <div className="border-b">
+                        <TabsList className="bg-transparent p-0 m-0 rounded-none gap-4 px-6">
+                            <TabsTrigger value="Owen Newton" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Owen's Diary</TabsTrigger>
+                            <TabsTrigger value="Nick Miller" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Nick's Diary</TabsTrigger>
+                        </TabsList>
                     </div>
-                )}
+                    <div className="p-6">
+                        <TabsContent value="Owen Newton" className="mt-0">
+                            {renderEvents(owenEvents)}
+                        </TabsContent>
+                        <TabsContent value="Nick Miller" className="mt-0">
+                            {renderEvents(nickEvents)}
+                        </TabsContent>
+                    </div>
+                </Tabs>
             </CardContent>
         </Card>
     );
 }
+
+    
