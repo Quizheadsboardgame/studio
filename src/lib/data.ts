@@ -22,54 +22,87 @@ export const siteStatuses: SiteStatus[] = [
 export type AuditStatus = 'Not Booked' | 'Emailed Client' | 'Booked' | 'Completed';
 export const auditStatuses: AuditStatus[] = ['Not Booked', 'Emailed Client', 'Booked', 'Completed'];
 
+export type Contact = {
+  name: string;
+  phone?: string;
+  email?: string;
+};
+
 export type Site = {
   id: string;
   name: string;
+  siteCode?: string;
   status: SiteStatus;
   notes?: string;
+  contacts?: Contact[];
+};
+
+const clientData: { [key: string]: { siteCode: string; contacts: Contact[] } } = {
+  "ACCI LEVEL 6": { siteCode: "UOC117", contacts: [{ name: "RHODA KUC", phone: "62564", email: "rek22@medschl.cam.ac.uk" }] },
+  "ANNE MCLAREN": { siteCode: "UOC1", contacts: [{ name: "SALLY-ANNE THOMAS", phone: "01223 336762", email: "sat55@cam.ac.uk" }] },
+  "BARTON HOUSE": { siteCode: "UOC119", contacts: [{ name: "CHLOE CALEY LIGHT", phone: "", email: "Chloe.caley-Light@bioresource.nihr.ac.uk" }] },
+  "BAY 13": { siteCode: "UOC5", contacts: [{ name: "DENISE FAULKNER", phone: "30977", email: "Denise.Faulkner@admin.cam.ac.uk" }] },
+  "BIO-RESIPISHORY LAB LEVEL 1": { siteCode: "UOC3", contacts: [{ name: "NATALIA WLADYSLAWA PIASZCZYK", phone: "1222 (7)61423", email: "Natalia.Piaszczyk@mrc-epid.cam.ac.uk" }] },
+  "BONE RESEARCH/RADIOLOGY LEVEL 4": { siteCode: "UOC122", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "CEDAR": { siteCode: "UOC3", contacts: [{ name: "ANDRE NURMSALU", phone: "", email: "Andre.Nurmsalu@mrc-epid.cam.ac.uk" }] },
+  "CLIFFORD ALLBUTT BUILDING - CAB": { siteCode: "UOC4", contacts: [{ name: "JAKE PORTCH", phone: "", email: "jgp26@medschl.cam.ac.uk" }] },
+  "CLINICAL SCHOOLS": { siteCode: "UOC6", contacts: [{ name: "CHRIS CAMPBELL", phone: "01223 336176", email: "cc2022@medschl.cam.ac.uk" }] },
+  "COTON HOUSE": { siteCode: "UOC120", contacts: [{ name: "CHLOE CALEY LIGHT", phone: "", email: "Chloe.caley-Light@bioresource.nihr.ac.uk" }] },
+  "E7": { siteCode: "", contacts: [{ name: "UNOCCUPIED", phone: "", email: "" }] },
+  "EAST FORVIE (IPH - INSTITUTE OF PUBLIC HELATH)": { siteCode: "UOC9", contacts: [{ name: "JEREMY MARTIN", phone: "30300", email: "jcm209@medschl.cam.ac.uk" }, { name: "STEPHEN CLARKE", phone: "01223 748635", email: "sjc313@medschl.cam.ac.uk" }] },
+  "GRANTCHESTER HOUSE": { siteCode: "UOC104", contacts: [{ name: "CHRIS CAMPBELL", phone: "01224 336176", email: "cc2022@medschl.cam.ac.uk" }] },
+  "HERSCHEL SMITH BUILDING - HSB": { siteCode: "UOC8", contacts: [{ name: "BETTY RAJ", phone: "01223 337106", email: "HSB@medschl.cam.ac.uk" }] },
+  "HLRI - HEART & LUNG BUILDING / VICTOR PHILLIP DAHDAL": { siteCode: "UOC15", contacts: [{ name: "SPYRIDONAS TSIRONIS", phone: "7426829685", email: "st726@cam.ac.uk" }] },
+  "IMS LEVELS 4&5": { siteCode: "UOC105", contacts: [{ name: "JONATHAN FORT", phone: "36424", email: "jf277@medschl.cam.ac.uk" }, { name: "VERITY KEW", phone: "", email: "vgk20@medschl.cam.ac.uk" }] },
+  "ISLAND RESEARCH BUILDING - IRB": { siteCode: "UOC10", contacts: [{ name: "JAKE PORTCH", phone: "", email: "jgp26@medschl.cam.ac.uk" }] },
+  "JEFFREY CHEAH (CAPELLA) OFFICE": { siteCode: "UOC11", contacts: [{ name: "JAMES MACKENZIE", phone: "01223 767801", email: "James.Mackenzie@admin.cam.ac.uk" }] },
+  "JOHN VAN GEEST - JVG": { siteCode: "UOC12", contacts: [{ name: "BEATA ORLOS", phone: "", email: "bwo22@medschl.cam.ac.uk" }, { name: "DAMION BOX", phone: "", email: "dmsb2@cam.ac.uk" }] },
+  "MEDICINE LEVEL 5": { siteCode: "UOC108", contacts: [{ name: "JOHN O BRIEN", phone: "01224 762604", email: "jao47@cam.ac.uk" }] },
+  "MEDICAL GENETICS LEVEL 6": { siteCode: "UOC107", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "MRC EPIDEMIOLOGY LEVEL 3": { siteCode: "UOC109", contacts: [{ name: "ANDRE NURMSALU", phone: "", email: "Andre.Nurmsalu@mrc-epid.cam.ac.uk" }] },
+  "MRC WATERBEACH SAMPLE STORAGE": { siteCode: "UOC118", contacts: [{ name: "STEVEN KNIGHTON", phone: "01223 862777", email: "Steven.Knighton@mrc-epid.cam.ac.uk" }] },
+  "NEURO SPACE": { siteCode: "UOC126", contacts: [{ name: "JONATHAN HALL", phone: "01223 336942", email: "jdh79@medschl.cam.ac.uk" }, { name: "SUE SHAW-HAWKINS", phone: "", email: "ss2921@medschl.cam.ac.uk" }] },
+  "OBS": { siteCode: "UOC110", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "OLD IMS - LAB BLOCK 4": { siteCode: "UOC106", contacts: [{ name: "JONATHAN FORT", phone: "36424", email: "jf277@medschl.cam.ac.uk" }, { name: "VERITY KEW", phone: "", email: "vgk20@medschl.cam.ac.uk" }] },
+  "P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4": { siteCode: "UOC111", contacts: [{ name: "KAREN MITCHELL", phone: "01223 217889", email: "PACEAdministration@medschl.cam.ac.uk" }] },
+  "PAEDIATRICS LEVEL 8": { siteCode: "UOC123", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "POST DOC": { siteCode: "?", contacts: [{ name: "SHAUN BALLISAT", phone: "", email: "centres.opda@admin.cam.ac.uk" }, { name: "ELLIE BURGESS-WILSON", phone: "", email: "centres.opda@admin.cam.ac.uk" }] },
+  "STRAGEWAYS (SLR)": { siteCode: "UOC14", contacts: [{ name: "JEREMY MARTIN", phone: "948619", email: "jcm209@medschl.cam.ac.uk" }, { name: "STEPHEN CLARKE", phone: "01223 748635", email: "sjc313@medschl.cam.ac.uk" }] },
+  "SURGERY & RHEUMATOLOGY LEVEL 6 HUB": { siteCode: "UOC124", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "SURGERY LEVEL 9": { siteCode: "UOC121", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
+  "TMS F&G LEVEL 2 OFFICE SPACE": { siteCode: "UOC3", contacts: [{ name: "SUE SHAW-HAWKINS", phone: "", email: "ss2921@medschl.cam.ac.uk" }] },
+  "WBIC RPU BASEMENT": { siteCode: "UOC125", contacts: [{ name: "ANIRUDDHA DOKE", phone: "", email: "akd44@cam.ac.uk" }] },
+  "WEST FORVIE": { siteCode: "UOC16", contacts: [{ name: "DENISE FAULKNER", phone: "30977", email: "Denise.Faulkner@admin.cam.ac.uk" }] },
+  "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER": { siteCode: "UOC112", contacts: [{ name: "MONIKA FITZJOHN", phone: "01223 331823", email: "ml818@cam.ac.uk" }, { name: "VICKY LUPSON", phone: "31825", email: "vcl21@cam.ac.uk" }] },
+  "X RAY BLOCK RADIOLOGY LEVEL 5": { siteCode: "UOC113", contacts: [{ name: "JAMES BARRETT", phone: "36891", email: "jwab3@medschl.cam.ac.uk" }, { name: "JOYCE VIVEROS COBOS", phone: "01223 336890", email: "jvc31@cam.ac.uk" }] },
 };
 
 
-export const initialSites: Omit<Site, 'id'>[] = [
-    "ACCI LEVEL 6",
-    "ANNE MCLAREN",
-    "BARTON HOUSE",
-    "BAY 13",
-    "BIO-RESIPISHORY LAB LEVEL 1",
-    "BONE RESEARCH/RADIOLOGY LEVEL 4",
-    "CEDAR",
-    "CLIFFORD ALLBUTT BUILDING - CAB",
-    "CLINICAL SCHOOLS",
-    "COTON HOUSE",
-    "E7",
-    "EAST FORVIE (IPH - INSTITUTE OF PUBLIC HELATH)",
-    "GRANTCHESTER HOUSE",
-    "HERSCHEL SMITH BUILDING - HSB",
-    "HLRI - HEART & LUNG BUILDING / VICTOR PHILLIP DAHDAL",
-    "IMS LEVELS 4&5",
-    "ISLAND RESEARCH BUILDING - IRB",
-    "JEFFREY CHEAH (CAPELLA) OFFICE",
-    "JOHN VAN GEEST - JVG",
-    "MEDICINE LEVEL 5",
-    "MRC EPIDEMIOLOGY LEVEL 3",
-    "MRC WATERBEACH SAMPLE STORAGE",
-    "NERO SPACE",
-    "NEURO SPACE",
-    "OBS",
-    "OLD IMS - LAB BLOCK 4",
-    "P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4",
-    "PAEDIATRICS LEVEL 8",
-    "POST DOC",
-    "STRAGEWAYS (SLR)",
-    "SURGERY & RHEUMATOLOGY LEVEL 6 HUB",
-    "SURGERY LEVEL 9",
-    "TMS F&G LEVEL 2 OFFICE SPACE",
-    "WBIC RPU BASEMENT",
-    "WEST FORVIE",
-    "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER",
-    "X RAY BLOCK RADIOLOGY LEVEL 5"
-].sort((a, b) => a.localeCompare(b)).map(name => ({ name, status: 'N/A' as SiteStatus, notes: '' }));
+const allSiteNames = [
+    "ACCI LEVEL 6", "ANNE MCLAREN", "BARTON HOUSE", "BAY 13", "BIO-RESIPISHORY LAB LEVEL 1",
+    "BONE RESEARCH/RADIOLOGY LEVEL 4", "CEDAR", "CLIFFORD ALLBUTT BUILDING - CAB",
+    "CLINICAL SCHOOLS", "COTON HOUSE", "E7", "EAST FORVIE (IPH - INSTITUTE OF PUBLIC HELATH)",
+    "GRANTCHESTER HOUSE", "HERSCHEL SMITH BUILDING - HSB", "HLRI - HEART & LUNG BUILDING / VICTOR PHILLIP DAHDAL",
+    "IMS LEVELS 4&5", "ISLAND RESEARCH BUILDING - IRB", "JEFFREY CHEAH (CAPELLA) OFFICE",
+    "JOHN VAN GEEST - JVG", "MEDICINE LEVEL 5", "MRC EPIDEMIOLOGY LEVEL 3", "MRC WATERBEACH SAMPLE STORAGE",
+    "NEURO SPACE", "NERO SPACE", "OBS", "OLD IMS - LAB BLOCK 4", "P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4",
+    "PAEDIATRICS LEVEL 8", "POST DOC", "STRAGEWAYS (SLR)", "SURGERY & RHEUMATOLOGY LEVEL 6 HUB",
+    "SURGERY LEVEL 9", "TMS F&G LEVEL 2 OFFICE SPACE", "WBIC RPU BASEMENT", "WEST FORVIE",
+    "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER", "X RAY BLOCK RADIOLOGY LEVEL 5"
+];
 
+export const initialSites: Omit<Site, 'id'>[] = [...new Set(allSiteNames)]
+    .sort((a, b) => a.localeCompare(b))
+    .map(name => {
+        const details = clientData[name];
+        return {
+            name,
+            siteCode: details?.siteCode || '',
+            status: 'N/A' as SiteStatus,
+            notes: '',
+            contacts: details?.contacts || [],
+        };
+    });
 
 export type CleanerPerformance =
   | 'N/A'
@@ -503,4 +536,5 @@ export type Task = {
   assignee?: string;
   site?: string;
 };
+
 

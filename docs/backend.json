@@ -10,6 +10,10 @@
           "type": "string",
           "description": "The common name or identifier for the cleaning site, e.g., 'Anne Mclaren' or 'MRC Epidemiology Level 3'."
         },
+        "siteCode": {
+          "type": "string",
+          "description": "The unique code for the site, e.g., 'UOC1'."
+        },
         "status": {
           "type": "string",
           "description": "The current operational status of the site, indicating client satisfaction or required actions. Possible values include: 'N/A', 'Client happy', 'Operations request', 'Client concerns', 'Under control', 'Site under action plan', 'Site requires action plan'."
@@ -17,11 +21,41 @@
         "notes": {
           "type": "string",
           "description": "Optional notes or comments about the site."
+        },
+        "contacts": {
+          "type": "array",
+          "description": "A list of client contacts for the site.",
+          "items": {
+            "$ref": "#/backend/entities/Contact"
+          }
         }
       },
       "required": [
         "name",
         "status"
+      ]
+    },
+    "Contact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a client contact for a site.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the contact person."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the contact person."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the contact person."
+        }
+      },
+      "required": [
+        "name"
       ]
     },
     "Cleaner": {

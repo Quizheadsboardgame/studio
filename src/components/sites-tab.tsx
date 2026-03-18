@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Site, SiteStatus } from '@/lib/data';
 import { siteStatuses } from '@/lib/data';
-import { PlusCircle, Pencil, Check, X, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X, Trash2, UserSearch } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import {
@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SitesTabProps {
   sites: Site[];
@@ -80,9 +81,11 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Site</TableHead>
-              <TableHead className="w-[25%]">Status</TableHead>
+              <TableHead className="w-[25%]">Site</TableHead>
+              <TableHead className="w-[15%]">Site Code</TableHead>
+              <TableHead className="w-[20%]">Status</TableHead>
               <TableHead>Notes</TableHead>
+              <TableHead className="w-[10%]">Contacts</TableHead>
               <TableHead className="w-[120px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -110,6 +113,7 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
                     site.name
                   )}
                 </TableCell>
+                <TableCell className="align-top py-4 text-muted-foreground">{site.siteCode}</TableCell>
                 <TableCell className="align-top py-4">
                   <Select
                     value={site.status}
@@ -143,6 +147,39 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+                </TableCell>
+                <TableCell className="align-top py-4">
+                   {site.contacts && site.contacts.length > 0 ? (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full">
+                                  <UserSearch className="mr-2 h-4 w-4" /> 
+                                  {site.contacts.length}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                                <div className="grid gap-4">
+                                    <div className="space-y-1">
+                                        <h4 className="font-medium leading-none">Client Contacts</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            {site.name}
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {site.contacts.map((contact, index) => (
+                                            <div key={index} className="grid gap-1">
+                                                <p className="text-sm font-medium leading-none">{contact.name}</p>
+                                                {contact.email && <p className="text-sm text-muted-foreground">{contact.email}</p>}
+                                                {contact.phone && <p className="text-sm text-muted-foreground">Tel: {contact.phone}</p>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    ) : (
+                        <span className="text-sm text-muted-foreground">None</span>
+                    )}
                 </TableCell>
                  <TableCell className="align-top py-4 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -186,7 +223,7 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No sites found. Add one to get started.
                 </TableCell>
               </TableRow>
