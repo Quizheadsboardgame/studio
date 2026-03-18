@@ -12,8 +12,6 @@ import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
-import type { DateRange } from 'react-day-picker';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -219,7 +217,8 @@ interface DiaryTabProps {
 }
 
 export default function DiaryTab({ sites, appointments, monthlyAudits, leave, schedule, onAddAppointment, onUpdateAppointment, onRemoveAppointment }: DiaryTabProps) {
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
+    const [filterStartDate, setFilterStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+    const [filterEndDate, setFilterEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [activeDiary, setActiveDiary] = useState('Owen Newton');
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const printableRef = useRef<HTMLDivElement>(null);
@@ -304,18 +303,18 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
 
         const allEvents = [...auditEvents, ...expandedAppointments, ...coverEvents];
         
-        if (!dateRange?.from) {
-          return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
+        if (!filterStartDate || !filterEndDate) {
+            return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
         }
         
-        const fromDate = new Date(dateRange.from);
+        const fromDate = parseISO(filterStartDate);
         fromDate.setHours(0,0,0,0);
-        let toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+        const toDate = parseISO(filterEndDate);
         toDate.setHours(23, 59, 59, 999);
 
         return allEvents.filter(event => event.date >= fromDate && event.date <= toDate).sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    }, [monthlyAudits, appointments, sites, leave, schedule, dateRange]);
+    }, [monthlyAudits, appointments, sites, leave, schedule, filterStartDate, filterEndDate]);
 
     const owenEvents = useMemo(() => events.filter(e => e.assignee === 'Owen Newton'), [events]);
     const nickEvents = useMemo(() => events.filter(e => e.assignee === 'Nick Miller'), [events]);
@@ -479,9 +478,23 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                             )}
                         </div>
                     </div>
-                     <div className="pt-4">
+                     <div className="pt-4 space-y-2">
                         <Label className="text-sm font-medium">Filter by date</Label>
-                        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <Input
+                                type="date"
+                                value={filterStartDate}
+                                onChange={(e) => setFilterStartDate(e.target.value)}
+                                className="w-full sm:w-auto"
+                            />
+                            <span className="text-muted-foreground">to</span>
+                            <Input
+                                type="date"
+                                value={filterEndDate}
+                                onChange={(e) => setFilterEndDate(e.target.value)}
+                                className="w-full sm:w-auto"
+                            />
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
