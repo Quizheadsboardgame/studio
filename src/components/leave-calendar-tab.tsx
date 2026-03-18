@@ -115,6 +115,7 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
                     <DatePicker 
                         date={startDate} 
                         onDateChange={setStartDate} 
+                        modal={true}
                         placeholder="Select start date"
                         className="w-full"
                     />

@@ -87,6 +87,7 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
           <DatePicker
             date={newTaskDueDate}
             onDateChange={setNewTaskDueDate}
+            modal={true}
             placeholder="Select due date"
             className="w-full sm:w-[200px]"
           />

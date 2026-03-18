@@ -151,6 +151,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                             <DatePicker
                                 date={audit?.bookedDate ? parseISO(audit.bookedDate) : undefined}
                                 onDateChange={(date) => handleBookedDateChange(site.id, date)}
+                                modal={true}
                                 placeholder="N/A"
                                 className="w-[180px]"
                                 disabled={!isEditable && !isCompleted}

@@ -90,7 +90,7 @@ function AppointmentDialog({ onSave, appointment, children }: AppointmentDialogP
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="date">Date</Label>
-                        <DatePicker date={date} onDateChange={setDate} />
+                        <DatePicker date={date} onDateChange={setDate} modal={true} />
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">

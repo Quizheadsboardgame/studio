@@ -269,7 +269,7 @@ export default function DashboardPage() {
                   <BookOpenCheck className="h-6 w-6 text-black" />
               </div>
               <div>
-                <h1 className="bg-black px-3 py-1 rounded-md text-2xl font-bold tracking-tight text-white font-headline">
+                <h1 className="text-2xl font-bold tracking-tight text-white font-headline">
                     Excellerate Services
                 </h1>
                 <p className="text-sm text-muted-foreground">Lot 4. Addenbrooke’s</p>
