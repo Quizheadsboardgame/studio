@@ -31,24 +31,39 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
 
 
   const handleScoreChange = (siteId: string, scoreString: string) => {
-    const score = scoreString === '' ? undefined : parseInt(scoreString, 10);
-    if (score !== undefined && (score < 0 || score > 100)) return;
-
-    const updateData: Partial<Omit<MonthlyAudit, 'id'>> = { score };
-
-    if (score !== undefined) {
-        updateData.status = 'Completed';
-        updateData.completedDate = format(new Date(), 'yyyy-MM-dd');
-    }
+    const scoreValue = scoreString.trim() === '' ? null : parseInt(scoreString, 10);
+    if (scoreValue !== null && (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100)) return;
     
+    const audit = auditsForMonth.find(a => a.siteId === siteId);
+    const updateData: Partial<Omit<MonthlyAudit, 'id'>> = { score: scoreValue };
+
+    if (scoreValue !== null) { // A score is being set
+        updateData.status = 'Completed';
+        // Only set new completed date if it wasn't completed before
+        if (audit?.status !== 'Completed') {
+            updateData.completedDate = format(new Date(), 'yyyy-MM-dd');
+        }
+    } else { // Score is being cleared to null
+        updateData.completedDate = null;
+        // If it was completed, reset status. Let's use 'Booked'.
+        if (audit?.status === 'Completed') {
+            updateData.status = 'Booked';
+        }
+    }
     onSetAudit(siteId, currentDate, updateData);
   };
   
   const handleStatusChange = (siteId: string, newStatus: AuditStatus) => {
     const updateData: Partial<Omit<MonthlyAudit, 'id'>> = { status: newStatus };
     if (newStatus !== 'Completed') {
-      updateData.score = undefined;
-      updateData.completedDate = undefined;
+      updateData.score = null;
+      updateData.completedDate = null;
+    } else {
+      // If user manually sets to 'Completed' without a score, we might need to set a date.
+      const audit = auditsForMonth.find(a => a.siteId === siteId);
+      if (!audit?.completedDate) {
+        updateData.completedDate = format(new Date(), 'yyyy-MM-dd');
+      }
     }
     onSetAudit(siteId, currentDate, updateData);
   };

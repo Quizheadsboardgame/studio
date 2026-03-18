@@ -78,8 +78,8 @@ export default function DashboardPage() {
     
     setDocumentNonBlocking(doc(firestore, 'monthlyAudits', docId), fullAuditData, { merge: true });
 
-    // Update site status if score is provided
-    if (auditData.score !== undefined) {
+    // Update site status if score is provided and is a valid number
+    if (auditData.score !== undefined && auditData.score !== null) {
       let newSiteStatus: SiteStatus = 'N/A'; // Default case
       if (auditData.score <= 95) {
         newSiteStatus = 'Site under action plan';
