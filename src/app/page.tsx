@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -16,6 +16,7 @@ import AuditsTab from '@/components/audits-tab';
 import AuditHistoryTab from '@/components/audit-history-tab';
 import SuppliesTab from '@/components/supplies-tab';
 import DiaryTab from '@/components/diary-tab';
+import TasksTab from '@/components/tasks-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -43,6 +44,7 @@ export default function DashboardPage() {
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Sites', icon: LayoutDashboard },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
+    { value: 'tasks', label: 'Tasks', icon: ListTodo },
   ].sort((a, b) => a.label.localeCompare(b.label)), []);
 
   const ActiveIcon = useMemo(() => tabs.find(t => t.value === activeTab)?.icon, [activeTab, tabs]);
@@ -76,6 +78,9 @@ export default function DashboardPage() {
   
   const appointmentsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'appointments') : null, [firestore, user]);
   const { data: appointments, isLoading: appointmentsLoading } = useCollection<Appointment>(appointmentsCollection);
+
+  const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
+  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
 
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
@@ -275,18 +280,34 @@ export default function DashboardPage() {
       if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'appointments', appointmentId));
   };
+  
+  const handleAddTask = (newTaskData: Omit<Task, 'id' | 'completed'>) => {
+    if (!tasksCollection) return;
+    addDocumentNonBlocking(tasksCollection, { ...newTaskData, completed: false });
+  };
+
+  const handleUpdateTask = (taskId: string, updatedData: Partial<Omit<Task, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'tasks', taskId), updatedData);
+  };
+
+  const handleRemoveTask = (taskId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'tasks', taskId));
+  };
 
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading;
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
+  const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-black">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-black px-4 sm:h-20 sm:px-6">
           <div className="flex items-center gap-4">
-              <div className="p-2">
+              <div className="p-2 relative">
                   <svg
                       className="h-6 w-6 text-white"
                       fill="none"
@@ -296,6 +317,11 @@ export default function DashboardPage() {
                   >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
+                   {outstandingTasksCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                        {outstandingTasksCount}
+                    </div>
+                  )}
               </div>
               <div className='flex flex-col justify-center'>
                 <h1 className="text-xl font-bold tracking-tight text-white font-headline">
@@ -456,6 +482,15 @@ export default function DashboardPage() {
                 cleaners={sortedCleaners}
                 actionPlans={actionPlans || []}
                 onUpdateActionPlan={handleUpdateActionPlan}
+              />
+            </TabsContent>
+
+            <TabsContent value="tasks">
+              <TasksTab
+                tasks={tasks || []}
+                onAddTask={handleAddTask}
+                onUpdateTask={handleUpdateTask}
+                onRemoveTask={handleRemoveTask}
               />
             </TabsContent>
 

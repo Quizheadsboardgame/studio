@@ -283,4 +283,10 @@ export type Appointment = {
   recurrenceEndDate?: string; // YYYY-MM-DD
 };
 
-    
+export type Task = {
+  id: string;
+  description: string;
+  dueDate?: string | null; // YYYY-MM-DD
+  completed: boolean;
+  assignee?: string;
+};

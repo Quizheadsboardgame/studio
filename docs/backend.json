@@ -378,6 +378,41 @@
         "date",
         "assignee"
       ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "A single to-do item or task.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The description of the task."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The due date of the task (YYYY-MM-DD)."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the task is completed or not."
+        },
+        "assignee": {
+          "type": "string",
+          "description": "The person this task is assigned to.",
+          "enum": [
+            "Owen Newton",
+            "Nick Miller",
+            "Mircalla Bond (Carla)",
+            "Unassigned"
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "completed"
+      ]
     }
   },
   "auth": {
@@ -476,6 +511,16 @@
             "$ref": "#/backend/entities/Appointment"
           },
           "description": "Collection storing general diary appointments."
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Collection storing general to-do tasks."
         }
       }
     ]
