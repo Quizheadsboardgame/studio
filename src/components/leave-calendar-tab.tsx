@@ -234,7 +234,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                         DayContent: CustomDayContent
                     }}
                     className="rounded-md border"
-                    showOutsideDays={false}
+                    showOutsideDays={true}
                 />
             </div>
             <div className="w-full md:w-1/3">
