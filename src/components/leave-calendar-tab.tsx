@@ -2,15 +2,15 @@
 
 import { useState, useMemo } from 'react';
 import type { Cleaner, Leave, ScheduleEntry, CoverAssignment } from '@/lib/data';
-import { type DateRange, type DayContentProps } from 'react-day-picker';
+import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Trash2 } from 'lucide-react';
-import { format, parseISO, isSameDay, isFuture, startOfToday, isToday } from 'date-fns';
+import { format, parseISO, isSameDay, isFuture, isToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -77,53 +77,22 @@ function AddLeaveForm({ cleaners, selectedDate, onAddLeave, onClose }: { cleaner
 }
 
 export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
-  const [month, setMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { toast } = useToast();
   
-  const handleDayClick = (day: Date) => {
-      setSelectedDay(day);
-      setIsDialogOpen(true);
+  const handleDateSelect = (day: Date | undefined) => {
+      if (day) {
+        setSelectedDay(day);
+        setIsDialogOpen(true);
+      }
   };
   
   const leaveOnSelectedDay = useMemo(() => {
     if (!selectedDay) return [];
     return leave.filter(l => isSameDay(parseISO(l.date), selectedDay));
   }, [leave, selectedDay]);
-
-  const leaveByDate = useMemo(() => {
-    const map = new Map<string, Leave[]>();
-    if (!leave) return map;
-    leave.forEach(l => {
-      const dateKey = format(parseISO(l.date), 'yyyy-MM-dd');
-      const existing = map.get(dateKey) || [];
-      map.set(dateKey, [...existing, l]);
-    });
-    return map;
-  }, [leave]);
-  
-  const CustomDayContent = (props: DayContentProps) => {
-    const dayLeave = leaveByDate.get(format(props.date, 'yyyy-MM-dd'));
-    
-    return (
-      <div className="relative w-full h-full flex items-center justify-center">
-        {format(props.date, 'd')}
-        {dayLeave && dayLeave.length > 0 && (
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-            {dayLeave.slice(0, 4).map((l) => (
-              <div
-                key={l.id}
-                className={`h-1.5 w-1.5 rounded-full ${l.type === 'holiday' ? 'bg-chart-4' : 'bg-destructive'}`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   
   const getRemainingHolidays = (cleaner: Cleaner) => {
     if (!cleaner) return 'N/A';
@@ -219,22 +188,17 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
     <>
       <Card>
         <CardHeader>
-            <CardTitle>Leave Calendar</CardTitle>
-            <CardDescription>Click a date to add holiday or log sickness. View leave balances below.</CardDescription>
+            <CardTitle>Leave Management</CardTitle>
+            <CardDescription>Select a date to add holiday or log sickness. View leave balances below.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-8">
-            <div className="flex-grow flex justify-center">
-                 <Calendar
-                    mode="single"
-                    selected={selectedDay}
-                    onDayClick={handleDayClick}
-                    month={month}
-                    onMonthChange={setMonth}
-                    components={{
-                        DayContent: CustomDayContent
-                    }}
-                    className="rounded-md border"
-                    showOutsideDays={true}
+            <div className="flex-grow space-y-2">
+                <Label>Select a Date</Label>
+                 <DatePicker
+                    date={undefined}
+                    onDateChange={handleDateSelect}
+                    placeholder="Select a date to view or add absences"
+                    className="w-full md:w-[300px]"
                 />
             </div>
             <div className="w-full md:w-1/3">
@@ -335,8 +299,13 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
       </Card>
 
       {selectedDay && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+                setSelectedDay(undefined);
+            }
+        }}>
+            <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Absences for {format(selectedDay, 'PPP')}</DialogTitle>
                 </DialogHeader>
