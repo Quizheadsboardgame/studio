@@ -488,6 +488,7 @@ export default function DashboardPage() {
             <TabsContent value="tasks">
               <TasksTab
                 tasks={tasks || []}
+                sites={sortedSites}
                 onAddTask={handleAddTask}
                 onUpdateTask={handleUpdateTask}
                 onRemoveTask={handleRemoveTask}

@@ -23,6 +23,7 @@ type DiaryEvent = {
     date: Date;
     title: string;
     details: string;
+    site?: string;
     notes?: string;
     assignee: string;
     raw: Appointment | MonthlyAudit | (Leave & { site: string });
@@ -50,7 +51,7 @@ function PrintableDiary({ events, title, forwardedRef }: { events: DiaryEvent[],
                   <div className="space-y-4">
                       {groupedEvents[day].map(event => (
                           <div key={event.id}>
-                              <p className="font-semibold text-lg">{event.title}</p>
+                              <p className="font-semibold text-lg">{event.title}{event.site && ` @ ${event.site}`}</p>
                               <p className="text-gray-700">{event.details}</p>
                               {event.notes && <p className="text-gray-600 italic pl-4">"{event.notes}"</p>}
                           </div>
@@ -68,17 +69,19 @@ function PrintableDiary({ events, title, forwardedRef }: { events: DiaryEvent[],
 
 
 interface AppointmentDialogProps {
+  sites: Site[];
   onSave: (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => void;
   appointment?: Appointment;
   defaultAssignee?: string;
   children: React.ReactNode;
 }
 
-function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: AppointmentDialogProps) {
+function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, children }: AppointmentDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { toast } = useToast();
     
     const [title, setTitle] = useState(appointment?.title || '');
+    const [site, setSite] = useState(appointment?.site || '');
     const [date, setDate] = useState<string>('');
     const [assignee, setAssignee] = useState(appointment?.assignee || defaultAssignee || 'Owen Newton');
     const [startTime, setStartTime] = useState(appointment?.startTime || '');
@@ -100,6 +103,7 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
 
         const appointmentData = {
             title,
+            site: site || undefined,
             date,
             assignee,
             startTime,
@@ -121,6 +125,7 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
     const handleOpenChange = (open: boolean) => {
         if (open) {
             setTitle(appointment?.title || '');
+            setSite(appointment?.site || '');
             setDate(appointment ? appointment.date : format(new Date(), 'yyyy-MM-dd'));
             setAssignee(appointment?.assignee || defaultAssignee || 'Owen Newton');
             setStartTime(appointment?.startTime || '');
@@ -141,6 +146,18 @@ function AppointmentDialog({ onSave, appointment, defaultAssignee, children }: A
                     <div className="space-y-2">
                         <Label htmlFor="title">Title</Label>
                         <Input id="title" value={title} onChange={e => setTitle(e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="site">Site (Optional)</Label>
+                        <Select value={site} onValueChange={setSite}>
+                            <SelectTrigger id="site">
+                                <SelectValue placeholder="Select a site" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">None</SelectItem>
+                                {sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -231,8 +248,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                     id: audit.id,
                     type: 'audit',
                     date: parseISO(audit.bookedDate!),
-                    title: `Audit @ ${site?.name || 'Unknown Site'}`,
+                    title: `Audit`,
                     details: `Status: ${audit.status}${audit.bookedTime ? ` at ${audit.bookedTime}`: ''}`,
+                    site: site?.name || 'Unknown Site',
                     notes: audit.score ? `Score: ${audit.score}%` : undefined,
                     assignee: audit.auditor,
                     raw: audit,
@@ -250,6 +268,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                     date: startDate,
                     title: app.title,
                     details: `${app.startTime || ''}${app.endTime ? ` - ${app.endTime}` : ''}`,
+                    site: app.site,
                     notes: app.notes,
                     assignee: app.assignee,
                     raw: app,
@@ -267,6 +286,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                     date: currentDate,
                     title: `${app.title} (Recurring)`,
                     details: `${app.startTime || ''}${app.endTime ? ` - ${app.endTime}` : ''}`,
+                    site: app.site,
                     notes: app.notes,
                     assignee: app.assignee,
                     raw: app,
@@ -291,8 +311,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                     id: `${leaveItem.id}-${assignment.site}`,
                     type: 'cover' as const,
                     date: parseISO(leaveItem.date),
-                    title: `Cover shift at ${assignment.site}`,
+                    title: `Cover shift`,
                     details: `Covering for ${leaveItem.cleanerName}${shift ? ` from ${shift.start} to ${shift.finish}` : ''}`,
+                    site: assignment.site,
                     notes: `Original leave type: ${leaveItem.type}`,
                     assignee: assignment.coverCleanerName,
                     raw: { ...leaveItem, site: assignment.site },
@@ -406,7 +427,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                         }
                                     </div>
                                     <div className="flex-grow">
-                                        <p className="font-semibold">{event.title}</p>
+                                        <p className="font-semibold">{event.title}{event.site && <span className="font-normal text-muted-foreground"> @ {event.site}</span>}</p>
                                         <p className="text-sm text-muted-foreground">{event.details}</p>
                                         {isStaffCoverView && (
                                             <p className="text-sm font-medium mt-1">Cover provided by: <span className="font-bold">{event.assignee}</span></p>
@@ -415,7 +436,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                     </div>
                                     {event.type === 'appointment' && (
                                         <div className="flex items-center gap-1">
-                                            <AppointmentDialog onSave={handleSaveAppointment} appointment={event.raw as Appointment}>
+                                            <AppointmentDialog sites={sites} onSave={handleSaveAppointment} appointment={event.raw as Appointment}>
                                                 <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
                                             </AppointmentDialog>
                                                 <AlertDialog>
@@ -471,7 +492,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                 {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
                             </Button>
                             {activeDiary !== 'Staff Cover' && (
-                                <AppointmentDialog onSave={handleSaveAppointment} defaultAssignee={activeDiary === 'Staff Cover' ? 'Owen Newton' : activeDiary}>
+                                <AppointmentDialog sites={sites} onSave={handleSaveAppointment} defaultAssignee={activeDiary === 'Staff Cover' ? 'Owen Newton' : activeDiary}>
                                     <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Appointment</Button>
                                 </AppointmentDialog>
                             )}

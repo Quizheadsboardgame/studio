@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Task } from '@/lib/data';
+import type { Task, Site } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,15 +22,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface TasksTabProps {
   tasks: Task[];
+  sites: Site[];
   onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
   onUpdateTask: (taskId: string, task: Partial<Omit<Task, 'id'>>) => void;
   onRemoveTask: (taskId: string) => void;
 }
 
-export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask }: TasksTabProps) {
+export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemoveTask }: TasksTabProps) {
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<string>('');
   const [newTaskAssignee, setNewTaskAssignee] = useState<string>('Unassigned');
+  const [newTaskSite, setNewTaskSite] = useState<string>('');
 
   const handleAddTask = () => {
     if (!newTaskDesc.trim()) return;
@@ -38,10 +40,12 @@ export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask 
       description: newTaskDesc,
       dueDate: newTaskDueDate || null,
       assignee: newTaskAssignee,
+      site: newTaskSite || undefined,
     });
     setNewTaskDesc('');
     setNewTaskDueDate('');
     setNewTaskAssignee('Unassigned');
+    setNewTaskSite('');
   };
 
   const sortedTasks = [...tasks].sort((a, b) => {
@@ -69,6 +73,18 @@ export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask 
               value={newTaskDesc}
               onChange={(e) => setNewTaskDesc(e.target.value)}
             />
+          </div>
+          <div className="w-full md:w-auto space-y-2">
+            <Label htmlFor="new-task-site">Site (Optional)</Label>
+            <Select value={newTaskSite} onValueChange={setNewTaskSite}>
+              <SelectTrigger id="new-task-site" className="w-full md:w-[200px]">
+                <SelectValue placeholder="Select a site" />
+              </SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div className="w-full md:w-auto space-y-2">
             <Label htmlFor="new-task-due-date">Due Date</Label>
@@ -107,6 +123,7 @@ export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask 
               <TableRow>
                 <TableHead className="w-[50px]">Done</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Site</TableHead>
                 <TableHead>Assignee</TableHead>
                 <TableHead>Due Date</TableHead>
                 <TableHead className="w-[50px] text-right"></TableHead>
@@ -124,6 +141,9 @@ export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask 
                   </TableCell>
                   <TableCell className={cn("font-medium", task.completed && 'line-through text-muted-foreground')}>
                     {task.description}
+                  </TableCell>
+                  <TableCell className={cn(task.completed && 'text-muted-foreground')}>
+                    {task.site || 'N/A'}
                   </TableCell>
                   <TableCell className={cn(task.completed && 'text-muted-foreground')}>
                     {task.assignee || 'Unassigned'}
@@ -155,7 +175,7 @@ export default function TasksTab({ tasks, onAddTask, onUpdateTask, onRemoveTask 
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No tasks yet. Add one to get started!
                   </TableCell>
                 </TableRow>

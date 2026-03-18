@@ -345,6 +345,10 @@
                 "Mircalla Bond (Carla)"
             ]
         },
+        "site": {
+          "type": "string",
+          "description": "The site associated with the appointment."
+        },
         "startTime": {
           "type": "string",
           "description": "The start time of the appointment."
@@ -407,6 +411,10 @@
             "Mircalla Bond (Carla)",
             "Unassigned"
           ]
+        },
+        "site": {
+          "type": "string",
+          "description": "The site associated with the task."
         }
       },
       "required": [

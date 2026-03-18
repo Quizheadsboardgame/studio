@@ -276,6 +276,7 @@ export type Appointment = {
   title: string;
   date: string; // YYYY-MM-DD
   assignee: string;
+  site?: string;
   startTime?: string;
   endTime?: string;
   notes?: string;
@@ -289,4 +290,5 @@ export type Task = {
   dueDate?: string | null; // YYYY-MM-DD
   completed: boolean;
   assignee?: string;
+  site?: string;
 };
