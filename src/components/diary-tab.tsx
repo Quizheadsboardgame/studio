@@ -142,7 +142,7 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader><DialogTitle>{appointment ? 'Edit' : 'Add'} Appointment</DialogTitle></DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
                     <div className="space-y-2">
                         <Label htmlFor="title">Title</Label>
                         <Input id="title" value={title} onChange={e => setTitle(e.target.value)} />
@@ -159,7 +159,7 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="date">Date</Label>
                             <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -178,7 +178,7 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
                              </Select>
                         </div>
                     </div>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="start-time">Start Time</Label>
                             <Input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
@@ -190,7 +190,7 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
                     </div>
                      <div className="space-y-2">
                         <Label>Recurrence</Label>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                              <Select value={recurrence} onValueChange={(v: RecurrenceType) => setRecurrence(v)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="No recurrence" />

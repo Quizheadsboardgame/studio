@@ -59,14 +59,14 @@ function ConsumableDialog({ siteId, consumable, onAdd, onEdit, children }: Consu
                 <DialogHeader>
                     <DialogTitle>{consumable ? 'Edit' : 'Add'} Consumable</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Name</Label>
-                        <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" />
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" value={name} onChange={e => setName(e.target.value)} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="code" className="text-right">Order Code</Label>
-                        <Input id="code" value={orderingCode} onChange={e => setOrderingCode(e.target.value)} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="code">Order Code</Label>
+                        <Input id="code" value={orderingCode} onChange={e => setOrderingCode(e.target.value)} />
                     </div>
                 </div>
                 <DialogFooter>

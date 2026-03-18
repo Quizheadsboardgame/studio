@@ -438,11 +438,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-black">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-black px-4 sm:h-20 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-auto items-center justify-between gap-4 border-b border-border bg-black px-4 py-3 sm:h-20 sm:px-6 sm:py-0">
           <div className="flex items-center gap-4">
               <div className="p-2 relative">
                   <svg
-                      className="h-6 w-6 text-white"
+                      className="h-8 w-8 text-white"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -451,7 +451,7 @@ export default function DashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                    {outstandingTasksCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                    <div className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                         {outstandingTasksCount}
                     </div>
                   )}
@@ -463,9 +463,9 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
               </div>
           </div>
-          <div className="text-right hidden sm:block">
-            <p className="font-semibold text-white">Manager: Owen Newton</p>
-            <p className="text-sm text-muted-foreground">Assistant Manager: Nick Miller</p>
+          <div className="text-right">
+            <p className="font-semibold text-white text-sm sm:text-base">Manager: Owen Newton</p>
+            <p className="text-xs text-muted-foreground sm:text-sm">Assistant Manager: Nick Miller</p>
           </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">

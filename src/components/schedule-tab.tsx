@@ -45,11 +45,11 @@ function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sit
                 <DialogHeader>
                     <DialogTitle>{entry ? 'Edit' : 'Add'} Schedule Entry</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="site" className="text-right">Site</Label>
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="site">Site</Label>
                          <Select value={site} onValueChange={setSite}>
-                            <SelectTrigger className="col-span-3">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select a site" />
                             </SelectTrigger>
                             <SelectContent>
@@ -57,10 +57,10 @@ function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sit
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="cleaner" className="text-right">Cleaner</Label>
+                     <div className="space-y-2">
+                        <Label htmlFor="cleaner">Cleaner</Label>
                         <Select value={cleaner} onValueChange={setCleaner}>
-                            <SelectTrigger className="col-span-3">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select a cleaner" />
                             </SelectTrigger>
                             <SelectContent>
@@ -68,13 +68,13 @@ function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sit
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="start" className="text-right">Start Time</Label>
-                        <Input id="start" value={start} onChange={e => setStart(e.target.value)} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="start">Start Time</Label>
+                        <Input id="start" value={start} onChange={e => setStart(e.target.value)} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="finish" className="text-right">Finish Time</Label>
-                        <Input id="finish" value={finish} onChange={e => setFinish(e.target.value)} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="finish">Finish Time</Label>
+                        <Input id="finish" value={finish} onChange={e => setFinish(e.target.value)} />
                     </div>
                 </div>
                 <DialogFooter>
