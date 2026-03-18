@@ -91,8 +91,8 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
     const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
 
     const handleSave = () => {
-        if (!title || !date || !assignee) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a title, date, and assignee.' });
+        if (!title || !assignee) {
+            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a title and assignee.' });
             return;
         }
 
@@ -104,7 +104,7 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
         const appointmentData = {
             title,
             site: site || undefined,
-            date,
+            date: date || format(new Date(), 'yyyy-MM-dd'),
             assignee,
             startTime,
             endTime,
@@ -149,12 +149,12 @@ function AppointmentDialog({ sites, onSave, appointment, defaultAssignee, childr
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="site">Site (Optional)</Label>
-                        <Select value={site} onValueChange={setSite}>
+                        <Select value={site} onValueChange={(value) => setSite(value === '__NONE__' ? '' : value)}>
                             <SelectTrigger id="site">
                                 <SelectValue placeholder="Select a site" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="__NONE__">None</SelectItem>
                                 {sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>

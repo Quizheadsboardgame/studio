@@ -76,12 +76,12 @@ export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemo
           </div>
           <div className="w-full md:w-auto space-y-2">
             <Label htmlFor="new-task-site">Site (Optional)</Label>
-            <Select value={newTaskSite} onValueChange={setNewTaskSite}>
+            <Select value={newTaskSite} onValueChange={(value) => setNewTaskSite(value === '__NONE__' ? '' : value)}>
               <SelectTrigger id="new-task-site" className="w-full md:w-[200px]">
                 <SelectValue placeholder="Select a site" />
               </SelectTrigger>
               <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__NONE__">None</SelectItem>
                   {sites.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
