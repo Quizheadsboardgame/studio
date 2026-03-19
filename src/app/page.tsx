@@ -294,7 +294,7 @@ export default function DashboardPage() {
         const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
         const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
         const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
-        const cleanerSites = cleanerSiteNames.map(name => calculatedSites.find(s => s.name === name)).filter((s): s is Site => !!s);
+        const cleanerSites = cleanerSiteNames.map(name => calculatedSites.find(s => s.name.toLowerCase() === name.toLowerCase())).filter((s): s is Site => !!s);
         
         // --- Determine Rating based on hierarchy ---
 
