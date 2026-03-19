@@ -257,7 +257,7 @@ export default function DashboardPage() {
 
         // 2. Check latest audit score
         const siteAudits = monthlyAudits
-            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined)
+            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
             .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
 
         if (siteAudits.length > 0) {
