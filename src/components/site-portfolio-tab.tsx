@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { User, Users, Star, PlusCircle, Trash2, UserSearch } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -146,7 +146,7 @@ export default function SitePortfolioTab({
   const selectedSite = useMemo(() => sites.find(s => s.id === selectedSiteId), [sites, selectedSiteId]);
 
   const siteData = useMemo(() => {
-    if (!selectedSite) return null;
+    if (!selectedSite || !schedule || !actionPlans || !monthlyAudits || !tasks || !appointments) return null;
     
     const uniqueCleaners = [...new Set(schedule.filter(s => s.site === selectedSite.name).map(s => s.cleaner))];
     const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === selectedSite.id);
