@@ -148,7 +148,7 @@ export default function SitePortfolioTab({
   const siteData = useMemo(() => {
     if (!selectedSite || !schedule || !actionPlans || !monthlyAudits || !tasks || !appointments) return null;
     
-    const uniqueCleaners = [...new Set(schedule.filter(s => s.site === selectedSite.name).map(s => s.cleaner))];
+    const uniqueCleaners = [...new Set(schedule.filter(s => s.site.toLowerCase().includes(selectedSite.name.toLowerCase())).map(s => s.cleaner))];
     const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === selectedSite.id);
     const siteAudits = monthlyAudits.filter(a => a.siteId === selectedSite.id && a.status === 'Completed' && a.bookedDate).sort((a,b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
     const siteTasks = tasks.filter(t => t.site === selectedSite.name);
