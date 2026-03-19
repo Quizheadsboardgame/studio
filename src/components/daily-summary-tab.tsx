@@ -170,8 +170,8 @@ function PrintableSummary({
                          </tr>
                      </thead>
                      <tbody>
-                         {schedule.map((entry) => (
-                             <tr key={entry.id} className="border-b border-gray-300">
+                         {schedule.map((entry, index) => (
+                             <tr key={entry.id || index} className="border-b border-gray-300">
                                  <td className="py-2">{entry.site}</td>
                                  <td className="py-2">{entry.cleaner}</td>
                                  <td className="py-2">{entry.start} - {entry.finish}</td>
@@ -200,6 +200,19 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
     setCurrentDate(format(new Date(), 'PPP'));
   }, []);
 
+  const uniqueSchedule = useMemo(() => {
+    const seen = new Set<string>();
+    return schedule.filter(entry => {
+        const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
+        if (seen.has(key)) {
+            return false;
+        } else {
+            seen.add(key);
+            return true;
+        }
+    });
+  }, [schedule]);
+
   const groupedSites = useMemo(() => sites.reduce((acc, site) => {
     if (site.status === 'N/A' && (!site.notes || site.notes.trim() === '')) return acc;
     const color = getSiteColor(site.status);
@@ -224,7 +237,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
   
   const todaysShiftsToCover = useMemo(() => {
      return todaysAbsences.flatMap(absence => {
-        const cleanerSchedule = schedule.filter(s => s.cleaner === absence.cleanerName);
+        const cleanerSchedule = uniqueSchedule.filter(s => s.cleaner === absence.cleanerName);
         
         if (cleanerSchedule.length > 0) {
             return cleanerSchedule.map((shift, index) => {
@@ -242,7 +255,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
         
         return []; // Don't show entry if cleaner had no shifts
     });
-  }, [todaysAbsences, schedule]);
+  }, [todaysAbsences, uniqueSchedule]);
 
 
   const hasContent = useMemo(() => [
@@ -313,7 +326,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
               groupedCleaners={groupedCleaners}
               todaysTasks={todaysTasks}
               todaysShiftsToCover={todaysShiftsToCover}
-              schedule={schedule}
+              schedule={uniqueSchedule}
               currentDate={currentDate}
           />
       </div>
@@ -512,8 +525,8 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {schedule.map((entry) => (
-                                                <tr key={entry.id} className="border-b last:border-0">
+                                            {uniqueSchedule.map((entry, index) => (
+                                                <tr key={entry.id || index} className="border-b last:border-0">
                                                     <td className="py-2 px-4 font-medium">{entry.site}</td>
                                                     <td className="py-2 px-4">{entry.cleaner}</td>
                                                     <td className="py-2 px-4">{entry.start} - {entry.finish}</td>
