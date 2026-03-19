@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { DatePicker } from './ui/date-picker';
 
 
 interface AuditsTabProps {
@@ -168,12 +167,11 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                     </TableCell>
                      <TableCell className="align-top py-4">
                        <div className="flex items-center gap-2">
-                            <DatePicker
-                                date={audit?.bookedDate ? parseISO(audit.bookedDate) : undefined}
-                                onDateChange={(date) => handleBookedDateChange(site.id, date ? format(date, 'yyyy-MM-dd') : null)}
+                            <Input
+                                type="date"
+                                value={audit?.bookedDate || ''}
+                                onChange={(e) => handleBookedDateChange(site.id, e.target.value || null)}
                                 className="w-full"
-                                modal={true}
-                                placeholder="Book a date"
                                 disabled={!isEditable && !isCompleted}
                             />
                             <Input
