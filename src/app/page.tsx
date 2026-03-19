@@ -240,6 +240,53 @@ export default function DashboardPage() {
   const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
   const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
 
+  const calculatedCleaners = useMemo(() => {
+    if (!cleaners || !sites || !schedule || !conversationRecords || !actionPlans) {
+        return cleaners || [];
+    }
+
+    return cleaners.map(cleaner => {
+        let newRating: CleanerPerformance = 'N/A'; // Start with N/A
+
+        // Highest priority: direct action plan on cleaner
+        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
+        if (cleanerActionPlan) {
+            return { ...cleaner, rating: 'Under action plan' };
+        }
+
+        // Second priority: conversation that requires follow up
+        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
+        if (records.some(r => r.followUpRequired)) {
+            return { ...cleaner, rating: 'Operational concerns' };
+        }
+        
+        // Third priority: cleaner works at a "bad" site
+        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
+        const cleanerSites = cleanerSiteNames.map(name => sites.find(s => s.name === name)).filter((s): s is Site => !!s);
+        
+        if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
+             return { ...cleaner, rating: 'Needs retraining' };
+        }
+
+        // Fourth priority: any conversation log
+        if (records.length > 0) {
+            return { ...cleaner, rating: 'Slight improvement needed' };
+        }
+
+        // Positive ratings if no negative indicators are found
+        if (cleanerSites.length > 0) {
+            if (cleanerSites.every(s => s.status === 'Client happy')) {
+                return { ...cleaner, rating: 'Excellent feedback' };
+            }
+            // If they have sites, but no negative indicators and not all are "Excellent"
+            return { ...cleaner, rating: 'Site satisfied' };
+        }
+        
+        // Default to N/A if no data points are available for the cleaner
+        return { ...cleaner, rating: newRating };
+    });
+  }, [cleaners, sites, schedule, conversationRecords, actionPlans]);
+
   // Annual holiday reset effect
   useEffect(() => {
     if (!firestore || !user || !cleaners || cleaners.length === 0) return;
@@ -554,7 +601,7 @@ export default function DashboardPage() {
 
   const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
-  const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
+  const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 

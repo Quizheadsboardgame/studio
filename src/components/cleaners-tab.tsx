@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { Cleaner, CleanerPerformance } from '@/lib/data';
-import { cleanerPerformances } from '@/lib/data';
+import type { Cleaner } from '@/lib/data';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -85,22 +83,8 @@ export default function CleanersTab({ cleaners, onUpdateCleaner, onAddCleaner, o
                 <TableCell className="font-medium align-top py-4">
                   {cleaner.name}
                 </TableCell>
-                <TableCell className="align-top py-4">
-                  <Select
-                    value={cleaner.rating}
-                    onValueChange={(newRating: CleanerPerformance) => onUpdateCleaner(cleaner.id, { rating: newRating })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cleanerPerformances.map((performance) => (
-                        <SelectItem key={performance} value={performance}>
-                          {performance}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <TableCell className="align-top py-4 font-medium">
+                  {cleaner.rating}
                 </TableCell>
                 <TableCell className="align-top py-4 hidden md:table-cell">
                   <Input
