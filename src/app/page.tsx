@@ -784,7 +784,7 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="site-map">
-              <SiteMapTab sites={sortedSites} />
+              <SiteMapTab />
             </TabsContent>
 
           </Tabs>
