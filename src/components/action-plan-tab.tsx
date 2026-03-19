@@ -187,22 +187,21 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
             {plan.tasks.length > 0 ? (
                 <Accordion type="multiple" className="space-y-1">
                     {plan.tasks.map(task => (
-                        <AccordionItem value={task.id} key={task.id} className="border rounded-md px-3">
-                            <AccordionTrigger className="py-2 hover:no-underline">
-                                <div className="flex items-center gap-3 w-full">
-                                    <Checkbox
-                                        id={`task-${task.id}`}
-                                        checked={task.completed}
-                                        onCheckedChange={() => handleToggleTask(task.id)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                    <Label htmlFor={`task-${task.id}`} className={`text-left ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        <AccordionItem value={task.id} key={task.id} className="border rounded-md">
+                            <div className="flex items-center px-3">
+                                <Checkbox
+                                    id={`task-${task.id}`}
+                                    checked={task.completed}
+                                    onCheckedChange={() => handleToggleTask(task.id)}
+                                />
+                                <AccordionTrigger className="py-2 hover:no-underline flex-1 text-left">
+                                    <div className={`ml-3 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                                         {task.description}
                                         <span className="text-xs text-muted-foreground ml-2"> (Due: {format(parseISO(task.dueDate), 'PP')})</span>
-                                    </Label>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
+                                    </div>
+                                </AccordionTrigger>
+                            </div>
+                            <AccordionContent className="pl-12 pr-3">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                     <div>
                                         <Label className="font-semibold">Before</Label>
