@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -17,6 +17,7 @@ import AuditHistoryTab from '@/components/audit-history-tab';
 import SuppliesTab from '@/components/supplies-tab';
 import DiaryTab from '@/components/diary-tab';
 import TasksTab from '@/components/tasks-tab';
+import ConversationLogTab from '@/components/conversation-log-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
@@ -38,6 +39,7 @@ export default function DashboardPage() {
     { value: 'audits', label: 'Audits', icon: FileCheck },
     { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
     { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+    { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
     { value: 'summary', label: 'Daily Summary', icon: FileText },
     { value: 'diary', label: 'Diary', icon: BookOpenCheck },
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
@@ -214,6 +216,9 @@ export default function DashboardPage() {
 
   const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
+  
+  const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
+  const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
 
   // Annual holiday reset effect
   useEffect(() => {
@@ -510,8 +515,23 @@ export default function DashboardPage() {
       deleteDocumentNonBlocking(doc(firestore, 'tasks', taskId));
   };
 
+  const handleAddConversationRecord = (newRecordData: Omit<ConversationRecord, 'id'>) => {
+    if (!conversationRecordsCollection) return;
+    addDocumentNonBlocking(conversationRecordsCollection, newRecordData);
+  };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading;
+  const handleUpdateConversationRecord = (recordId: string, updatedData: Partial<Omit<ConversationRecord, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId), updatedData);
+  };
+
+  const handleRemoveConversationRecord = (recordId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId));
+  };
+
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading;
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
@@ -707,6 +727,17 @@ export default function DashboardPage() {
                 onAddTask={handleAddTask}
                 onUpdateTask={handleUpdateTask}
                 onRemoveTask={handleRemoveTask}
+              />
+            </TabsContent>
+
+            <TabsContent value="conversation-log">
+              <ConversationLogTab
+                cleaners={sortedCleaners}
+                sites={sortedSites}
+                conversationRecords={conversationRecords || []}
+                onAddRecord={handleAddConversationRecord}
+                onUpdateRecord={handleUpdateConversationRecord}
+                onRemoveRecord={handleRemoveConversationRecord}
               />
             </TabsContent>
 

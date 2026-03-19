@@ -455,6 +455,54 @@
         "description",
         "completed"
       ]
+    },
+    "ConversationRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ConversationRecord",
+      "type": "object",
+      "description": "Represents a record of a conversation held with a cleaner.",
+      "properties": {
+        "cleanerId": {
+          "type": "string",
+          "description": "The ID of the cleaner involved in the conversation."
+        },
+        "cleanerName": {
+          "type": "string",
+          "description": "The name of the cleaner."
+        },
+        "siteId": {
+          "type": "string",
+          "description": "The ID of the site where the conversation is relevant."
+        },
+        "siteName": {
+          "type": "string",
+          "description": "The name of the site."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the conversation took place (YYYY-MM-DD)."
+        },
+        "issue": {
+          "type": "string",
+          "description": "A summary of the issue discussed."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Detailed notes about the conversation."
+        },
+        "followUpRequired": {
+          "type": "boolean",
+          "description": "Whether a follow-up meeting is required."
+        }
+      },
+      "required": [
+        "cleanerId",
+        "cleanerName",
+        "date",
+        "issue",
+        "followUpRequired"
+      ]
     }
   },
   "auth": {
@@ -563,6 +611,16 @@
             "$ref": "#/backend/entities/Task"
           },
           "description": "Collection storing general to-do tasks."
+        }
+      },
+      {
+        "path": "/conversationRecords/{recordId}",
+        "definition": {
+          "entityName": "ConversationRecord",
+          "schema": {
+            "$ref": "#/backend/entities/ConversationRecord"
+          },
+          "description": "Collection storing records of conversations with cleaners."
         }
       }
     ]

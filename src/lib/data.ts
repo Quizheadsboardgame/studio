@@ -551,6 +551,17 @@ export type Task = {
   site?: string;
 };
 
+export type ConversationRecord = {
+  id: string;
+  cleanerId: string;
+  cleanerName: string;
+  siteId?: string;
+  siteName?: string;
+  date: string; // YYYY-MM-DD
+  issue: string;
+  notes?: string;
+  followUpRequired: boolean;
+};
 
 
 
