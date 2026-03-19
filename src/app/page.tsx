@@ -25,7 +25,7 @@ import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, a
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React from 'react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -48,7 +48,7 @@ export default function DashboardPage() {
     { value: 'diary', label: 'Diary', icon: BookOpenCheck },
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
-    { value: 'sites', label: 'Sites', icon: LayoutDashboard },
+    { value: 'sites', label: 'Site Performance', icon: LayoutDashboard },
     { value: 'site-map', label: 'Site Map', icon: Map },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
     { value: 'tasks', label: 'Tasks', icon: ListTodo },
@@ -240,8 +240,48 @@ export default function DashboardPage() {
   const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
   const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
 
+  const calculatedSites = useMemo(() => {
+    if (!sites || !actionPlans || !monthlyAudits) {
+        return sites || [];
+    }
+
+    return sites.map(site => {
+        let newStatus: SiteStatus;
+
+        // 1. Check for action plans
+        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
+        if (siteActionPlan) {
+            newStatus = 'Site under action plan';
+            return { ...site, status: newStatus };
+        }
+
+        // 2. Check latest audit score
+        const siteAudits = monthlyAudits
+            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined)
+            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
+
+        if (siteAudits.length > 0) {
+            const latestAudit = siteAudits[0];
+            if (latestAudit.score === 100) {
+                newStatus = 'Gold Star Site';
+            } else if (latestAudit.score >= 99) {
+                newStatus = 'Client happy';
+            } else if (latestAudit.score >= 96) {
+                newStatus = 'Client concerns';
+            } else {
+                newStatus = 'Site requires action plan';
+            }
+        } else {
+            newStatus = 'No Concerns'; // Default if no audits
+        }
+        
+        return { ...site, status: newStatus };
+    });
+  }, [sites, actionPlans, monthlyAudits]);
+
+
   const calculatedCleaners = useMemo(() => {
-    if (!cleaners || !sites || !schedule || !conversationRecords || !actionPlans) {
+    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
         return cleaners || [];
     }
 
@@ -262,7 +302,7 @@ export default function DashboardPage() {
         
         // Third priority: cleaner works at a "bad" site
         const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
-        const cleanerSites = cleanerSiteNames.map(name => sites.find(s => s.name === name)).filter((s): s is Site => !!s);
+        const cleanerSites = cleanerSiteNames.map(name => calculatedSites.find(s => s.name === name)).filter((s): s is Site => !!s);
         
         if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
              return { ...cleaner, rating: 'Needs retraining' };
@@ -275,7 +315,7 @@ export default function DashboardPage() {
 
         // Positive ratings if no negative indicators are found
         if (cleanerSites.length > 0) {
-            if (cleanerSites.every(s => s.status === 'Client happy')) {
+            if (cleanerSites.every(s => s.status === 'Client happy' || s.status === 'Gold Star Site')) {
                 return { ...cleaner, rating: 'Gold Star Cleaner' };
             }
             // If they have sites, but no negative indicators and not all are "Excellent"
@@ -285,7 +325,7 @@ export default function DashboardPage() {
         // Default to No Concerns if no data points are available for the cleaner
         return { ...cleaner, rating: newRating };
     });
-  }, [cleaners, sites, schedule, conversationRecords, actionPlans]);
+  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
 
   // Annual holiday reset effect
   useEffect(() => {
@@ -331,12 +371,6 @@ export default function DashboardPage() {
     performAnnualHolidayReset();
   }, [firestore, user, cleaners, toast]);
 
-
-  const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { status: newStatus });
-  };
-
   const handleSiteNoteChange = (siteId: string, newNote: string) => {
      if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { notes: newNote });
@@ -357,28 +391,11 @@ export default function DashboardPage() {
     };
     
     setDocumentNonBlocking(doc(firestore, 'monthlyAudits', docId), fullAuditData, { merge: true });
-
-    // Update site status if score is provided and is a valid number
-    if (auditData.score !== undefined && auditData.score !== null) {
-      let newSiteStatus: SiteStatus = 'N/A'; // Default case
-      if (auditData.score <= 95) {
-        newSiteStatus = 'Site under action plan';
-      } else if (auditData.score >= 96 && auditData.score <= 98) {
-        newSiteStatus = 'Client concerns';
-      } else if (auditData.score >= 99 && auditData.score <= 100) {
-        newSiteStatus = 'Client happy';
-      }
-      
-      const site = sites?.find(s => s.id === siteId);
-      if (site && site.status !== newSiteStatus && newSiteStatus !== 'N/A') {
-        updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { status: newSiteStatus });
-      }
-    }
   };
 
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
-    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'N/A', notes: '' });
+    addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'No Concerns', notes: '' });
   };
 
   const handleEditSite = (siteId: string, newName: string) => {
@@ -605,7 +622,7 @@ export default function DashboardPage() {
 
 
   const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading;
-  const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
+  const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
@@ -690,12 +707,11 @@ export default function DashboardPage() {
             <TabsContent value="sites">
               <Card>
                 <CardHeader>
-                  <CardTitle>Site Status</CardTitle>
+                  <CardTitle>Site Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <SitesTab 
                     sites={sortedSites} 
-                    onStatusChange={handleSiteStatusChange}
                     onNoteChange={handleSiteNoteChange}
                     onAddSite={handleAddSite}
                     onEditSite={handleEditSite}
@@ -785,11 +801,11 @@ export default function DashboardPage() {
             </TabsContent>
 
              <TabsContent value="risk">
-                <RiskDashboardTab sites={sites || []} cleaners={sortedCleaners} />
+                <RiskDashboardTab sites={sortedSites} cleaners={sortedCleaners} />
             </TabsContent>
 
             <TabsContent value="summary">
-              <DailySummaryTab sites={sites || []} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />
+              <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />
             </TabsContent>
             
             <TabsContent value="diary">
@@ -807,7 +823,7 @@ export default function DashboardPage() {
 
             <TabsContent value="action-plan">
               <ActionPlanTab
-                sites={sites || []}
+                sites={sortedSites}
                 cleaners={sortedCleaners}
                 actionPlans={actionPlans || []}
                 onUpdateActionPlan={handleUpdateActionPlan}

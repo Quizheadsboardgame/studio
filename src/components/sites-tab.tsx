@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Site, SiteStatus } from '@/lib/data';
-import { siteStatuses } from '@/lib/data';
 import { PlusCircle, Pencil, Check, X, Trash2, UserSearch } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -27,14 +25,13 @@ import { useToast } from '@/hooks/use-toast';
 
 interface SitesTabProps {
   sites: Site[];
-  onStatusChange: (siteId: string, newStatus: SiteStatus) => void;
   onNoteChange: (siteId: string, newNote: string) => void;
   onAddSite: (siteName: string) => void;
   onEditSite: (siteId: string, newName: string) => void;
   onRemoveSite: (siteId: string) => void;
 }
 
-export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSite, onEditSite, onRemoveSite }: SitesTabProps) {
+export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, onRemoveSite }: SitesTabProps) {
   const [newSiteName, setNewSiteName] = useState('');
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
   const [editedSiteName, setEditedSiteName] = useState('');
@@ -119,10 +116,9 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
           <TableBody>
             {sites.length > 0 ? sites.map((site) => (
               <TableRow key={site.id} className={cn({
-                'border-l-4 border-accent': site.status === 'Client happy',
-                'border-l-4 border-destructive': site.status === 'Client concerns' || site.status.includes('action plan'),
-                'border-l-4 border-chart-4': site.status === 'Operations request' || site.status === 'Under control',
-                'border-l-4 border-transparent': site.status === 'N/A',
+                'border-l-4 border-accent': site.status === 'Gold Star Site' || site.status === 'Client happy' || site.status === 'No Concerns',
+                'border-l-4 border-destructive': site.status === 'Site under action plan' || site.status === 'Site requires action plan',
+                'border-l-4 border-chart-4': site.status === 'Client concerns',
               })}>
                 <TableCell className="font-medium align-top py-4">
                    {editingSiteId === site.id ? (
@@ -141,22 +137,8 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
                   )}
                 </TableCell>
                 <TableCell className="align-top py-4 text-muted-foreground hidden md:table-cell">{site.siteCode}</TableCell>
-                <TableCell className="align-top py-4">
-                  <Select
-                    value={site.status}
-                    onValueChange={(newStatus: SiteStatus) => onStatusChange(site.id, newStatus)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {siteStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <TableCell className="align-top py-4 font-medium">
+                  {site.status}
                 </TableCell>
                 <TableCell className="py-2 align-top">
                   <Accordion type="single" collapsible className="w-full">

@@ -1,22 +1,19 @@
 
-
 export type SiteStatus =
-  | 'N/A'
+  | 'Gold Star Site'
   | 'Client happy'
-  | 'Operations request'
+  | 'No Concerns'
   | 'Client concerns'
-  | 'Under control'
-  | 'Site under action plan'
-  | 'Site requires action plan';
+  | 'Site requires action plan'
+  | 'Site under action plan';
 
 export const siteStatuses: SiteStatus[] = [
-  'N/A',
+  'Gold Star Site',
   'Client happy',
-  'Operations request',
+  'No Concerns',
   'Client concerns',
-  'Under control',
-  'Site under action plan',
   'Site requires action plan',
+  'Site under action plan',
 ];
 
 export type AuditStatus = 'Not Booked' | 'Emailed Client' | 'Booked' | 'Completed';
@@ -98,7 +95,7 @@ export const initialSites: Omit<Site, 'id'>[] = [...new Set(allSiteNames)]
         return {
             name,
             siteCode: details?.siteCode || '',
-            status: 'N/A' as SiteStatus,
+            status: 'No Concerns' as SiteStatus,
             notes: '',
             contacts: details?.contacts || [],
         };
@@ -578,10 +575,3 @@ export type ConversationRecord = {
   notes?: string;
   followUpRequired: boolean;
 };
-
-
-
-
-
-
-    

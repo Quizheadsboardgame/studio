@@ -14,8 +14,7 @@ const LiveRiskChart = dynamic(() => import('@/components/live-risk-chart'), {
 const siteRiskChartConfig = {
     Red: { label: "Red: Action Required", color: "hsl(var(--chart-1))" },
     Amber: { label: "Amber: Monitor", color: "hsl(var(--chart-4))" },
-    Green: { label: "Green: Positive", color: "hsl(var(--chart-2))" },
-    "N/A": { label: "N/A", color: "hsl(var(--muted))" },
+    Green: { label: "Green: Positive / No Concerns", color: "hsl(var(--chart-2))" },
 } as const;
 
 const cleanerRiskChartConfig = {
@@ -39,17 +38,15 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
     let green = 0;
     let amber = 0;
     let red = 0;
-    let unassigned = 0;
 
     sites.forEach(site => {
-        if (site.status === 'Client happy') {
+        const status = site.status;
+        if (status === 'Gold Star Site' || status === 'Client happy' || status === 'No Concerns') {
             green++;
-        } else if (site.status === 'Operations request' || site.status === 'Under control') {
+        } else if (status === 'Client concerns') {
             amber++;
-        } else if (site.status === 'Client concerns' || site.status.includes('action')) {
+        } else if (status === 'Site under action plan' || status === 'Site requires action plan') {
             red++;
-        } else {
-            unassigned++;
         }
     });
 
@@ -57,7 +54,6 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
         { name: 'Red', value: red, fill: 'hsl(var(--chart-1))' },
         { name: 'Amber', value: amber, fill: 'hsl(var(--chart-4))' },
         { name: 'Green', value: green, fill: 'hsl(var(--chart-2))' },
-        { name: 'N/A', value: unassigned, fill: 'hsl(var(--muted))' },
     ].filter(item => item.value > 0);
   }, [sites]);
   

@@ -26,9 +26,9 @@ type GroupedItems<T> = {
 };
 
 const getSiteColor = (status: SiteStatus) => {
-    if (status === 'Client happy' || status === 'Site satisfied') return 'green';
-    if (status.includes('action plan') || status === 'Client concerns') return 'red';
-    if (status === 'Operations request' || status === 'Under control') return 'amber';
+    if (status === 'Gold Star Site' || status === 'Client happy' || status === 'No Concerns') return 'green';
+    if (status.includes('action plan') || status === 'Site requires action plan') return 'red';
+    if (status === 'Client concerns') return 'amber';
     return 'other';
 }
 
@@ -215,7 +215,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
   }, [schedule]);
 
   const groupedSites = useMemo(() => sites.reduce((acc, site) => {
-    if (site.status === 'N/A' && (!site.notes || site.notes.trim() === '')) return acc;
+    if (site.status === 'No Concerns' && (!site.notes || site.notes.trim() === '')) return acc;
     const color = getSiteColor(site.status);
     acc[color].push(site);
     return acc;
