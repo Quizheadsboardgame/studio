@@ -25,6 +25,11 @@ export type Contact = {
   email?: string;
 };
 
+export type AdditionalCleaner = {
+  name: string;
+  role: 'Trained' | 'Previously Cleaned';
+}
+
 export type Site = {
   id: string;
   name: string;
@@ -32,6 +37,7 @@ export type Site = {
   status: SiteStatus;
   notes?: string;
   contacts?: Contact[];
+  additionalCleaners?: AdditionalCleaner[];
 };
 
 const clientData: { [key: string]: { siteCode: string; contacts: Contact[] } } = {

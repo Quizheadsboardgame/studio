@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -21,6 +21,7 @@ import ConversationLogTab from '@/components/conversation-log-tab';
 import AvailabilityTab from '@/components/availability-tab';
 import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
+import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
@@ -52,6 +53,7 @@ export default function DashboardPage() {
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Site Performance', icon: LayoutDashboard },
     { value: 'site-map', label: 'Site Map', icon: Map },
+    { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
     { value: 'tasks', label: 'Tasks', icon: ListTodo },
   ].sort((a, b) => a.label.localeCompare(b.label)), []);
@@ -375,9 +377,9 @@ export default function DashboardPage() {
     performAnnualHolidayReset();
   }, [firestore, user, cleaners, toast]);
 
-  const handleSiteNoteChange = (siteId: string, newNote: string) => {
-     if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { notes: newNote });
+  const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
+    if (!firestore) return;
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), updatedData);
   };
 
   const handleSetMonthlyAudit = (siteId: string, date: Date, auditData: Partial<Omit<MonthlyAudit, 'id' | 'siteId' | 'month' | 'year'>>) => {
@@ -400,11 +402,6 @@ export default function DashboardPage() {
   const handleAddSite = (siteName: string) => {
     if (siteName.trim() === '' || !sitesCollection) return;
     addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'No Concerns', notes: '' });
-  };
-
-  const handleEditSite = (siteId: string, newName: string) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { name: newName });
   };
 
   const handleRemoveSite = (siteId: string) => {
@@ -716,9 +713,9 @@ export default function DashboardPage() {
                 <CardContent>
                   <SitesTab 
                     sites={sortedSites} 
-                    onNoteChange={handleSiteNoteChange}
+                    onNoteChange={(siteId, notes) => handleUpdateSite(siteId, { notes })}
                     onAddSite={handleAddSite}
-                    onEditSite={handleEditSite}
+                    onEditSite={(siteId, name) => handleUpdateSite(siteId, { name })}
                     onRemoveSite={handleRemoveSite}
                   />
                 </CardContent>
@@ -853,6 +850,19 @@ export default function DashboardPage() {
                 onAddRecord={handleAddConversationRecord}
                 onUpdateRecord={handleUpdateConversationRecord}
                 onRemoveRecord={handleRemoveConversationRecord}
+              />
+            </TabsContent>
+            
+            <TabsContent value="site-portfolio">
+              <SitePortfolioTab
+                sites={sortedSites}
+                cleaners={sortedCleaners}
+                schedule={sortedSchedule}
+                actionPlans={actionPlans || []}
+                monthlyAudits={monthlyAudits || []}
+                tasks={tasks || []}
+                appointments={appointments || []}
+                onUpdateSite={handleUpdateSite}
               />
             </TabsContent>
 
