@@ -866,6 +866,11 @@ export default function DashboardPage() {
                 tasks={tasks || []}
                 appointments={appointments || []}
                 onUpdateSite={handleUpdateSite}
+                onUpdateTask={handleUpdateTask}
+                onRemoveTask={handleRemoveTask}
+                onAddAppointment={handleAddAppointment}
+                onUpdateAppointment={handleUpdateAppointment}
+                onRemoveAppointment={handleRemoveAppointment}
               />
             </TabsContent>
 
@@ -884,3 +889,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
