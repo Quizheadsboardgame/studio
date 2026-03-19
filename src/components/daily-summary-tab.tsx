@@ -33,7 +33,7 @@ const getSiteColor = (status: SiteStatus) => {
 }
 
 const getCleanerColor = (rating: CleanerPerformance) => {
-    if (rating === 'Excellent feedback' || rating === 'Site satisfied') return 'green';
+    if (rating === 'Gold Star Cleaner' || rating === 'Site satisfied') return 'green';
     if (rating.includes('action plan') || rating === 'Needs retraining' || rating === 'Operational concerns') return 'red';
     if (rating === 'Slight improvement needed') return 'amber';
     return 'other';
@@ -222,7 +222,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
   }, { red: [], amber: [], green: [], other: [] } as GroupedItems<Site>), [sites]);
 
   const groupedCleaners = useMemo(() => cleaners.reduce((acc, cleaner) => {
-    if (cleaner.rating === 'N/A' && (!cleaner.notes || cleaner.notes.trim() === '')) return acc;
+    if (cleaner.rating === 'No Concerns' && (!cleaner.notes || cleaner.notes.trim() === '')) return acc;
     const color = getCleanerColor(cleaner.rating);
     acc[color].push(cleaner);
     return acc;

@@ -105,8 +105,8 @@ export const initialSites: Omit<Site, 'id'>[] = [...new Set(allSiteNames)]
     });
 
 export type CleanerPerformance =
-  | 'N/A'
-  | 'Excellent feedback'
+  | 'No Concerns'
+  | 'Gold Star Cleaner'
   | 'Site satisfied'
   | 'Slight improvement needed'
   | 'Needs retraining'
@@ -114,8 +114,8 @@ export type CleanerPerformance =
   | 'Operational concerns';
 
 export const cleanerPerformances: CleanerPerformance[] = [
-  'N/A',
-  'Excellent feedback',
+  'No Concerns',
+  'Gold Star Cleaner',
   'Site satisfied',
   'Slight improvement needed',
   'Needs retraining',
@@ -152,7 +152,7 @@ export const initialCleaners: Omit<Cleaner, 'id'>[] = [
   "Ubaldo Soares Vital", "Vacant", "Veronica Smintina", "Zbigniew Bajor"
 ].sort((a, b) => a.localeCompare(b)).map(name => ({
   name,
-  rating: 'N/A' as CleanerPerformance,
+  rating: 'No Concerns' as CleanerPerformance,
   notes: '',
   holidayAllowance: 20,
   holidayTaken: 0,

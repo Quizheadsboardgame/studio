@@ -246,7 +246,7 @@ export default function DashboardPage() {
     }
 
     return cleaners.map(cleaner => {
-        let newRating: CleanerPerformance = 'N/A'; // Start with N/A
+        let newRating: CleanerPerformance = 'No Concerns'; // Start with default
 
         // Highest priority: direct action plan on cleaner
         const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
@@ -276,13 +276,13 @@ export default function DashboardPage() {
         // Positive ratings if no negative indicators are found
         if (cleanerSites.length > 0) {
             if (cleanerSites.every(s => s.status === 'Client happy')) {
-                return { ...cleaner, rating: 'Excellent feedback' };
+                return { ...cleaner, rating: 'Gold Star Cleaner' };
             }
             // If they have sites, but no negative indicators and not all are "Excellent"
             return { ...cleaner, rating: 'Site satisfied' };
         }
         
-        // Default to N/A if no data points are available for the cleaner
+        // Default to No Concerns if no data points are available for the cleaner
         return { ...cleaner, rating: newRating };
     });
   }, [cleaners, sites, schedule, conversationRecords, actionPlans]);
@@ -400,7 +400,7 @@ export default function DashboardPage() {
     if (cleanerName.trim() === '' || !cleanersCollection) return;
     const newCleanerData = initialCleaners.find(c => c.name === cleanerName) || {
       name: cleanerName,
-      rating: 'N/A',
+      rating: 'No Concerns',
       notes: '',
       holidayAllowance: 20,
       holidayTaken: 0,

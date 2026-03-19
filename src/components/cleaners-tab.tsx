@@ -75,10 +75,10 @@ export default function CleanersTab({ cleaners, onUpdateCleaner, onAddCleaner, o
           <TableBody>
             {cleaners.length > 0 ? cleaners.map((cleaner) => (
               <TableRow key={cleaner.id} className={cn({
-                  'border-l-4 border-accent': cleaner.rating === 'Excellent feedback' || cleaner.rating === 'Site satisfied',
+                  'border-l-4 border-accent': cleaner.rating === 'Gold Star Cleaner' || cleaner.rating === 'Site satisfied',
                   'border-l-4 border-destructive': cleaner.rating === 'Needs retraining' || cleaner.rating === 'Under action plan' || cleaner.rating === 'Operational concerns',
                   'border-l-4 border-chart-4': cleaner.rating === 'Slight improvement needed',
-                  'border-l-4 border-transparent': cleaner.rating === 'N/A',
+                  'border-l-4 border-transparent': cleaner.rating === 'No Concerns',
               })}>
                 <TableCell className="font-medium align-top py-4">
                   {cleaner.name}
