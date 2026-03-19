@@ -20,7 +20,7 @@ interface ScheduleTabProps {
   onRemove: (id: string) => void;
 }
 
-function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sites: Site[], cleaners: Cleaner[], onSave: (entry: Omit<ScheduleEntry, 'id'>) => void, entry?: ScheduleEntry, children: React.ReactNode }) {
+function ScheduleEntryDialog({ schedule, sites, cleaners, onSave, entry, children }: { schedule: ScheduleEntry[], sites: Site[], cleaners: Cleaner[], onSave: (entry: Omit<ScheduleEntry, 'id'>) => void, entry?: ScheduleEntry, children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [site, setSite] = useState(entry?.site || '');
     const [cleaner, setCleaner] = useState(entry?.cleaner || '');
@@ -33,6 +33,21 @@ function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sit
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a site and cleaner.' });
             return;
         }
+
+        // Check for duplicates before saving
+        const isDuplicate = schedule.some(
+            e => e.id !== entry?.id && e.site === site && e.cleaner === cleaner && e.start === start && e.finish === finish
+        );
+
+        if (isDuplicate) {
+            toast({
+                variant: 'destructive',
+                title: 'Duplicate Entry',
+                description: 'This exact schedule entry already exists.',
+            });
+            return;
+        }
+        
         onSave({ site, cleaner, start, finish });
         setIsOpen(false);
         toast({ title: 'Schedule Saved', description: `The entry for ${cleaner} at ${site} has been saved.` });
@@ -89,6 +104,7 @@ function ScheduleEntryDialog({ sites, cleaners, onSave, entry, children }: { sit
 export default function CompanyScheduleTab({ schedule, sites, cleaners, onAdd, onUpdate, onRemove }: ScheduleTabProps) {
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editedRow, setEditedRow] = useState<Partial<ScheduleEntry>>({});
+  const { toast } = useToast();
 
   const handleEditClick = (entry: ScheduleEntry) => {
     setEditingRowId(entry.id);
@@ -101,6 +117,24 @@ export default function CompanyScheduleTab({ schedule, sites, cleaners, onAdd, o
   };
 
   const handleSaveEdit = (id: string) => {
+    // Check for duplicates before updating
+    const isDuplicate = schedule.some(
+        e => e.id !== id && 
+             e.site === editedRow.site && 
+             e.cleaner === editedRow.cleaner && 
+             e.start === editedRow.start && 
+             e.finish === editedRow.finish
+    );
+
+    if (isDuplicate) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Entry',
+            description: 'This exact schedule entry already exists.',
+        });
+        return;
+    }
+      
     onUpdate(id, editedRow);
     handleCancelEdit();
   };
@@ -108,7 +142,7 @@ export default function CompanyScheduleTab({ schedule, sites, cleaners, onAdd, o
   return (
     <div className="space-y-4">
         <div className="flex justify-end">
-            <ScheduleEntryDialog sites={sites} cleaners={cleaners} onSave={onAdd}>
+            <ScheduleEntryDialog sites={sites} cleaners={cleaners} onSave={onAdd} schedule={schedule}>
                  <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Entry</Button>
             </ScheduleEntryDialog>
         </div>
@@ -139,8 +173,8 @@ export default function CompanyScheduleTab({ schedule, sites, cleaners, onAdd, o
                                         <SelectContent>{cleaners.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 ) : entry.cleaner}</TableCell>
-                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.start} onChange={e => setEditedRow(prev => ({...prev, start: e.target.value}))} /> : entry.start}</TableCell>
-                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.finish} onChange={e => setEditedRow(prev => ({...prev, finish: e.target.value}))} /> : entry.finish}</TableCell>
+                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.start || ''} onChange={e => setEditedRow(prev => ({...prev, start: e.target.value}))} /> : entry.start}</TableCell>
+                                <TableCell>{editingRowId === entry.id ? <Input value={editedRow.finish || ''} onChange={e => setEditedRow(prev => ({...prev, finish: e.target.value}))} /> : entry.finish}</TableCell>
                                 <TableCell className="text-right">
                                     {editingRowId === entry.id ? (
                                         <div className="flex items-center justify-end gap-1">

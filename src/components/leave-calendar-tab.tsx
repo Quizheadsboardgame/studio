@@ -238,15 +238,27 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
     const groupedAbsences = absences.reduce((acc, current) => {
         const key = `${current.cleanerId}-${current.date}`;
         if (!acc[key]) {
+            const cleanerShifts = schedule.filter(s => s.cleaner === current.cleanerName);
+            
+            // De-duplicate shifts to prevent display issues from duplicate schedule entries
+            const uniqueShifts: ScheduleEntry[] = [];
+            const seenShifts = new Set<string>();
+            cleanerShifts.forEach(shift => {
+                const shiftKey = `${shift.site}|${shift.start}|${shift.finish}`;
+                if (!seenShifts.has(shiftKey)) {
+                    seenShifts.add(shiftKey);
+                    uniqueShifts.push(shift);
+                }
+            });
+
             acc[key] = {
                 ...current,
-                shifts: schedule
-                    .filter(s => s.cleaner === current.cleanerName)
-                    .map((s, index) => ({
-                        site: s.site,
-                        time: `${s.start} - ${s.finish}`,
-                        uniqueId: `${current.id}-${s.id || index}`
-                    }))
+                shifts: uniqueShifts.map((s) => ({
+                    site: s.site,
+                    time: `${s.start} - ${s.finish}`,
+                    // Use a more robust unique ID based on shift content
+                    uniqueId: `${current.id}-${s.site}-${s.start}-${s.finish}`
+                }))
             };
         }
         return acc;
