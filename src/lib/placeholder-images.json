@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "site-map",
+      "description": "A map of the Addenbrooke's hospital site.",
+      "imageUrl": "https://images.unsplash.com/photo-1599580506437-a8a5d57b563a?q=80&w=1200",
+      "imageHint": "hospital map"
+    }
+  ]
 }

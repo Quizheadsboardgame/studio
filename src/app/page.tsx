@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -19,6 +19,7 @@ import DiaryTab from '@/components/diary-tab';
 import TasksTab from '@/components/tasks-tab';
 import ConversationLogTab from '@/components/conversation-log-tab';
 import AvailabilityTab from '@/components/availability-tab';
+import SiteMapTab from '@/components/site-map-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
@@ -48,6 +49,7 @@ export default function DashboardPage() {
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Sites', icon: LayoutDashboard },
+    { value: 'site-map', label: 'Site Map', icon: Map },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
     { value: 'tasks', label: 'Tasks', icon: ListTodo },
   ].sort((a, b) => a.label.localeCompare(b.label)), []);
@@ -779,6 +781,10 @@ export default function DashboardPage() {
                 onUpdateRecord={handleUpdateConversationRecord}
                 onRemoveRecord={handleRemoveConversationRecord}
               />
+            </TabsContent>
+
+            <TabsContent value="site-map">
+              <SiteMapTab sites={sortedSites} />
             </TabsContent>
 
           </Tabs>
