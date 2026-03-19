@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Cleaner, Leave, ScheduleEntry } from '@/lib/data';
 import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
@@ -22,36 +22,34 @@ interface LeaveCalendarTabProps {
   onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
 }
 
-// England & Wales Bank Holidays
-const bankHolidays = [
-    // 2024
-    new Date('2024-01-01'), new Date('2024-03-29'), new Date('2024-04-01'),
-    new Date('2024-05-06'), new Date('2024-05-27'), new Date('2024-08-26'),
-    new Date('2024-12-25'), new Date('2024-12-26'),
-    // 2025
-    new Date('2025-01-01'), new Date('2025-04-18'), new Date('2025-04-21'),
-    new Date('2025-05-05'), new Date('2025-05-26'), new Date('2025-08-25'),
-    new Date('2025-12-25'), new Date('2025-12-26'),
-];
-
-const isWeekend = (date: Date) => {
-    const day = date.getDay();
-    return day === 0 || day === 6; // Sunday or Saturday
-};
-
-const isBankHoliday = (date: Date) => {
-    return bankHolidays.some(bh => isSameDay(bh, date));
-};
-
-const disabledDays = [isWeekend, isBankHoliday];
-
-
 function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeave: LeaveCalendarTabProps['onAddLeave'] }) {
     const [selectedCleanerId, setSelectedCleanerId] = useState<string>('');
     const [leaveType, setLeaveType] = useState<'holiday' | 'sick'>('holiday');
     const [startDate, setStartDate] = useState<string>('');
     const [numberOfDays, setNumberOfDays] = useState(1);
     const { toast } = useToast();
+
+    // Define helpers inside the component to ensure they run on the client
+    const bankHolidays = useMemo(() => [
+        // 2024
+        new Date('2024-01-01'), new Date('2024-03-29'), new Date('2024-04-01'),
+        new Date('2024-05-06'), new Date('2024-05-27'), new Date('2024-08-26'),
+        new Date('2024-12-25'), new Date('2024-12-26'),
+        // 2025
+        new Date('2025-01-01'), new Date('2025-04-18'), new Date('2025-04-21'),
+        new Date('2025-05-05'), new Date('2025-05-26'), new Date('2025-08-25'),
+        new Date('2025-12-25'), new Date('2025-12-26'),
+    ], []);
+
+    const isWeekend = (date: Date) => {
+        const day = date.getDay();
+        return day === 0 || day === 6; // Sunday or Saturday
+    };
+
+    const isBankHoliday = useCallback((date: Date) => {
+        return bankHolidays.some(bh => isSameDay(bh, date));
+    }, [bankHolidays]);
+
 
     const handleSubmit = () => {
         if (!selectedCleanerId || !startDate) {
