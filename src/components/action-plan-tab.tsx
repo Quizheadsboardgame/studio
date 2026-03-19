@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -92,6 +91,26 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
   const handleNotesChange = (notes: string) => {
       handleUpdate({ notes });
   }
+
+  const handleShareOnWhatsApp = () => {
+    let message = `*Action Plan: ${plan.targetName}*\n\n`;
+
+    if (plan.tasks.length > 0) {
+        message += "*Tasks:*\n";
+        plan.tasks.forEach(task => {
+            const status = task.completed ? '✅' : '🔲';
+            message += `${status} ${task.description} (Due: ${format(parseISO(task.dueDate), 'PP')})\n`;
+        });
+        message += "\n";
+    }
+
+    if (plan.notes) {
+        message += `*Notes:*\n${plan.notes}\n`;
+    }
+
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   const handleGeneratePdf = async () => {
     if (!printableRef.current) return;
@@ -202,15 +221,26 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
           />
         </div>
 
-        <div className="flex justify-end pt-4 border-t mt-4">
+        <div className="flex justify-end pt-4 border-t mt-4 gap-2">
+          <Button onClick={handleShareOnWhatsApp} variant="outline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              WhatsApp
+          </Button>
           <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
             {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-            {isGeneratingPdf ? 'Generating...' : 'Download as PDF'}
+            {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
           </Button>
         </div>
       </div>
     </>
   );
+}
+
+interface ActionPlanTabProps {
+  sites: Site[];
+  cleaners: Cleaner[];
+  actionPlans: ActionPlan[];
+  onUpdateActionPlan: (plan: ActionPlan) => void;
 }
 
 export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan }: ActionPlanTabProps) {
@@ -240,6 +270,35 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
   useEffect(() => {
     printableRefs.current = printableRefs.current.slice(0, allPlans.length);
   }, [allPlans]);
+
+  const handleShareAllOnWhatsApp = () => {
+    let fullMessage = `*All Action Plans Report*\nGenerated on: ${format(new Date(), 'PPP')}\n\n`;
+    
+    allPlans.forEach((plan) => {
+        fullMessage += `------------------------------------\n`;
+        fullMessage += `*Action Plan for: ${plan.targetName} (${plan.targetType})*\n\n`;
+
+        if (plan.tasks.length > 0) {
+            fullMessage += "*Tasks:*\n";
+            plan.tasks.forEach(task => {
+                const status = task.completed ? '✅' : '🔲';
+                fullMessage += `${status} ${task.description} (Due: ${format(parseISO(task.dueDate), 'PP')})\n`;
+            });
+            fullMessage += "\n";
+        } else {
+            fullMessage += "_No tasks for this plan._\n\n";
+        }
+
+        if (plan.notes) {
+            fullMessage += `*Notes:*\n${plan.notes}\n`;
+        }
+        
+        fullMessage += `\n`;
+    });
+    
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullMessage)}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   const handleGenerateAllPdfs = async () => {
     if (printableRefs.current.length === 0) return;
@@ -314,10 +373,16 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
               <CardTitle>Action Plan Management</CardTitle>
               <p className="text-sm text-muted-foreground">Sites and cleaners that require an action plan.</p>
             </div>
-             <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || actionItems.length === 0}>
-                {isGeneratingAllPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                {isGeneratingAllPdf ? 'Generating...' : 'Download All'}
-            </Button>
+             <div className="flex gap-2">
+                <Button onClick={handleShareAllOnWhatsApp} variant="outline" disabled={actionItems.length === 0}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    Share All
+                </Button>
+                 <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || actionItems.length === 0}>
+                    {isGeneratingAllPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                    {isGeneratingAllPdf ? 'Generating...' : 'Download All'}
+                </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -345,5 +410,3 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
     </>
   );
 }
-
-    

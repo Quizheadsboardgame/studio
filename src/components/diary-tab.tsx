@@ -350,6 +350,50 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
         }
     };
     
+    const eventsForPdf = 
+        activeDiary === 'Owen Newton' ? owenEvents :
+        activeDiary === 'Nick Miller' ? nickEvents :
+        activeDiary === 'Mircalla Bond (Carla)' ? carlaEvents :
+        activeDiary === 'Staff Cover' ? staffCoverEvents :
+        [];
+
+    const diaryTitleForPdf = activeDiary === 'Staff Cover' ? 'Staff Cover Diary' : `Diary for ${activeDiary}`;
+    
+    const handleShareOnWhatsApp = () => {
+        const eventsToShare = eventsForPdf;
+        const isStaffCoverView = activeDiary === 'Staff Cover';
+
+        let message = `*${diaryTitleForPdf}*\n`;
+        message += `Date Range: ${format(parseISO(filterStartDate), 'PPP')} to ${format(parseISO(filterEndDate), 'PPP')}\n\n`;
+
+        const groupedEvents = eventsToShare.reduce((acc, event) => {
+            const day = format(event.date, 'yyyy-MM-dd');
+            if (!acc[day]) acc[day] = [];
+            acc[day].push(event);
+            return acc;
+        }, {} as Record<string, DiaryEvent[]>);
+        const sortedDays = Object.keys(groupedEvents).sort();
+
+        if (sortedDays.length > 0) {
+            sortedDays.forEach(day => {
+                message += `*${format(parseISO(day), 'EEEE, do MMMM yyyy')}*\n`;
+                groupedEvents[day].forEach(event => {
+                    message += ` - ${event.title}${event.site ? ` @ ${event.site}` : ''}\n`;
+                    message += `   _(${event.details})_\n`;
+                    if(isStaffCoverView){
+                        message += `   *Covered by: ${event.assignee}*\n`
+                    }
+                });
+                message += "\n";
+            });
+        } else {
+            message += "No events scheduled for this period.";
+        }
+
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+    
     const handleGeneratePdf = async () => {
       if (!printableRef.current) return;
       setIsGeneratingPdf(true);
@@ -465,15 +509,6 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
         )
     };
     
-    const eventsForPdf = 
-        activeDiary === 'Owen Newton' ? owenEvents :
-        activeDiary === 'Nick Miller' ? nickEvents :
-        activeDiary === 'Mircalla Bond (Carla)' ? carlaEvents :
-        activeDiary === 'Staff Cover' ? staffCoverEvents :
-        [];
-
-    const diaryTitleForPdf = activeDiary === 'Staff Cover' ? 'Staff Cover Diary' : `Diary for ${activeDiary}`;
-
     return (
         <>
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
@@ -487,6 +522,10 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                             <CardDescription>View upcoming audits and appointments.</CardDescription>
                         </div>
                         <div className="flex gap-2">
+                             <Button onClick={handleShareOnWhatsApp} variant="outline">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                WhatsApp
+                            </Button>
                              <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} variant="outline">
                                 {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                                 {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
