@@ -155,7 +155,7 @@ export type ScheduleEntry = {
   finish: string;
 };
 
-export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = [
+const rawScheduleData: [string, string, string, string][] = [
   ["Coton House Level 5 NIHR Resources", "Alasdair Strachan", "11:30pm", "1.45am"],
   ["Medicine Level 5, E Spur", "Alasdair Strachan", "5pm", "7pm"],
   ["Medicine Level 5, E Spur", "Alasdair Strachan", "8.30pm", "11.30pm"],
@@ -246,7 +246,21 @@ export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = [
   ["Clinical Schools Building - Level 2 & 3", "Veronica Smintina", "3pm", "6pm"],
   ["Grantchester House (6 Weekly Deep Clean)", "Veronica Smintina", "Additional Ancillary work", ""],
   ["UoC - Capella Building /Jeffrey Cheah Biomedical Centre (JCBC)", "Zbigniew Bajor", "4.30am", "8.30am"]
-].map(([site, cleaner, start, finish]) => ({ site, cleaner, start, finish }));
+];
+
+// Deduplicate the initial schedule data to prevent issues from copy-paste errors.
+const scheduleKeys = new Set<string>();
+const uniqueRawSchedule = rawScheduleData.filter(entry => {
+    const key = entry.join('|').toLowerCase();
+    if (scheduleKeys.has(key)) {
+        return false; // Found a duplicate, so filter it out
+    }
+    scheduleKeys.add(key);
+    return true; // Keep this unique entry
+});
+
+export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = uniqueRawSchedule.map(([site, cleaner, start, finish]) => ({ site, cleaner, start, finish }));
+
 
 export type ActionPlanTask = {
   id: string;
@@ -536,6 +550,7 @@ export type Task = {
   assignee?: string;
   site?: string;
 };
+
 
 
 
