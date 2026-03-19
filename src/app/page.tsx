@@ -215,6 +215,51 @@ export default function DashboardPage() {
   const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
 
+  // Annual holiday reset effect
+  useEffect(() => {
+    if (!firestore || !user || !cleaners || cleaners.length === 0) return;
+
+    const performAnnualHolidayReset = async () => {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const resetMonth = 3; // April is month 3 (0-indexed)
+
+      const resetKey = `holiday_reset_year_${currentYear}`;
+
+      if (localStorage.getItem(resetKey)) {
+        return;
+      }
+
+      // Check if it's April 1st or later
+      if (today.getMonth() >= resetMonth) {
+        console.log(`Performing annual holiday reset for ${currentYear}...`);
+        
+        const batch = writeBatch(firestore);
+        
+        cleaners.forEach(cleaner => {
+          const cleanerRef = doc(firestore, 'cleaners', cleaner.id);
+          // Only reset holidayTaken, preserve custom holidayAllowance
+          batch.update(cleanerRef, {
+            holidayTaken: 0
+          });
+        });
+
+        try {
+          await batch.commit();
+          toast({ title: "Holiday Balances Reset", description: `Cleaners' holiday days taken have been reset for ${currentYear}.` });
+          localStorage.setItem(resetKey, 'true');
+          console.log("Annual holiday reset complete.");
+        } catch (error) {
+          console.error("Error performing annual holiday reset:", error);
+          toast({ variant: 'destructive', title: "Reset Failed", description: "Could not reset holiday balances." });
+        }
+      }
+    };
+    
+    performAnnualHolidayReset();
+  }, [firestore, user, cleaners, toast]);
+
+
   const handleSiteStatusChange = (siteId: string, newStatus: SiteStatus) => {
     if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), { status: newStatus });
@@ -282,6 +327,11 @@ export default function DashboardPage() {
   const handleCleanerNoteChange = (cleanerId: string, newNote: string) => {
     if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { notes: newNote });
+  };
+  
+  const handleHolidayAllowanceChange = (cleanerId: string, newAllowance: number) => {
+    if (!firestore) return;
+    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { holidayAllowance: newAllowance });
   };
 
   const handleAddCleaner = (cleanerName: string) => {
@@ -527,6 +577,7 @@ export default function DashboardPage() {
                     onNoteChange={handleCleanerNoteChange}
                     onAddCleaner={handleAddCleaner}
                     onRemoveCleaner={handleRemoveCleaner}
+                    onHolidayAllowanceChange={handleHolidayAllowanceChange}
                   />
                 </CardContent>
               </Card>

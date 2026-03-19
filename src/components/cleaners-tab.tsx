@@ -18,14 +18,22 @@ interface CleanersTabProps {
   onNoteChange: (cleanerId: string, newNote: string) => void;
   onAddCleaner: (cleanerName: string) => void;
   onRemoveCleaner: (cleanerId: string) => void;
+  onHolidayAllowanceChange: (cleanerId: string, allowance: number) => void;
 }
 
-export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, onAddCleaner, onRemoveCleaner }: CleanersTabProps) {
+export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, onAddCleaner, onRemoveCleaner, onHolidayAllowanceChange }: CleanersTabProps) {
   const [newCleanerName, setNewCleanerName] = useState('');
 
   const handleAddClick = () => {
     onAddCleaner(newCleanerName);
     setNewCleanerName('');
+  };
+
+  const handleAllowanceChange = (cleanerId: string, value: string) => {
+    const allowance = parseInt(value, 10);
+    if (!isNaN(allowance) && allowance >= 0) {
+      onHolidayAllowanceChange(cleanerId, allowance);
+    }
   };
 
   return (
@@ -47,8 +55,9 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Cleaner</TableHead>
-              <TableHead className="w-[25%]">Rating</TableHead>
+              <TableHead className="w-[25%]">Cleaner</TableHead>
+              <TableHead className="w-[20%]">Rating</TableHead>
+              <TableHead className="w-[15%]">Holiday Allowance</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[10%] text-right"></TableHead>
             </TableRow>
@@ -81,6 +90,14 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell className="align-top py-4">
+                  <Input
+                    type="number"
+                    value={cleaner.holidayAllowance || 20}
+                    onChange={(e) => handleAllowanceChange(cleaner.id, e.target.value)}
+                    className="w-20"
+                  />
+                </TableCell>
                 <TableCell className="py-2 align-top">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="notes" className="border-b-0">
@@ -106,7 +123,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No cleaners found. Add one to get started.
                 </TableCell>
               </TableRow>

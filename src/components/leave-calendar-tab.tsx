@@ -247,7 +247,9 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                          <thead className="sticky top-0 bg-muted">
                             <tr className="border-b">
                                 <th className="py-2 px-3 text-left font-medium">Cleaner</th>
-                                <th className="py-2 px-3 text-center font-medium">Holidays Left</th>
+                                <th className="py-2 px-3 text-center font-medium">Allowance</th>
+                                <th className="py-2 px-3 text-center font-medium">Taken</th>
+                                <th className="py-2 px-3 text-center font-medium">Remaining</th>
                                 <th className="py-2 px-3 text-center font-medium">Sick Days</th>
                             </tr>
                         </thead>
@@ -255,7 +257,9 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                             {cleaners.map(cleaner => (
                                 <tr key={cleaner.id} className="border-b last:border-b-0">
                                     <td className="py-2 px-3 font-medium">{cleaner.name}</td>
-                                    <td className={`py-2 px-3 text-center font-bold`}>{getRemainingHolidays(cleaner)}</td>
+                                    <td className="py-2 px-3 text-center font-bold">{cleaner.holidayAllowance || 20}</td>
+                                    <td className="py-2 px-3 text-center font-bold">{cleaner.holidayTaken || 0}</td>
+                                    <td className="py-2 px-3 text-center font-bold">{getRemainingHolidays(cleaner)}</td>
                                     <td className="py-2 px-3 text-center font-bold">{cleaner.sickDaysTaken || 0}</td>
                                 </tr>
                             ))}
