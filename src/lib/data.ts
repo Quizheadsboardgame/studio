@@ -267,8 +267,6 @@ export type ActionPlanTask = {
   description: string;
   dueDate: string; // YYYY-MM-DD
   completed: boolean;
-  beforeImageUrl?: string;
-  afterImageUrl?: string;
 };
 
 export type ActionPlan = {
@@ -568,3 +566,6 @@ export type ConversationRecord = {
 
 
 
+
+
+    
