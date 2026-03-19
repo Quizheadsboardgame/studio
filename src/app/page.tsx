@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -20,6 +20,7 @@ import TasksTab from '@/components/tasks-tab';
 import ConversationLogTab from '@/components/conversation-log-tab';
 import AvailabilityTab from '@/components/availability-tab';
 import SiteMapTab from '@/components/site-map-tab';
+import GoldStandardTab from '@/components/gold-standard-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
@@ -46,6 +47,7 @@ export default function DashboardPage() {
     { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
     { value: 'summary', label: 'Daily Summary', icon: FileText },
     { value: 'diary', label: 'Diary', icon: BookOpenCheck },
+    { value: 'gold-standard', label: 'Gold Standard', icon: Award },
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Site Performance', icon: LayoutDashboard },
@@ -286,43 +288,45 @@ export default function DashboardPage() {
     }
 
     return cleaners.map(cleaner => {
-        let newRating: CleanerPerformance = 'No Concerns'; // Start with default
+        let newRating: CleanerPerformance;
 
-        // Highest priority: direct action plan on cleaner
+        // Get data specific to the cleaner
         const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
-        if (cleanerActionPlan) {
-            return { ...cleaner, rating: 'Under action plan' };
-        }
-
-        // Second priority: conversation that requires follow up
         const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
-        if (records.some(r => r.followUpRequired)) {
-            return { ...cleaner, rating: 'Operational concerns' };
-        }
-        
-        // Third priority: cleaner works at a "bad" site
         const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
         const cleanerSites = cleanerSiteNames.map(name => calculatedSites.find(s => s.name === name)).filter((s): s is Site => !!s);
         
-        if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
-             return { ...cleaner, rating: 'Needs retraining' };
+        // --- Determine Rating based on hierarchy ---
+
+        // 1. Highest priority: direct action plan on cleaner
+        if (cleanerActionPlan) {
+            newRating = 'Under action plan';
+        }
+        // 2. Conversation that requires follow up
+        else if (records.some(r => r.followUpRequired)) {
+            newRating = 'Operational concerns';
+        }
+        // 3. Cleaner works at a "bad" site
+        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
+             newRating = 'Needs retraining';
+        }
+        // 4. Any conversation log (but no follow-up required)
+        else if (records.length > 0) {
+            newRating = 'Slight improvement needed';
+        }
+        // 5. GOLD STAR: No negative indicators AND all sites are Gold Star
+        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site')) {
+            newRating = 'Gold Star Cleaner';
+        }
+        // 6. Site satisfied: Works at sites, but not all are Gold Star, and no negative indicators
+        else if (cleanerSites.length > 0) {
+            newRating = 'Site satisfied';
+        }
+        // 7. Default if no other conditions met
+        else {
+            newRating = 'No Concerns';
         }
 
-        // Fourth priority: any conversation log
-        if (records.length > 0) {
-            return { ...cleaner, rating: 'Slight improvement needed' };
-        }
-
-        // Positive ratings if no negative indicators are found
-        if (cleanerSites.length > 0) {
-            if (cleanerSites.every(s => s.status === 'Client happy' || s.status === 'Gold Star Site')) {
-                return { ...cleaner, rating: 'Gold Star Cleaner' };
-            }
-            // If they have sites, but no negative indicators and not all are "Excellent"
-            return { ...cleaner, rating: 'Site satisfied' };
-        }
-        
-        // Default to No Concerns if no data points are available for the cleaner
         return { ...cleaner, rating: newRating };
     });
   }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
@@ -854,6 +858,10 @@ export default function DashboardPage() {
 
             <TabsContent value="site-map">
               <SiteMapTab sites={sortedSites} />
+            </TabsContent>
+
+            <TabsContent value="gold-standard">
+              <GoldStandardTab sites={sortedSites} cleaners={sortedCleaners} />
             </TabsContent>
 
           </Tabs>
