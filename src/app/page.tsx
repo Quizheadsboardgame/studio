@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -18,6 +18,7 @@ import SuppliesTab from '@/components/supplies-tab';
 import DiaryTab from '@/components/diary-tab';
 import TasksTab from '@/components/tasks-tab';
 import ConversationLogTab from '@/components/conversation-log-tab';
+import AvailabilityTab from '@/components/availability-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
@@ -38,6 +39,7 @@ export default function DashboardPage() {
     { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
     { value: 'audit-history', label: 'Audit History', icon: FileClock },
     { value: 'audits', label: 'Audits', icon: FileCheck },
+    { value: 'availability', label: 'Cleaner Availability', icon: Clock },
     { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
     { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
     { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
@@ -64,7 +66,7 @@ export default function DashboardPage() {
 
     const seedDatabase = async () => {
       // Using a new key to force re-evaluation for users with old data.
-      const SEED_VERSION = 'db_seeded_with_contacts_v1';
+      const SEED_VERSION = 'db_seeded_with_availability_v1';
       if (sessionStorage.getItem(SEED_VERSION)) {
         return;
       }
@@ -150,7 +152,7 @@ export default function DashboardPage() {
         }
       } else {
         // UPDATE existing sites with siteCode and contacts
-        console.log('Database already exists. Checking for site data updates...');
+        console.log('Database already exists. Checking for data updates...');
         
         const allSitesSnapshot = await getDocs(sitesCollectionRef);
         let updatesMade = false;
@@ -169,17 +171,32 @@ export default function DashboardPage() {
             }
         });
 
+        // Check for cleaner data updates (add availability fields)
+        const cleanersCollectionRef = collection(firestore, 'cleaners');
+        const allCleanersSnapshot = await getDocs(cleanersCollectionRef);
+        allCleanersSnapshot.forEach(docSnap => {
+            const existingCleanerData = docSnap.data();
+            if (existingCleanerData.availabilityStatus === undefined) {
+                batch.update(docSnap.ref, {
+                    availabilityStatus: 'Unavailable',
+                    availableLots: [],
+                    availabilityNotes: '',
+                });
+                updatesMade = true;
+            }
+        });
+
         if (updatesMade) {
             try {
                 await batch.commit();
-                toast({ title: "Data Update", description: "Site contact information has been updated." });
-                console.log('Site data update complete.');
+                toast({ title: "Data Update", description: "Your application data has been updated." });
+                console.log('Data update complete.');
             } catch (error) {
-                console.error('Error updating site data:', error);
-                toast({ variant: 'destructive', title: "Update Failed", description: "Could not update site contact information." });
+                console.error('Error updating data:', error);
+                toast({ variant: 'destructive', title: "Update Failed", description: "Could not update your application data." });
             }
         } else {
-            console.log('Site data is already up to date.');
+            console.log('Data is already up to date.');
         }
         
         // Mark as seeded regardless of whether an update was needed, to prevent re-running this logic.
@@ -324,25 +341,26 @@ export default function DashboardPage() {
     if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'sites', siteId));
   };
-
-  const handleCleanerRatingChange = (cleanerId: string, newRating: CleanerPerformance) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { rating: newRating });
-  };
   
-  const handleCleanerNoteChange = (cleanerId: string, newNote: string) => {
+  const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
     if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { notes: newNote });
-  };
-  
-  const handleHolidayAllowanceChange = (cleanerId: string, newAllowance: number) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), { holidayAllowance: newAllowance });
+    updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), updatedData);
   };
 
   const handleAddCleaner = (cleanerName: string) => {
     if (cleanerName.trim() === '' || !cleanersCollection) return;
-    addDocumentNonBlocking(cleanersCollection, { name: cleanerName, rating: 'N/A', notes: '', holidayAllowance: 20, holidayTaken: 0, sickDaysTaken: 0 });
+    const newCleanerData = initialCleaners.find(c => c.name === cleanerName) || {
+      name: cleanerName,
+      rating: 'N/A',
+      notes: '',
+      holidayAllowance: 20,
+      holidayTaken: 0,
+      sickDaysTaken: 0,
+      availabilityStatus: 'Unavailable',
+      availableLots: [],
+      availabilityNotes: '',
+    };
+    addDocumentNonBlocking(cleanersCollection, newCleanerData);
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
@@ -641,14 +659,19 @@ export default function DashboardPage() {
                 <CardContent>
                   <CleanersTab 
                     cleaners={sortedCleaners} 
-                    onRatingChange={handleCleanerRatingChange}
-                    onNoteChange={handleCleanerNoteChange}
+                    onUpdateCleaner={handleUpdateCleaner}
                     onAddCleaner={handleAddCleaner}
                     onRemoveCleaner={handleRemoveCleaner}
-                    onHolidayAllowanceChange={handleHolidayAllowanceChange}
                   />
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="availability">
+              <AvailabilityTab
+                cleaners={sortedCleaners}
+                onUpdateCleaner={handleUpdateCleaner}
+              />
             </TabsContent>
 
             <TabsContent value="company-schedule">

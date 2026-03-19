@@ -87,6 +87,31 @@
         "sickDaysTaken": {
           "type": "number",
           "description": "The total number of sick days taken by the cleaner."
+        },
+        "availabilityStatus": {
+          "type": "string",
+          "description": "The cleaner's availability for extra hours.",
+          "enum": [
+            "Available",
+            "Unavailable",
+            "Available for Specific Lots"
+          ]
+        },
+        "availableLots": {
+          "type": "array",
+          "description": "Which lots the cleaner is available to work in for extra hours.",
+          "items": {
+            "type": "number",
+            "enum": [
+              1,
+              3,
+              4
+            ]
+          }
+        },
+        "availabilityNotes": {
+          "type": "string",
+          "description": "Notes regarding the cleaner's availability."
         }
       },
       "required": [
@@ -177,6 +202,14 @@
         },
         "completed": {
           "type": "boolean"
+        },
+        "beforeImageUrl": {
+          "type": "string",
+          "description": "URL of the 'before' image for the task."
+        },
+        "afterImageUrl": {
+          "type": "string",
+          "description": "URL of the 'after' image for the task."
         }
       },
       "required": [
@@ -626,5 +659,3 @@
     ]
   }
 }
-
-    

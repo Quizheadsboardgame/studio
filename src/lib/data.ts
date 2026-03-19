@@ -123,6 +123,9 @@ export const cleanerPerformances: CleanerPerformance[] = [
   'Operational concerns',
 ];
 
+export type AvailabilityStatus = 'Available' | 'Unavailable' | 'Available for Specific Lots';
+export const availabilityStatuses: AvailabilityStatus[] = ['Available', 'Unavailable', 'Available for Specific Lots'];
+
 export type Cleaner = {
   id: string;
   name: string;
@@ -131,6 +134,9 @@ export type Cleaner = {
   holidayAllowance: number;
   holidayTaken: number;
   sickDaysTaken: number;
+  availabilityStatus?: AvailabilityStatus;
+  availableLots?: number[];
+  availabilityNotes?: string;
 };
 
 export const initialCleaners: Omit<Cleaner, 'id'>[] = [
@@ -144,7 +150,17 @@ export const initialCleaners: Omit<Cleaner, 'id'>[] = [
   "Owen Newton", "Piotr Skrzypczyk", "Placido Da Costa", "Rhyse Howard", "Rosana Da Silva",
   "Salvador Da Costa", "Sergio Dos Reis", "Shakila Soloman", "Susana Correia", "Thomas Boltasiu",
   "Ubaldo Soares Vital", "Vacant", "Veronica Smintina", "Zbigniew Bajor"
-].sort((a, b) => a.localeCompare(b)).map(name => ({ name, rating: 'N/A' as CleanerPerformance, notes: '', holidayAllowance: 20, holidayTaken: 0, sickDaysTaken: 0 }));
+].sort((a, b) => a.localeCompare(b)).map(name => ({
+  name,
+  rating: 'N/A' as CleanerPerformance,
+  notes: '',
+  holidayAllowance: 20,
+  holidayTaken: 0,
+  sickDaysTaken: 0,
+  availabilityStatus: 'Unavailable' as AvailabilityStatus,
+  availableLots: [],
+  availabilityNotes: '',
+}));
 
 
 export type ScheduleEntry = {

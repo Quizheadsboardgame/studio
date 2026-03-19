@@ -15,14 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface CleanersTabProps {
   cleaners: Cleaner[];
-  onRatingChange: (cleanerId: string, newRating: CleanerPerformance) => void;
-  onNoteChange: (cleanerId: string, newNote: string) => void;
+  onUpdateCleaner: (cleanerId: string, data: Partial<Omit<Cleaner, 'id'>>) => void;
   onAddCleaner: (cleanerName: string) => void;
   onRemoveCleaner: (cleanerId: string) => void;
-  onHolidayAllowanceChange: (cleanerId: string, allowance: number) => void;
 }
 
-export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, onAddCleaner, onRemoveCleaner, onHolidayAllowanceChange }: CleanersTabProps) {
+export default function CleanersTab({ cleaners, onUpdateCleaner, onAddCleaner, onRemoveCleaner }: CleanersTabProps) {
   const [newCleanerName, setNewCleanerName] = useState('');
   const { toast } = useToast();
 
@@ -46,7 +44,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
   const handleAllowanceChange = (cleanerId: string, value: string) => {
     const allowance = parseInt(value, 10);
     if (!isNaN(allowance) && allowance >= 0) {
-      onHolidayAllowanceChange(cleanerId, allowance);
+      onUpdateCleaner(cleanerId, { holidayAllowance: allowance });
     }
   };
 
@@ -90,7 +88,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
                 <TableCell className="align-top py-4">
                   <Select
                     value={cleaner.rating}
-                    onValueChange={(newRating: CleanerPerformance) => onRatingChange(cleaner.id, newRating)}
+                    onValueChange={(newRating: CleanerPerformance) => onUpdateCleaner(cleaner.id, { rating: newRating })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select rating" />
@@ -122,7 +120,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
                         <Textarea
                           placeholder="Add notes for this cleaner..."
                           value={cleaner.notes || ''}
-                          onChange={(e) => onNoteChange(cleaner.id, e.target.value)}
+                          onChange={(e) => onUpdateCleaner(cleaner.id, { notes: e.target.value })}
                           className="w-full min-h-[60px] resize-y"
                         />
                       </AccordionContent>
