@@ -871,6 +871,9 @@ export default function DashboardPage() {
                 onAddAppointment={handleAddAppointment}
                 onUpdateAppointment={handleUpdateAppointment}
                 onRemoveAppointment={handleRemoveAppointment}
+                onAddScheduleEntry={handleAddScheduleEntry}
+                onUpdateScheduleEntry={handleUpdateScheduleEntry}
+                onRemoveScheduleEntry={handleRemoveScheduleEntry}
               />
             </TabsContent>
 
