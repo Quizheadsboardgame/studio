@@ -29,7 +29,6 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
     const [numberOfDays, setNumberOfDays] = useState(1);
     const { toast } = useToast();
 
-    // Define helpers inside the component to ensure they run on the client
     const bankHolidays = useMemo(() => [
         // 2024
         new Date('2024-01-01'), new Date('2024-03-29'), new Date('2024-04-01'),
@@ -147,8 +146,6 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
 
   const upcomingAbsences = useMemo(() => {
     if (!dateRange || !dateRange.from) {
-      // Return empty array by default to prevent hydration errors from using isFuture/isToday.
-      // User must select a date range to view absences.
       return [];
     }
     
@@ -162,35 +159,28 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
       .filter(l => {
         const leaveDate = parseISO(l.date);
         return leaveDate >= fromDate && leaveDate <= toDate;
-      });
-
-    const detailedAbsences = absences.flatMap(l => {
-      const cleanerSchedule = schedule.filter(s => s.cleaner === l.cleanerName);
-      
-      if (cleanerSchedule.length > 0) {
-        return cleanerSchedule.map((s, index) => ({
-          ...l,
-          site: s.site,
-          time: `${s.start} - ${s.finish}`,
-          uniqueId: `${l.id}-${s.id || index}` // Use index as a fallback for key
-        }));
-      }
-      
-      // If cleaner has no scheduled shifts, still show the absence entry.
-      return [{ 
-        ...l, 
-        site: 'No scheduled shift', 
-        time: 'N/A',
-        uniqueId: l.id
-      }];
-    });
-
-    return detailedAbsences.sort((a, b) => {
+      })
+      .sort((a, b) => {
         const dateA = parseISO(a.date).getTime();
         const dateB = parseISO(b.date).getTime();
         if (dateA !== dateB) return dateA - dateB;
         return a.cleanerName.localeCompare(b.cleanerName);
+      });
+
+    // Group shifts by leave record to avoid duplicating cleaner entries
+    const detailedAbsences = absences.map(l => {
+      const cleanerShifts = schedule.filter(s => s.cleaner === l.cleanerName);
+      return {
+        ...l,
+        shifts: cleanerShifts.map((s, index) => ({
+          site: s.site,
+          time: `${s.start} - ${s.finish}`,
+          uniqueId: `${l.id}-${s.id || index}`
+        }))
+      };
     });
+
+    return detailedAbsences;
   }, [leave, schedule, dateRange]);
   
   const scheduledCleaners = useMemo(() => new Set(schedule.map(s => s.cleaner)), [schedule]);
@@ -277,60 +267,66 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
         <CardContent>
           {upcomingAbsences.length > 0 ? (
             <div className="space-y-4">
-              {upcomingAbsences.map(l => {
-                 if (l.site === 'No scheduled shift') return null;
-
-                 const currentCover = l.coverAssignments?.find(a => a.site === l.site)?.coverCleanerName || '__NONE__';
-                 
-                 const cleanersAtThisSite = new Set(
-                    schedule
-                        .filter(s => s.site === l.site)
-                        .map(s => s.cleaner)
-                 );
-
+              {upcomingAbsences.map(leaveEntry => {
                 return (
-                  <div key={l.uniqueId} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4 p-3 border rounded-lg">
-                    <div className="font-medium md:col-span-1">
-                      <p>{l.cleanerName}</p>
-                      <p className="text-sm text-muted-foreground">{format(parseISO(l.date), 'EEE, PPP')}</p>
+                  <div key={leaveEntry.id} className="p-4 border rounded-lg space-y-4 bg-card">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="font-semibold text-lg">{leaveEntry.cleanerName}</p>
+                            <p className="text-sm text-muted-foreground">{format(parseISO(leaveEntry.date), 'EEEE, do MMMM yyyy')}</p>
+                        </div>
+                        <Badge variant={leaveEntry.type === 'holiday' ? 'secondary' : 'destructive'}>{leaveEntry.type}</Badge>
                     </div>
-                    <div className="md:col-span-2">
-                       <p className="font-medium">{l.site}</p>
-                       <p className="text-sm text-muted-foreground">{l.time}</p>
-                    </div>
-                    <div>
-                      <Badge variant={l.type === 'holiday' ? 'secondary' : 'destructive'}>{l.type}</Badge>
-                    </div>
-                    <div className="md:col-span-1">
-                      <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
-                      <Select
-                        value={currentCover}
-                        onValueChange={(cleanerName) => handleAssignCover(l.id, l.site, cleanerName)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a cleaner to cover..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__NONE__">
-                            <span className="text-muted-foreground">None (Uncovered)</span>
-                          </SelectItem>
-                          {cleaners
-                            .filter(c => c.name !== l.cleanerName)
-                            .map(c => {
-                                const isSuitable = cleanersAtThisSite.has(c.name) || !scheduledCleaners.has(c.name);
-                                return (
-                                    <SelectItem key={c.id} value={c.name}>
-                                        {c.name} {isSuitable && '⭐'}
-                                    </SelectItem>
-                                )
-                            })}
-                        </SelectContent>
-                      </Select>
-                    </div>
+
+                    {leaveEntry.shifts.length > 0 ? (
+                      <div className="space-y-3 pl-4 border-l-2 ml-1">
+                        {leaveEntry.shifts.map(shift => {
+                          const currentCover = leaveEntry.coverAssignments?.find(a => a.site === shift.site)?.coverCleanerName || '__NONE__';
+                          const cleanersAtThisSite = new Set(schedule.filter(s => s.site === shift.site).map(s => s.cleaner));
+
+                          return (
+                            <div key={shift.uniqueId} className="grid grid-cols-1 md:grid-cols-3 items-center gap-x-4 gap-y-2 py-2">
+                              <div className="md:col-span-2">
+                                <p className="font-medium">{shift.site}</p>
+                                <p className="text-sm text-muted-foreground">{shift.time}</p>
+                              </div>
+                              <div className="md:col-span-1">
+                                <Label className="text-xs font-medium text-muted-foreground">Assign Cover</Label>
+                                <Select
+                                    value={currentCover}
+                                    onValueChange={(cleanerName) => handleAssignCover(leaveEntry.id, shift.site, cleanerName)}
+                                  >
+                                    <SelectTrigger>
+                                       <SelectValue placeholder="Select a cleaner to cover..." />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                        <SelectItem value="__NONE__">
+                                            <span className="text-muted-foreground">None (Uncovered)</span>
+                                        </SelectItem>
+                                        {cleaners
+                                            .filter(c => c.name !== leaveEntry.cleanerName)
+                                            .map(c => {
+                                                const isSuitable = cleanersAtThisSite.has(c.name) || !scheduledCleaners.has(c.name);
+                                                return (
+                                                  <SelectItem key={c.id} value={c.name}>
+                                                      {c.name} {isSuitable && '⭐'}
+                                                 </SelectItem>
+                                                )
+                                            })}
+                                      </SelectContent>
+                                   </Select>
+                              </div>
+                            </div>
+                           );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground pl-5">No scheduled shifts found for this cleaner.</p>
+                    )}
                   </div>
-                )
+                );
               })}
-            </div>
+             </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No upcoming absences found for the selected date range.</p>
           )}
