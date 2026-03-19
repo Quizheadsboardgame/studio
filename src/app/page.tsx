@@ -314,8 +314,8 @@ export default function DashboardPage() {
         else if (records.length > 0) {
             newRating = 'Slight improvement needed';
         }
-        // 5. GOLD STAR: No negative indicators AND all sites are Gold Star
-        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site')) {
+        // 5. GOLD STAR: No negative indicators AND all sites are Gold Star or Client Happy
+        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
             newRating = 'Gold Star Cleaner';
         }
         // 6. Site satisfied: Works at sites, but not all are Gold Star, and no negative indicators
