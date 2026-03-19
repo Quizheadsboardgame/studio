@@ -33,7 +33,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('diary');
+  const [activeTab, setActiveTab] = useState('summary');
 
   const tabs = useMemo(() => [
     { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },

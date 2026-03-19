@@ -316,6 +316,59 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
     }
   };
 
+  const handleShareOnWhatsApp = () => {
+    let message = `*Daily Operations Report*\n${currentDate}\n\n`;
+
+    if (todaysShiftsToCover.length > 0) {
+        message += "*Absences & Cover Today:*\n";
+        todaysShiftsToCover.forEach(shift => {
+            message += `- ${shift.cleanerName} is off (${shift.type}) - Shift: ${shift.site}\n`;
+            if (shift.isCovered) {
+                message += `  *Covered by: ${shift.coverCleanerName}*\n`;
+            } else {
+                message += `  *NOT COVERED*\n`;
+            }
+        });
+        message += "\n";
+    }
+
+    if (todaysTasks.length > 0) {
+        message += "*Action Plan Tasks Due Today:*\n";
+        todaysTasks.forEach(task => {
+            message += `- ${task.description} (For: ${task.targetName})\n`;
+        });
+        message += "\n";
+    }
+
+    if (Object.values(groupedSites).flat().length > 0) {
+        message += "*Site Status Summary:*\n";
+        if (groupedSites.red.length > 0) message += "🔴 *Red:*\n" + groupedSites.red.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
+        if (groupedSites.amber.length > 0) message += "🟠 *Amber:*\n" + groupedSites.amber.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
+        if (groupedSites.green.length > 0) message += "🟢 *Green:*\n" + groupedSites.green.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
+        if (groupedSites.other.length > 0) message += "⚪️ *Other w/ Notes:*\n" + groupedSites.other.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
+        message += "\n";
+    }
+
+    if (Object.values(groupedCleaners).flat().length > 0) {
+        message += "*Cleaner Performance Summary:*\n";
+        if (groupedCleaners.red.length > 0) message += "🔴 *Red:*\n" + groupedCleaners.red.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
+        if (groupedCleaners.amber.length > 0) message += "🟠 *Amber:*\n" + groupedCleaners.amber.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
+        if (groupedCleaners.green.length > 0) message += "🟢 *Green:*\n" + groupedCleaners.green.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
+        if (groupedCleaners.other.length > 0) message += "⚪️ *Other w/ Notes:*\n" + groupedCleaners.other.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
+        message += "\n";
+    }
+
+    if (uniqueSchedule.length > 0) {
+        message += "*Today's Schedule:*\n";
+        uniqueSchedule.forEach(entry => {
+            message += `- ${entry.site}: ${entry.cleaner} (${entry.start} - ${entry.finish})\n`;
+        });
+    }
+
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
 
   return (
     <div className="space-y-4" key={key}>
@@ -331,7 +384,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
           />
       </div>
        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row gap-y-4 sm:gap-y-0 sm:items-center sm:justify-between">
                 <div>
                     <CardTitle>Daily Operations Report</CardTitle>
                     <CardDescription>
@@ -342,6 +395,10 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
                     <Button onClick={forceUpdate} variant="outline" size="sm">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Refresh
+                    </Button>
+                     <Button onClick={handleShareOnWhatsApp} variant="outline" size="sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        WhatsApp
                     </Button>
                     <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} size="sm">
                         {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
