@@ -202,10 +202,43 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   const [filterEndDate, setFilterEndDate] = useState<string>('');
   const { toast } = useToast();
   
-  const getRemainingHolidays = (cleaner: Cleaner) => {
-    if (!cleaner) return 'N/A';
-    return `${(cleaner.holidayAllowance || 20) - (cleaner.holidayTaken || 0)}`;
-  }
+  const cleanerStats = useMemo(() => {
+    const stats = new Map<string, { holidays: number; sickDays: number }>();
+    
+    // Define holiday year boundaries (April 1st to March 31st)
+    const getHolidayYear = (date: Date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0 = Jan, 3 = Apr
+        if (month >= 3) {
+            // Current holiday year started this year in April
+            return { start: new Date(year, 3, 1), end: new Date(year + 1, 2, 31) };
+        } else {
+            // Current holiday year started last year in April
+            return { start: new Date(year - 1, 3, 1), end: new Date(year, 2, 31) };
+        }
+    };
+
+    const { start: holidayYearStart, end: holidayYearEnd } = getHolidayYear(new Date());
+
+    cleaners.forEach(cleaner => {
+        const holidaysTakenThisYear = leave.filter(l => 
+            l.cleanerId === cleaner.id && 
+            l.type === 'holiday' &&
+            parseISO(l.date) >= holidayYearStart &&
+            parseISO(l.date) <= holidayYearEnd
+        ).length;
+
+        // Sick days are a running total, not bound by the holiday year
+        const sickDaysTaken = leave.filter(l => 
+             l.type === 'sick' &&
+             l.cleanerId === cleaner.id
+        ).length;
+        
+        stats.set(cleaner.id, { holidays: holidaysTakenThisYear, sickDays: sickDaysTaken });
+    });
+
+    return stats;
+  }, [leave, cleaners]);
 
   const upcomingAbsences = useMemo(() => {
     if (!filterStartDate) {
@@ -325,15 +358,21 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                             </tr>
                         </thead>
                         <tbody>
-                            {cleaners.map(cleaner => (
-                                <tr key={cleaner.id} className="border-b last:border-b-0">
-                                    <td className="py-2 px-3 font-medium">{cleaner.name}</td>
-                                    <td className="py-2 px-3 text-center font-bold">{cleaner.holidayAllowance || 20}</td>
-                                    <td className="py-2 px-3 text-center font-bold">{cleaner.holidayTaken || 0}</td>
-                                    <td className="py-2 px-3 text-center font-bold">{getRemainingHolidays(cleaner)}</td>
-                                    <td className="py-2 px-3 text-center font-bold">{cleaner.sickDaysTaken || 0}</td>
-                                </tr>
-                            ))}
+                            {cleaners.map(cleaner => {
+                                const stats = cleanerStats.get(cleaner.id) || { holidays: 0, sickDays: 0 };
+                                const allowance = cleaner.holidayAllowance || 20;
+                                const remaining = allowance - stats.holidays;
+
+                                return (
+                                    <tr key={cleaner.id} className="border-b last:border-b-0">
+                                        <td className="py-2 px-3 font-medium">{cleaner.name}</td>
+                                        <td className="py-2 px-3 text-center font-bold">{allowance}</td>
+                                        <td className="py-2 px-3 text-center font-bold">{stats.holidays}</td>
+                                        <td className="py-2 px-3 text-center font-bold">{remaining}</td>
+                                        <td className="py-2 px-3 text-center font-bold">{stats.sickDays}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -388,7 +427,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Delete Absence?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Are you sure you want to delete this {leaveEntry.type} day for {leaveEntry.cleanerName} on {format(parseISO(leaveEntry.date), 'PPP')}? This cannot be undone and will restore 1 day to their holiday balance if applicable.
+                                            Are you sure you want to delete this {leaveEntry.type} day for {leaveEntry.cleanerName} on {format(parseISO(leaveEntry.date), 'PPP')}? This will restore 1 day to their holiday balance if applicable.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
