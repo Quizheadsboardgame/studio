@@ -10,8 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, FileDown, RefreshCw } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PlusCircle, FileDown, RefreshCw, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from '@/hooks/use-toast';
+
 
 function PrintableActionPlan({ plan, forwardedRef }: { plan: ActionPlan, forwardedRef: React.Ref<HTMLDivElement> }) {
   return (
@@ -55,8 +60,7 @@ function PrintableActionPlan({ plan, forwardedRef }: { plan: ActionPlan, forward
 }
 
 
-function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { item: {id: string, name: string, type: 'site' | 'cleaner'}, plan: ActionPlan | undefined, onUpdateActionPlan: (plan: ActionPlan) => void}) {
-  // Ensure the plan always has an ID, using the item's ID if no plan exists yet.
+function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemoveActionPlan }: { item: {id: string, name: string, type: 'site' | 'cleaner'}, plan: ActionPlan, onUpdateActionPlan: (plan: ActionPlan) => void, onRemoveActionPlan: (planId: string) => void }) {
   const plan = useMemo(() => initialPlan || { id: item.id, targetName: item.name, targetType: item.type, tasks: [], notes: '' }, [initialPlan, item]);
   
   const [newTaskDesc, setNewTaskDesc] = useState('');
@@ -222,6 +226,25 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
         </div>
 
         <div className="flex justify-end pt-4 border-t mt-4 gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="mr-auto">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Plan
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the action plan for {plan.targetName}. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onRemoveActionPlan(plan.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           <Button onClick={handleShareOnWhatsApp} variant="outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
               WhatsApp
@@ -236,45 +259,122 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
   );
 }
 
+interface CreateActionPlanDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sites: Site[];
+  cleaners: Cleaner[];
+  existingPlanIds: string[];
+  onCreatePlan: (plan: ActionPlan) => void;
+}
+
+function CreateActionPlanDialog({ open, onOpenChange, sites, cleaners, existingPlanIds, onCreatePlan }: CreateActionPlanDialogProps) {
+  const [targetType, setTargetType] = useState<'site' | 'cleaner'>('site');
+  const [targetId, setTargetId] = useState('');
+  const { toast } = useToast();
+
+  const targets = targetType === 'site' ? sites : cleaners;
+  
+  const handleCreate = () => {
+    if (!targetId) {
+      toast({ variant: 'destructive', title: 'Please select a target.' });
+      return;
+    }
+    if (existingPlanIds.includes(targetId)) {
+      toast({ variant: 'destructive', title: 'Action plan already exists for this target.' });
+      return;
+    }
+    const target = targets.find(t => t.id === targetId);
+    if (!target) return;
+
+    onCreatePlan({
+      id: target.id,
+      targetName: target.name,
+      targetType: targetType,
+      tasks: [],
+      notes: ''
+    });
+    toast({ title: 'Action Plan Created', description: `You can now add tasks and notes for ${target.name}.`});
+    onOpenChange(false);
+  };
+
+  useEffect(() => {
+    if (open) {
+      setTargetType('site');
+      setTargetId('');
+    }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Action Plan</DialogTitle>
+          <DialogDescription>Select a site or cleaner to create an action plan for.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Target Type</Label>
+            <Select value={targetType} onValueChange={(v: 'site' | 'cleaner') => { setTargetType(v); setTargetId(''); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="site">Site</SelectItem>
+                <SelectItem value="cleaner">Cleaner</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Target</Label>
+            <Select value={targetId} onValueChange={setTargetId}>
+              <SelectTrigger><SelectValue placeholder={`Select a ${targetType}`} /></SelectTrigger>
+              <SelectContent>
+                {targets.map(t => (
+                  <SelectItem key={t.id} value={t.id} disabled={existingPlanIds.includes(t.id)}>
+                    {t.name} {existingPlanIds.includes(t.id) && '(Has Plan)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+          <Button onClick={handleCreate}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 interface ActionPlanTabProps {
   sites: Site[];
   cleaners: Cleaner[];
   actionPlans: ActionPlan[];
   onUpdateActionPlan: (plan: ActionPlan) => void;
+  onRemoveActionPlan: (planId: string) => void;
 }
 
-export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan }: ActionPlanTabProps) {
+export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan, onRemoveActionPlan }: ActionPlanTabProps) {
   const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
-  const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
-  const printableRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const actionItems = useMemo(() => {
-    const siteItems = sortedSites
-      .filter(s => s.status === 'Site under action plan' || s.status === 'Site requires action plan')
-      .map(s => ({ id: s.id, name: s.name, type: 'site' as const }));
-
-    const cleanerItems = sortedCleaners
-      .filter(c => c.rating === 'Under action plan' || c.rating === 'Needs retraining')
-      .map(c => ({ id: c.id, name: c.name, type: 'cleaner' as const }));
-
-    return [...siteItems, ...cleanerItems].sort((a, b) => a.name.localeCompare(b.name));
-  }, [sortedSites, sortedCleaners]);
-
-  const allPlans = useMemo(() => {
-    return actionItems.map(item => {
-        return actionPlans.find(p => p.id === item.id) || { id: item.id, targetName: item.name, targetType: item.type, tasks: [], notes: '' };
-    });
-  }, [actionItems, actionPlans]);
   
+  const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
+  const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const existingActionPlans = useMemo(() => {
+    return [...actionPlans].sort((a, b) => a.targetName.localeCompare(b.targetName));
+  }, [actionPlans]);
+
+  const printableRefs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => {
-    printableRefs.current = printableRefs.current.slice(0, allPlans.length);
-  }, [allPlans]);
+    printableRefs.current = printableRefs.current.slice(0, existingActionPlans.length);
+  }, [existingActionPlans]);
 
   const handleShareAllOnWhatsApp = () => {
     let fullMessage = `*All Action Plans Report*\nGenerated on: ${format(new Date(), 'PPP')}\n\n`;
     
-    allPlans.forEach((plan) => {
+    existingActionPlans.forEach((plan) => {
         fullMessage += `------------------------------------\n`;
         fullMessage += `*Action Plan for: ${plan.targetName} (${plan.targetType})*\n\n`;
 
@@ -346,19 +446,10 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
     }
   };
 
-
-  if (actionItems.length === 0) {
-    return (
-      <div className="rounded-lg border bg-card text-card-foreground p-6 min-h-[200px] flex items-center justify-center">
-        <p className="text-muted-foreground">No sites or cleaners currently require an action plan.</p>
-      </div>
-    );
-  }
-
   return (
     <>
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-        {allPlans.map((plan, index) => (
+        {existingActionPlans.map((plan, index) => (
             <PrintableActionPlan key={plan.id} plan={plan} forwardedRef={el => {
                 if (printableRefs.current) {
                     printableRefs.current[index] = el;
@@ -366,19 +457,30 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
             }} />
         ))}
       </div>
+      <CreateActionPlanDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        sites={sortedSites}
+        cleaners={sortedCleaners}
+        existingPlanIds={existingActionPlans.map(p => p.id)}
+        onCreatePlan={onUpdateActionPlan}
+      />
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 sm:items-start sm:justify-between">
             <div>
               <CardTitle>Action Plan Management</CardTitle>
-              <p className="text-sm text-muted-foreground">Sites and cleaners that require an action plan.</p>
+              <CardDescription>Create and manage action plans for sites and cleaners.</CardDescription>
             </div>
              <div className="flex gap-2">
-                <Button onClick={handleShareAllOnWhatsApp} variant="outline" disabled={actionItems.length === 0}>
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Create Action Plan
+                </Button>
+                <Button onClick={handleShareAllOnWhatsApp} variant="outline" disabled={existingActionPlans.length === 0}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     Share All
                 </Button>
-                 <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || actionItems.length === 0}>
+                 <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || existingActionPlans.length === 0}>
                     {isGeneratingAllPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                     {isGeneratingAllPdf ? 'Generating...' : 'Download All'}
                 </Button>
@@ -386,25 +488,32 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
           </div>
         </CardHeader>
         <CardContent>
-          <Accordion type="multiple" className="w-full space-y-2">
-            {actionItems.map(item => (
-              <AccordionItem key={item.id} value={item.id} className="border rounded-md px-4">
-                <AccordionTrigger className="hover:no-underline">
-                    <div className="flex justify-between items-center w-full pr-2">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-sm text-muted-foreground capitalize bg-muted px-2 py-1 rounded-md">{item.type}</span>
-                    </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ActionPlanDetails
-                    item={item}
-                    plan={actionPlans.find(p => p.id === item.id)}
-                    onUpdateActionPlan={onUpdateActionPlan}
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          {existingActionPlans.length === 0 ? (
+            <div className="rounded-lg border-2 border-dashed bg-card text-card-foreground p-6 min-h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">No action plans have been created yet.</p>
+            </div>
+          ) : (
+            <Accordion type="multiple" className="w-full space-y-2">
+              {existingActionPlans.map(plan => (
+                <AccordionItem key={plan.id} value={plan.id} className="border rounded-md px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                      <div className="flex justify-between items-center w-full pr-2">
+                          <span className="font-medium">{plan.targetName}</span>
+                          <span className="text-sm text-muted-foreground capitalize bg-muted px-2 py-1 rounded-md">{plan.targetType}</span>
+                      </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ActionPlanDetails
+                      item={{id: plan.id, name: plan.targetName, type: plan.targetType}}
+                      plan={plan}
+                      onUpdateActionPlan={onUpdateActionPlan}
+                      onRemoveActionPlan={onRemoveActionPlan}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </CardContent>
       </Card>
     </>

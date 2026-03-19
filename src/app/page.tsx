@@ -421,6 +421,11 @@ export default function DashboardPage() {
     if (!firestore || !actionPlansCollection) return;
     setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
+
+  const handleRemoveActionPlan = (planId: string) => {
+    if (!firestore) return;
+    deleteDocumentNonBlocking(doc(firestore, 'actionPlans', planId));
+  };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
     if (!leaveCollection || !firestore) return;
@@ -806,6 +811,7 @@ export default function DashboardPage() {
                 cleaners={sortedCleaners}
                 actionPlans={actionPlans || []}
                 onUpdateActionPlan={handleUpdateActionPlan}
+                onRemoveActionPlan={handleRemoveActionPlan}
               />
             </TabsContent>
 
