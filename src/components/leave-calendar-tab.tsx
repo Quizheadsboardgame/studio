@@ -146,25 +146,21 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   }
 
   const upcomingAbsences = useMemo(() => {
+    if (!dateRange || !dateRange.from) {
+      // Return empty array by default to prevent hydration errors from using isFuture/isToday.
+      // User must select a date range to view absences.
+      return [];
+    }
+    
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0,0,0,0);
+
+    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    toDate.setHours(23, 59, 59, 999);
+    
     const absences = leave
       .filter(l => {
         const leaveDate = parseISO(l.date);
-        
-        if (!dateRange?.from) {
-          return isFuture(leaveDate) || isToday(leaveDate);
-        }
-
-        const fromDate = new Date(dateRange.from);
-        fromDate.setHours(0,0,0,0);
-
-        let toDate: Date;
-        if (dateRange.to) {
-            toDate = new Date(dateRange.to);
-        } else {
-            toDate = new Date(dateRange.from);
-        }
-        toDate.setHours(23, 59, 59, 999);
-        
         return leaveDate >= fromDate && leaveDate <= toDate;
       });
 
