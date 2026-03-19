@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import type { Cleaner, Leave, ScheduleEntry } from '@/lib/data';
-import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { format, parseISO, isSameDay, isFuture, isToday, addDays, eachDayOfInterval } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 
 interface LeaveCalendarTabProps {
@@ -136,7 +134,8 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
 }
 
 export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
   const { toast } = useToast();
   
   const getRemainingHolidays = (cleaner: Cleaner) => {
@@ -145,15 +144,19 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
   }
 
   const upcomingAbsences = useMemo(() => {
-    if (!dateRange || !dateRange.from) {
+    if (!filterStartDate) {
       return [];
     }
     
-    const fromDate = new Date(dateRange.from);
+    const fromDate = parseISO(filterStartDate);
     fromDate.setHours(0,0,0,0);
 
-    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    const toDate = filterEndDate ? parseISO(filterEndDate) : fromDate;
     toDate.setHours(23, 59, 59, 999);
+
+    if (fromDate > toDate) {
+        return [];
+    }
     
     const absences = leave
       .filter(l => {
@@ -167,21 +170,27 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
         return a.cleanerName.localeCompare(b.cleanerName);
       });
 
-    // Group shifts by leave record to avoid duplicating cleaner entries
-    const detailedAbsences = absences.map(l => {
-      const cleanerShifts = schedule.filter(s => s.cleaner === l.cleanerName);
-      return {
-        ...l,
-        shifts: cleanerShifts.map((s, index) => ({
-          site: s.site,
-          time: `${s.start} - ${s.finish}`,
-          uniqueId: `${l.id}-${s.id || index}`
-        }))
-      };
-    });
+    // Group absences by cleaner and date to handle multiple shifts on the same day
+    const groupedAbsences = absences.reduce((acc, current) => {
+        const key = `${current.cleanerId}-${current.date}`;
+        if (!acc[key]) {
+            acc[key] = {
+                ...current,
+                shifts: schedule
+                    .filter(s => s.cleaner === current.cleanerName)
+                    .map((s, index) => ({
+                        site: s.site,
+                        time: `${s.start} - ${s.finish}`,
+                        uniqueId: `${current.id}-${s.id || index}`
+                    }))
+            };
+        }
+        return acc;
+    }, {} as Record<string, (Leave & { shifts: { site: string; time: string; uniqueId: string }[] }) >);
 
-    return detailedAbsences;
-  }, [leave, schedule, dateRange]);
+
+    return Object.values(groupedAbsences);
+  }, [leave, schedule, filterStartDate, filterEndDate]);
   
   const scheduledCleaners = useMemo(() => new Set(schedule.map(s => s.cleaner)), [schedule]);
 
@@ -259,9 +268,24 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Upcoming Absences & Cover</CardTitle>
-          <CardDescription>Assign cover for upcoming holidays and sickness. Use the date picker to search for specific dates.</CardDescription>
-          <div className="pt-4">
-            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          <CardDescription>Assign cover for upcoming holidays and sickness. Use the date filters to search for specific dates.</CardDescription>
+          <div className="pt-4 space-y-2">
+            <Label className="text-sm font-medium">Filter by date</Label>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+                <Input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-full sm:w-auto"
+                />
+                <span className="text-muted-foreground">to</span>
+                <Input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-full sm:w-auto"
+                />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
