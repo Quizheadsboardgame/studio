@@ -181,13 +181,21 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="num-days">Number of Days</Label>
-                    <Input 
-                        id="num-days"
-                        type="number"
-                        value={numberOfDays}
-                        onChange={(e) => setNumberOfDays(parseInt(e.target.value, 10) || 1)}
-                        min="1"
-                    />
+                    <Select
+                        value={String(numberOfDays)}
+                        onValueChange={(value) => setNumberOfDays(parseInt(value, 10))}
+                    >
+                        <SelectTrigger id="num-days">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Array.from({ length: 14 }, (_, i) => i + 1).map(day => (
+                                <SelectItem key={day} value={String(day)}>
+                                    {day}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
             <div className="flex justify-end">
