@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from '@/hooks/use-toast';
 
 interface SitesTabProps {
   sites: Site[];
@@ -37,9 +38,22 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
   const [newSiteName, setNewSiteName] = useState('');
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
   const [editedSiteName, setEditedSiteName] = useState('');
+  const { toast } = useToast();
 
   const handleAddClick = () => {
-    onAddSite(newSiteName);
+    const trimmedName = newSiteName.trim();
+    if (trimmedName === '') return;
+
+    if (sites.some(site => site.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Site',
+        description: `A site with the name "${trimmedName}" already exists.`,
+      });
+      return;
+    }
+    
+    onAddSite(trimmedName);
     setNewSiteName('');
   };
 
@@ -54,9 +68,22 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
   };
 
   const handleSaveEdit = (siteId: string) => {
-    if (editedSiteName.trim()) {
-      onEditSite(siteId, editedSiteName.trim());
+    const trimmedName = editedSiteName.trim();
+    if (!trimmedName) {
+      handleCancelEdit();
+      return;
     }
+
+    if (sites.some(site => site.id !== siteId && site.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Site',
+        description: `A site with the name "${trimmedName}" already exists.`,
+      });
+      return;
+    }
+    
+    onEditSite(siteId, trimmedName);
     setEditingSiteId(null);
     setEditedSiteName('');
   };

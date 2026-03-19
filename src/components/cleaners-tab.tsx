@@ -11,6 +11,7 @@ import { cleanerPerformances } from '@/lib/data';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface CleanersTabProps {
   cleaners: Cleaner[];
@@ -23,9 +24,22 @@ interface CleanersTabProps {
 
 export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, onAddCleaner, onRemoveCleaner, onHolidayAllowanceChange }: CleanersTabProps) {
   const [newCleanerName, setNewCleanerName] = useState('');
+  const { toast } = useToast();
 
   const handleAddClick = () => {
-    onAddCleaner(newCleanerName);
+    const trimmedName = newCleanerName.trim();
+    if (trimmedName === '') return;
+
+    if (cleaners.some(cleaner => cleaner.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Cleaner',
+        description: `A cleaner with the name "${trimmedName}" already exists.`,
+      });
+      return;
+    }
+
+    onAddCleaner(trimmedName);
     setNewCleanerName('');
   };
 
