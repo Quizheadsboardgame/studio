@@ -177,6 +177,16 @@
         },
         "completed": {
           "type": "boolean"
+        },
+        "beforeImageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A data URI of the 'before' image for the task."
+        },
+        "afterImageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A data URI of the 'after' image for the task."
         }
       },
       "required": [

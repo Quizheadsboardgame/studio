@@ -13,13 +13,6 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, FileDown, RefreshCw } from 'lucide-react';
 
-interface ActionPlanTabProps {
-  sites: Site[];
-  cleaners: Cleaner[];
-  actionPlans: ActionPlan[];
-  onUpdateActionPlan: (plan: ActionPlan) => void;
-}
-
 function PrintableActionPlan({ plan, forwardedRef }: { plan: ActionPlan, forwardedRef: React.Ref<HTMLDivElement> }) {
   return (
     <div ref={forwardedRef} className="p-8 bg-white text-black" style={{ width: '794px', minHeight: '1123px' }}>
@@ -31,27 +24,39 @@ function PrintableActionPlan({ plan, forwardedRef }: { plan: ActionPlan, forward
 
       {plan.tasks.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Action Items</h3>
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b-2 border-black">
-                <th className="py-2 w-2/3">Description</th>
-                <th className="py-2">Due Date</th>
-                <th className="py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plan.tasks.map(task => (
-                <tr key={task.id} className="border-b border-gray-300">
-                  <td className="py-2">{task.description}</td>
-                  <td className="py-2">{format(parseISO(task.dueDate), 'PPP')}</td>
-                  <td className={`py-2 font-semibold ${task.completed ? 'text-green-700' : 'text-red-700'}`}>
-                    {task.completed ? 'Completed' : 'Pending'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Action Items</h3>
+            <div className="space-y-6">
+                {plan.tasks.map(task => (
+                    <div key={task.id} className="break-inside-avoid">
+                        <div className="pl-4 border-l-4 border-gray-300">
+                            <p className="font-semibold text-lg">{task.description}</p>
+                            <p className="text-base text-gray-600">
+                                Due: {format(parseISO(task.dueDate), 'PPP')} | Status: <span className={`font-semibold ${task.completed ? 'text-green-700' : 'text-red-700'}`}>{task.completed ? 'Completed' : 'Pending'}</span>
+                            </p>
+                        </div>
+                        {(task.beforeImageUrl || task.afterImageUrl) && (
+                            <div className="grid grid-cols-2 gap-4 mt-4 pl-4">
+                                <div>
+                                    <p className="text-sm font-bold mb-1">Before</p>
+                                    {task.beforeImageUrl ? (
+                                        <img src={task.beforeImageUrl} alt="Before" className="w-full h-auto rounded border" />
+                                    ) : (
+                                        <div className="border rounded h-32 flex items-center justify-center bg-gray-100 text-gray-500 text-sm">No Image</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold mb-1">After</p>
+                                    {task.afterImageUrl ? (
+                                        <img src={task.afterImageUrl} alt="After" className="w-full h-auto rounded border" />
+                                    ) : (
+                                        <div className="border rounded h-32 flex items-center justify-center bg-gray-100 text-gray-500 text-sm">No Image</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
         </div>
       )}
 
@@ -107,6 +112,27 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
       handleUpdate({ notes });
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, taskId: string, type: 'before' | 'after') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        const updatedTasks = plan.tasks.map(task => {
+        if (task.id === taskId) {
+            return {
+            ...task,
+            ...(type === 'before' ? { beforeImageUrl: dataUrl } : { afterImageUrl: dataUrl })
+            };
+        }
+        return task;
+        });
+        handleUpdate({ tasks: updatedTasks });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleGeneratePdf = async () => {
     if (!printableRef.current) return;
     setIsGeneratingPdf(true);
@@ -158,19 +184,66 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan }: { it
         <div>
           <h4 className="font-semibold mb-2">Tasks</h4>
           <div className="space-y-2">
-            {plan.tasks.length > 0 ? plan.tasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`task-${task.id}`}
-                  checked={task.completed}
-                  onCheckedChange={() => handleToggleTask(task.id)}
-                />
-                <Label htmlFor={`task-${task.id}`} className={`flex-grow ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                  {task.description} - <span className="text-xs text-muted-foreground">Due: {format(parseISO(task.dueDate), 'PPP')}</span>
-                </Label>
-              </div>
-            )) : <p className="text-sm text-muted-foreground">No tasks added yet.</p>}
-          </div>
+            {plan.tasks.length > 0 ? (
+                <Accordion type="multiple" className="space-y-1">
+                    {plan.tasks.map(task => (
+                        <AccordionItem value={task.id} key={task.id} className="border rounded-md px-3">
+                            <AccordionTrigger className="py-2 hover:no-underline">
+                                <div className="flex items-center gap-3 w-full">
+                                    <Checkbox
+                                        id={`task-${task.id}`}
+                                        checked={task.completed}
+                                        onCheckedChange={() => handleToggleTask(task.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <Label htmlFor={`task-${task.id}`} className={`text-left ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                        {task.description}
+                                        <span className="text-xs text-muted-foreground ml-2"> (Due: {format(parseISO(task.dueDate), 'PP')})</span>
+                                    </Label>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                    <div>
+                                        <Label className="font-semibold">Before</Label>
+                                        {task.beforeImageUrl ? (
+                                            <img src={task.beforeImageUrl} alt="Before" className="mt-2 rounded-md border aspect-video object-cover w-full" />
+                                        ) : (
+                                            <div className="mt-2 aspect-video rounded-md border border-dashed flex items-center justify-center">
+                                                <p className="text-muted-foreground text-sm">No image</p>
+                                            </div>
+                                        )}
+                                        <Input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={(e) => handleImageUpload(e, task.id, 'before')} 
+                                            className="mt-2 file:text-foreground file:text-xs file:sm:text-sm" 
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="font-semibold">After</Label>
+                                        {task.afterImageUrl ? (
+                                            <img src={task.afterImageUrl} alt="After" className="mt-2 rounded-md border aspect-video object-cover w-full" />
+                                        ) : (
+                                            <div className="mt-2 aspect-video rounded-md border border-dashed flex items-center justify-center">
+                                                <p className="text-muted-foreground text-sm">No image</p>
+                                            </div>
+                                        )}
+                                        <Input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={(e) => handleImageUpload(e, task.id, 'after')} 
+                                            className="mt-2 file:text-foreground file:text-xs file:sm:text-sm"
+                                            disabled={!task.completed}
+                                        />
+                                    </div>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            ) : <p className="text-sm text-muted-foreground">No tasks added yet.</p>}
+        </div>
         </div>
 
         <div className="space-y-2">
