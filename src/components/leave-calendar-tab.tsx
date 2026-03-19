@@ -10,6 +10,70 @@ import { format, parseISO, isSameDay, isFuture, isToday, addDays, eachDayOfInter
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
+interface EditLeaveDialogProps {
+    leaveEntry: Leave;
+    onUpdateLeave: (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => void;
+    children: React.ReactNode;
+}
+
+function EditLeaveDialog({ leaveEntry, onUpdateLeave, children }: EditLeaveDialogProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [date, setDate] = useState(leaveEntry.date);
+    const [type, setType] = useState<'holiday' | 'sick'>(leaveEntry.type);
+    const { toast } = useToast();
+
+    const handleSave = () => {
+        onUpdateLeave(leaveEntry.id, { date, type });
+        toast({ title: 'Absence Updated' });
+        setIsOpen(false);
+    };
+
+    const handleOpenChange = (open: boolean) => {
+        if (open) {
+            setDate(leaveEntry.date);
+            setType(leaveEntry.type);
+        }
+        setIsOpen(open);
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Absence</DialogTitle>
+                    <DialogDescription>
+                        Editing absence for {leaveEntry.cleanerName} on {format(parseISO(leaveEntry.date), 'PPP')}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-date">Date</Label>
+                        <Input id="edit-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-type">Type</Label>
+                        <Select value={type} onValueChange={(value: 'holiday' | 'sick') => setType(value)}>
+                            <SelectTrigger id="edit-type"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="holiday">Holiday</SelectItem>
+                                <SelectItem value="sick">Sickness</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                    <Button onClick={handleSave}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 interface LeaveCalendarTabProps {
   cleaners: Cleaner[];
@@ -299,7 +363,29 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                             <p className="font-semibold text-lg">{leaveEntry.cleanerName}</p>
                             <p className="text-sm text-muted-foreground">{format(parseISO(leaveEntry.date), 'EEEE, do MMMM yyyy')}</p>
                         </div>
-                        <Badge variant={leaveEntry.type === 'holiday' ? 'secondary' : 'destructive'}>{leaveEntry.type}</Badge>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={leaveEntry.type === 'holiday' ? 'secondary' : 'destructive'}>{leaveEntry.type}</Badge>
+                            <EditLeaveDialog leaveEntry={leaveEntry} onUpdateLeave={onUpdateLeave}>
+                                <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
+                            </EditLeaveDialog>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Absence?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to delete this {leaveEntry.type} day for {leaveEntry.cleanerName} on {format(parseISO(leaveEntry.date), 'PPP')}? This cannot be undone and will restore 1 day to their holiday balance if applicable.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => onDeleteLeave(leaveEntry)}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     </div>
 
                     {leaveEntry.shifts.length > 0 ? (

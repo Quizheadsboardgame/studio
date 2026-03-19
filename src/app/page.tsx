@@ -370,7 +370,38 @@ export default function DashboardPage() {
   };
 
   const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
-    if (!firestore) return;
+    if (!firestore || !leave || !cleaners) return;
+
+    const originalLeave = leave.find(l => l.id === leaveId);
+    if (!originalLeave) return;
+
+    // If type is changing, we need to adjust cleaner stats
+    if (updatedData.type && updatedData.type !== originalLeave.type) {
+        const cleaner = cleaners.find(c => c.id === originalLeave.cleanerId);
+        if (cleaner) {
+            const cleanerRef = doc(firestore, 'cleaners', originalLeave.cleanerId);
+            let holidayUpdate = 0;
+            let sickUpdate = 0;
+            
+            if (originalLeave.type === 'holiday' && updatedData.type === 'sick') {
+                holidayUpdate = -1;
+                sickUpdate = 1;
+            } else if (originalLeave.type === 'sick' && updatedData.type === 'holiday') {
+                holidayUpdate = 1;
+                sickUpdate = -1;
+            }
+            
+            if(holidayUpdate !== 0 || sickUpdate !== 0) {
+                const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) + holidayUpdate);
+                const newSickDaysTaken = Math.max(0, (cleaner.sickDaysTaken || 0) + sickUpdate);
+                updateDocumentNonBlocking(cleanerRef, {
+                    holidayTaken: newHolidayTaken,
+                    sickDaysTaken: newSickDaysTaken,
+                });
+            }
+        }
+    }
+
     updateDocumentNonBlocking(doc(firestore, 'leave', leaveId), updatedData);
   };
 
