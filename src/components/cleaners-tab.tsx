@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Cleaner } from '@/lib/data';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Star } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -75,12 +75,13 @@ export default function CleanersTab({ cleaners, onUpdateCleaner, onAddCleaner, o
           <TableBody>
             {cleaners.length > 0 ? cleaners.map((cleaner) => (
               <TableRow key={cleaner.id} className={cn({
-                  'border-l-4 border-accent': cleaner.rating === 'Gold Star Cleaner' || cleaner.rating === 'Site satisfied',
+                  'border-l-4 border-gold-star': cleaner.rating === 'Gold Star Cleaner',
+                  'border-l-4 border-accent': cleaner.rating === 'Site satisfied' || cleaner.rating === 'No Concerns',
                   'border-l-4 border-destructive': cleaner.rating === 'Needs retraining' || cleaner.rating === 'Under action plan' || cleaner.rating === 'Operational concerns',
                   'border-l-4 border-chart-4': cleaner.rating === 'Slight improvement needed',
-                  'border-l-4 border-transparent': cleaner.rating === 'No Concerns',
               })}>
                 <TableCell className="font-medium align-top py-4">
+                  {cleaner.rating === 'Gold Star Cleaner' && <Star className="h-4 w-4 inline-block mr-2 text-gold-star fill-gold-star" />}
                   {cleaner.name}
                 </TableCell>
                 <TableCell className="align-top py-4 font-medium">

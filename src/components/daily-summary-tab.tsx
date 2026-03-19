@@ -3,7 +3,7 @@
 import { useReducer, useMemo, useRef, useState, useEffect } from 'react';
 import type { Site, Cleaner, SiteStatus, CleanerPerformance, ActionPlan, ScheduleEntry, Leave } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FileDown } from 'lucide-react';
+import { RefreshCw, FileDown, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface DailySummaryTabProps {
 }
 
 type GroupedItems<T> = {
+  gold: T[];
   red: T[];
   amber: T[];
   green: T[];
@@ -26,14 +27,16 @@ type GroupedItems<T> = {
 };
 
 const getSiteColor = (status: SiteStatus) => {
-    if (status === 'Gold Star Site' || status === 'Client happy' || status === 'No Concerns') return 'green';
+    if (status === 'Gold Star Site') return 'gold';
+    if (status === 'Client happy' || status === 'No Concerns') return 'green';
     if (status.includes('action plan') || status === 'Site requires action plan') return 'red';
     if (status === 'Client concerns') return 'amber';
     return 'other';
 }
 
 const getCleanerColor = (rating: CleanerPerformance) => {
-    if (rating === 'Gold Star Cleaner' || rating === 'Site satisfied') return 'green';
+    if (rating === 'Gold Star Cleaner') return 'gold';
+    if (rating === 'Site satisfied' || rating === 'No Concerns') return 'green';
     if (rating.includes('action plan') || rating === 'Needs retraining' || rating === 'Operational concerns') return 'red';
     if (rating === 'Slight improvement needed') return 'amber';
     return 'other';
@@ -101,6 +104,12 @@ function PrintableSummary({
             <div>
                 <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Site Status Summary</h3>
                 <div className="space-y-4">
+                     {groupedSites.gold.map(site => (
+                        <div key={site.id} className="pl-4">
+                            <p className="font-semibold">{site.name} - <span className="font-normal text-yellow-600">{site.status}</span></p>
+                            {site.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{site.notes}"</p>}
+                        </div>
+                    ))}
                      {groupedSites.red.map(site => (
                         <div key={site.id} className="pl-4">
                             <p className="font-semibold">{site.name} - <span className="font-normal text-red-700">{site.status}</span></p>
@@ -132,6 +141,12 @@ function PrintableSummary({
             <div>
                 <h3 className="text-xl font-bold mb-3 border-b border-gray-400 pb-1">Cleaner Performance Summary</h3>
                  <div className="space-y-4">
+                    {groupedCleaners.gold.map(cleaner => (
+                         <div key={cleaner.id} className="pl-4">
+                            <p className="font-semibold">{cleaner.name} - <span className="font-normal text-yellow-600">{cleaner.rating}</span></p>
+                            {cleaner.notes && <p className="text-gray-600 italic whitespace-pre-wrap pl-2 border-l-2 ml-1">"{cleaner.notes}"</p>}
+                        </div>
+                    ))}
                     {groupedCleaners.red.map(cleaner => (
                          <div key={cleaner.id} className="pl-4">
                             <p className="font-semibold">{cleaner.name} - <span className="font-normal text-red-700">{cleaner.rating}</span></p>
@@ -219,14 +234,14 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
     const color = getSiteColor(site.status);
     acc[color].push(site);
     return acc;
-  }, { red: [], amber: [], green: [], other: [] } as GroupedItems<Site>), [sites]);
+  }, { gold: [], red: [], amber: [], green: [], other: [] } as GroupedItems<Site>), [sites]);
 
   const groupedCleaners = useMemo(() => cleaners.reduce((acc, cleaner) => {
     if (cleaner.rating === 'No Concerns' && (!cleaner.notes || cleaner.notes.trim() === '')) return acc;
     const color = getCleanerColor(cleaner.rating);
     acc[color].push(cleaner);
     return acc;
-  }, { red: [], amber: [], green: [], other: [] } as GroupedItems<Cleaner>), [cleaners]);
+  }, { gold: [], red: [], amber: [], green: [], other: [] } as GroupedItems<Cleaner>), [cleaners]);
   
   const todaysTasks = useMemo(() => actionPlans
     .flatMap(plan => plan.tasks.map(task => ({ ...task, targetName: plan.targetName, targetType: plan.targetType })))
@@ -266,11 +281,12 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
       ...todaysShiftsToCover,
     ].length > 0, [groupedSites, groupedCleaners, todaysTasks, todaysShiftsToCover]);
 
-  const renderColorPill = (color: 'red' | 'amber' | 'green' | 'other') => {
+  const renderColorPill = (color: 'red' | 'amber' | 'green' | 'other' | 'gold') => {
       return <span className={cn('h-4 w-1.5 rounded-full shrink-0', {
           'bg-destructive': color === 'red',
           'bg-chart-4': color === 'amber',
           'bg-accent': color === 'green',
+          'bg-gold-star': color === 'gold',
           'bg-muted': color ==='other',
       })} />
   }
@@ -343,6 +359,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
 
     if (Object.values(groupedSites).flat().length > 0) {
         message += "*Site Status Summary:*\n";
+        if (groupedSites.gold.length > 0) message += "⭐ *Gold Star:*\n" + groupedSites.gold.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
         if (groupedSites.red.length > 0) message += "🔴 *Red:*\n" + groupedSites.red.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
         if (groupedSites.amber.length > 0) message += "🟠 *Amber:*\n" + groupedSites.amber.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
         if (groupedSites.green.length > 0) message += "🟢 *Green:*\n" + groupedSites.green.map(s => `  - ${s.name}: ${s.status}`).join('\n') + '\n';
@@ -352,6 +369,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
 
     if (Object.values(groupedCleaners).flat().length > 0) {
         message += "*Cleaner Performance Summary:*\n";
+        if (groupedCleaners.gold.length > 0) message += "⭐ *Gold Star:*\n" + groupedCleaners.gold.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
         if (groupedCleaners.red.length > 0) message += "🔴 *Red:*\n" + groupedCleaners.red.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
         if (groupedCleaners.amber.length > 0) message += "🟠 *Amber:*\n" + groupedCleaners.amber.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
         if (groupedCleaners.green.length > 0) message += "🟢 *Green:*\n" + groupedCleaners.green.map(c => `  - ${c.name}: ${c.rating}`).join('\n') + '\n';
@@ -462,6 +480,20 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
                             <AccordionTrigger className="hover:no-underline">Site Status Summary</AccordionTrigger>
                             <AccordionContent>
                                 <div className="space-y-4 pt-2">
+                                    {groupedSites.gold.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('gold')} <h4 className="font-medium">Gold Star Sites</h4></div>
+                                            {groupedSites.gold.map(site => (
+                                                <div key={site.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground flex items-center">
+                                                        <Star className="h-4 w-4 mr-2 text-gold-star fill-gold-star" />
+                                                        {site.name} <span className="text-sm font-normal text-muted-foreground ml-2">({site.status})</span>
+                                                    </p>
+                                                    {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     {groupedSites.red.length > 0 && (
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Sites With Issues</h4></div>
@@ -518,6 +550,20 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
                             <AccordionTrigger className="hover:no-underline">Cleaner Performance Summary</AccordionTrigger>
                             <AccordionContent>
                                 <div className="space-y-4 pt-2">
+                                    {groupedCleaners.gold.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('gold')} <h4 className="font-medium">Gold Star Cleaners</h4></div>
+                                            {groupedCleaners.gold.map(cleaner => (
+                                                <div key={cleaner.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground flex items-center">
+                                                        <Star className="h-4 w-4 mr-2 text-gold-star fill-gold-star" />
+                                                        {cleaner.name} <span className="text-sm font-normal text-muted-foreground ml-2">({cleaner.rating})</span>
+                                                    </p>
+                                                    {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     {groupedCleaners.red.length > 0 && (
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Performance Issues</h4></div>

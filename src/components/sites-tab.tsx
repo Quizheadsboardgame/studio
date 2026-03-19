@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Site, SiteStatus } from '@/lib/data';
-import { PlusCircle, Pencil, Check, X, Trash2, UserSearch } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X, Trash2, UserSearch, Star } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import {
@@ -116,7 +116,8 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
           <TableBody>
             {sites.length > 0 ? sites.map((site) => (
               <TableRow key={site.id} className={cn({
-                'border-l-4 border-accent': site.status === 'Gold Star Site' || site.status === 'Client happy' || site.status === 'No Concerns',
+                'border-l-4 border-gold-star': site.status === 'Gold Star Site',
+                'border-l-4 border-accent': site.status === 'Client happy' || site.status === 'No Concerns',
                 'border-l-4 border-destructive': site.status === 'Site under action plan' || site.status === 'Site requires action plan',
                 'border-l-4 border-chart-4': site.status === 'Client concerns',
               })}>
@@ -133,7 +134,10 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                       className="h-9"
                     />
                   ) : (
-                    site.name
+                    <>
+                      {site.status === 'Gold Star Site' && <Star className="h-4 w-4 inline-block mr-2 text-gold-star fill-gold-star" />}
+                      {site.name}
+                    </>
                   )}
                 </TableCell>
                 <TableCell className="align-top py-4 text-muted-foreground hidden md:table-cell">{site.siteCode}</TableCell>

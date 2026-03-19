@@ -15,13 +15,14 @@ const siteRiskChartConfig = {
     Red: { label: "Red: Action Required", color: "hsl(var(--chart-1))" },
     Amber: { label: "Amber: Monitor", color: "hsl(var(--chart-4))" },
     Green: { label: "Green: Positive / No Concerns", color: "hsl(var(--chart-2))" },
+    "Gold Star": { label: "Gold Star Site", color: "hsl(var(--gold-star))" },
 } as const;
 
 const cleanerRiskChartConfig = {
     Red: { label: "Red: Performance Issues", color: "hsl(var(--chart-1))" },
     Amber: { label: "Amber: Monitor", color: "hsl(var(--chart-4))" },
-    Green: { label: "Green: Positive", color: "hsl(var(--chart-2))" },
-    "No Concerns": { label: "No Concerns", color: "hsl(var(--muted))" },
+    Green: { label: "Green: Positive / No Concerns", color: "hsl(var(--chart-2))" },
+    "Gold Star": { label: "Gold Star Cleaner", color: "hsl(var(--gold-star))" },
 } as const;
 
 
@@ -38,10 +39,13 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
     let green = 0;
     let amber = 0;
     let red = 0;
+    let gold = 0;
 
     sites.forEach(site => {
         const status = site.status;
-        if (status === 'Gold Star Site' || status === 'Client happy' || status === 'No Concerns') {
+        if (status === 'Gold Star Site') {
+            gold++;
+        } else if (status === 'Client happy' || status === 'No Concerns') {
             green++;
         } else if (status === 'Client concerns') {
             amber++;
@@ -54,6 +58,7 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
         { name: 'Red', value: red, fill: 'hsl(var(--chart-1))' },
         { name: 'Amber', value: amber, fill: 'hsl(var(--chart-4))' },
         { name: 'Green', value: green, fill: 'hsl(var(--chart-2))' },
+        { name: 'Gold Star', value: gold, fill: 'hsl(var(--gold-star))' },
     ].filter(item => item.value > 0);
   }, [sites]);
   
@@ -63,17 +68,17 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
     let green = 0;
     let amber = 0;
     let red = 0;
-    let unassigned = 0;
+    let gold = 0;
 
     cleaners.forEach(cleaner => {
-        if (cleaner.rating === 'Gold Star Cleaner' || cleaner.rating === 'Site satisfied') {
+        if (cleaner.rating === 'Gold Star Cleaner') {
+            gold++;
+        } else if (cleaner.rating === 'Site satisfied' || cleaner.rating === 'No Concerns') {
             green++;
         } else if (cleaner.rating === 'Slight improvement needed') {
             amber++;
         } else if (cleaner.rating.includes('action') || cleaner.rating === 'Needs retraining' || cleaner.rating === 'Operational concerns') {
             red++;
-        } else {
-            unassigned++;
         }
     });
     
@@ -81,7 +86,7 @@ export default function RiskDashboardTab({ sites, cleaners }: RiskDashboardTabPr
         { name: 'Red', value: red, fill: 'hsl(var(--chart-1))' },
         { name: 'Amber', value: amber, fill: 'hsl(var(--chart-4))' },
         { name: 'Green', value: green, fill: 'hsl(var(--chart-2))' },
-        { name: 'No Concerns', value: unassigned, fill: 'hsl(var(--muted))' },
+        { name: 'Gold Star', value: gold, fill: 'hsl(var(--gold-star))' },
     ].filter(item => item.value > 0);
   }, [cleaners]);
 
