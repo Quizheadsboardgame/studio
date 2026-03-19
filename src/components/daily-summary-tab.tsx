@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isToday } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface DailySummaryTabProps {
   sites: Site[];
@@ -408,193 +409,195 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
             </CardHeader>
             <CardContent>
                 {hasContent ? (
-                    <div className="space-y-6">
-
+                    <Accordion type="single" collapsible defaultValue="item-1" className="w-full space-y-2">
                         {/* COVER SUMMARY */}
                         {todaysShiftsToCover.length > 0 && (
-                            <div>
-                                <h3 className="font-semibold text-lg mb-2">Absences & Cover Today</h3>
-                                <div className="space-y-4 p-4 border rounded-lg">
-                                    {todaysShiftsToCover.map(shift => (
-                                    <div key={shift.id} className="flex items-center gap-3">
-                                        <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
-                                            'bg-accent': shift.isCovered,
-                                            'bg-destructive': !shift.isCovered,
-                                        })} />
-                                        <div className="flex-grow">
-                                        <p className="font-medium">{shift.cleanerName} is off ({shift.type})</p>
-                                        <p className="text-sm text-muted-foreground">Shift: {shift.site}</p>
-                                        {shift.isCovered ? (
-                                            <p className="text-sm text-muted-foreground">Covered by: {shift.coverCleanerName}</p>
-                                        ) : (
-                                            <p className="text-sm text-destructive font-medium">NOT COVERED</p>
-                                        )}
+                            <AccordionItem value="item-1" className="border rounded-md px-4">
+                                <AccordionTrigger className="hover:no-underline">Absences & Cover Today</AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="space-y-4 pt-2">
+                                        {todaysShiftsToCover.map(shift => (
+                                        <div key={shift.id} className="flex items-center gap-3">
+                                            <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', {
+                                                'bg-accent': shift.isCovered,
+                                                'bg-destructive': !shift.isCovered,
+                                            })} />
+                                            <div className="flex-grow">
+                                            <p className="font-medium">{shift.cleanerName} is off ({shift.type})</p>
+                                            <p className="text-sm text-muted-foreground">Shift: {shift.site}</p>
+                                            {shift.isCovered ? (
+                                                <p className="text-sm text-muted-foreground">Covered by: {shift.coverCleanerName}</p>
+                                            ) : (
+                                                <p className="text-sm text-destructive font-medium">NOT COVERED</p>
+                                            )}
+                                            </div>
                                         </div>
+                                        ))}
                                     </div>
-                                    ))}
-                                </div>
-                            </div>
+                                </AccordionContent>
+                            </AccordionItem>
                         )}
-                        {(todaysShiftsToCover.length > 0 && (todaysTasks.length > 0 || Object.values(groupedSites).flat().length > 0)) && <Separator />}
-
-
+                        
                         {/* ACTION PLAN TASKS FOR TODAY */}
                         {todaysTasks.length > 0 && (
-                          <div>
-                            <h3 className="font-semibold text-lg mb-2">Action Plan Tasks Due Today</h3>
-                            <div className="space-y-4 p-4 border rounded-lg">
-                              {todaysTasks.map(task => (
-                                <div key={task.id} className="pl-6 space-y-1">
-                                  <p className="font-medium text-foreground">{task.description}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    For: {task.targetName} ({task.targetType})
-                                  </p>
+                          <AccordionItem value="item-2" className="border rounded-md px-4">
+                            <AccordionTrigger className="hover:no-underline">Action Plan Tasks Due Today</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-4 pt-2">
+                                {todaysTasks.map(task => (
+                                    <div key={task.id} className="pl-6 space-y-1">
+                                    <p className="font-medium text-foreground">{task.description}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        For: {task.targetName} ({task.targetType})
+                                    </p>
+                                    </div>
+                                ))}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
+                            </AccordionContent>
+                          </AccordionItem>
                         )}
-                        {todaysTasks.length > 0 && <Separator />}
 
                         {/* SITE SUMMARY */}
-                        <div>
-                            <h3 className="font-semibold text-lg mb-2">Site Status Summary</h3>
-                            <div className="space-y-4 p-4 border rounded-lg">
-                                 {groupedSites.red.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Sites With Issues</h4></div>
-                                        {groupedSites.red.map(site => (
-                                            <div key={site.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
-                                                {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedSites.amber.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('amber')} <h4 className="font-medium">Amber: Sites to Monitor</h4></div>
-                                        {groupedSites.amber.map(site => (
-                                            <div key={site.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
-                                                {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedSites.green.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('green')} <h4 className="font-medium">Green: Positive Sites</h4></div>
-                                        {groupedSites.green.map(site => (
-                                            <div key={site.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
-                                                {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedSites.other.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('other')} <h4 className="font-medium">Other Sites with Notes</h4></div>
-                                        {groupedSites.other.map(site => (
-                                            <div key={site.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
-                                                {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {Object.values(groupedSites).every(g => g.length === 0) && (
-                                     <p className="text-sm text-muted-foreground">No site statuses or notes recorded.</p>
-                                 )}
-                            </div>
-                        </div>
-
-                        <Separator />
+                         <AccordionItem value="item-3" className="border rounded-md px-4">
+                            <AccordionTrigger className="hover:no-underline">Site Status Summary</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-4 pt-2">
+                                    {groupedSites.red.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Sites With Issues</h4></div>
+                                            {groupedSites.red.map(site => (
+                                                <div key={site.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
+                                                    {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedSites.amber.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('amber')} <h4 className="font-medium">Amber: Sites to Monitor</h4></div>
+                                            {groupedSites.amber.map(site => (
+                                                <div key={site.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
+                                                    {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedSites.green.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('green')} <h4 className="font-medium">Green: Positive Sites</h4></div>
+                                            {groupedSites.green.map(site => (
+                                                <div key={site.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
+                                                    {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedSites.other.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('other')} <h4 className="font-medium">Other Sites with Notes</h4></div>
+                                            {groupedSites.other.map(site => (
+                                                <div key={site.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{site.name} <span className="text-sm font-normal text-muted-foreground">({site.status})</span></p>
+                                                    {site.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{site.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {Object.values(groupedSites).every(g => g.length === 0) && (
+                                        <p className="text-sm text-muted-foreground">No site statuses or notes recorded.</p>
+                                    )}
+                                </div>
+                            </AccordionContent>
+                         </AccordionItem>
 
                         {/* CLEANER SUMMARY */}
-                        <div>
-                            <h3 className="font-semibold text-lg mb-2">Cleaner Performance Summary</h3>
-                             <div className="space-y-4 p-4 border rounded-lg">
-                                {groupedCleaners.red.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Performance Issues</h4></div>
-                                        {groupedCleaners.red.map(cleaner => (
-                                            <div key={cleaner.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
-                                                {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedCleaners.amber.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('amber')} <h4 className="font-medium">Amber: Performance to Monitor</h4></div>
-                                        {groupedCleaners.amber.map(cleaner => (
-                                            <div key={cleaner.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
-                                                {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedCleaners.green.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('green')} <h4 className="font-medium">Green: Positive Performance</h4></div>
-                                        {groupedCleaners.green.map(cleaner => (
-                                            <div key={cleaner.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
-                                                {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {groupedCleaners.other.length > 0 && (
-                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-2">{renderColorPill('other')} <h4 className="font-medium">Other Cleaners with Notes</h4></div>
-                                        {groupedCleaners.other.map(cleaner => (
-                                            <div key={cleaner.id} className="pl-6 space-y-1">
-                                                <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
-                                                {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
-                                            </div>
-                                        ))}
-                                     </div>
-                                 )}
-                                 {Object.values(groupedCleaners).every(g => g.length === 0) && (
-                                     <p className="text-sm text-muted-foreground">No cleaner performance ratings or notes recorded.</p>
-                                 )}
-                            </div>
-                        </div>
-
-                         <Separator />
+                        <AccordionItem value="item-4" className="border rounded-md px-4">
+                            <AccordionTrigger className="hover:no-underline">Cleaner Performance Summary</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-4 pt-2">
+                                    {groupedCleaners.red.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('red')} <h4 className="font-medium">Red: Performance Issues</h4></div>
+                                            {groupedCleaners.red.map(cleaner => (
+                                                <div key={cleaner.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
+                                                    {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedCleaners.amber.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('amber')} <h4 className="font-medium">Amber: Performance to Monitor</h4></div>
+                                            {groupedCleaners.amber.map(cleaner => (
+                                                <div key={cleaner.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
+                                                    {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedCleaners.green.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('green')} <h4 className="font-medium">Green: Positive Performance</h4></div>
+                                            {groupedCleaners.green.map(cleaner => (
+                                                <div key={cleaner.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
+                                                    {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {groupedCleaners.other.length > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">{renderColorPill('other')} <h4 className="font-medium">Other Cleaners with Notes</h4></div>
+                                            {groupedCleaners.other.map(cleaner => (
+                                                <div key={cleaner.id} className="pl-6 space-y-1">
+                                                    <p className="font-medium text-foreground">{cleaner.name} <span className="text-sm font-normal text-muted-foreground">({cleaner.rating})</span></p>
+                                                    {cleaner.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-2 border-l-2 ml-1">{cleaner.notes}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {Object.values(groupedCleaners).every(g => g.length === 0) && (
+                                        <p className="text-sm text-muted-foreground">No cleaner performance ratings or notes recorded.</p>
+                                    )}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
                         
                         {/* SCHEDULE SUMMARY */}
-                        <div>
-                             <h3 className="font-semibold text-lg mb-2">Today's Schedule</h3>
-                              <div className="border rounded-lg overflow-hidden">
-                                <div className="max-h-60 overflow-y-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-muted">
-                                            <tr>
-                                                <th className="py-2 px-4 text-left font-medium">Site</th>
-                                                <th className="py-2 px-4 text-left font-medium">Cleaner</th>
-                                                <th className="py-2 px-4 text-left font-medium">Time</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {uniqueSchedule.map((entry, index) => (
-                                                <tr key={entry.id || index} className="border-b last:border-0">
-                                                    <td className="py-2 px-4 font-medium">{entry.site}</td>
-                                                    <td className="py-2 px-4">{entry.cleaner}</td>
-                                                    <td className="py-2 px-4">{entry.start} - {entry.finish}</td>
+                        <AccordionItem value="item-5" className="border rounded-md px-4">
+                            <AccordionTrigger className="hover:no-underline">Today's Schedule</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="border rounded-lg overflow-hidden mt-2">
+                                    <div className="max-h-60 overflow-y-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="sticky top-0 bg-muted">
+                                                <tr>
+                                                    <th className="py-2 px-4 text-left font-medium">Site</th>
+                                                    <th className="py-2 px-4 text-left font-medium">Cleaner</th>
+                                                    <th className="py-2 px-4 text-left font-medium">Time</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {uniqueSchedule.map((entry, index) => (
+                                                    <tr key={entry.id || index} className="border-b last:border-0">
+                                                        <td className="py-2 px-4 font-medium">{entry.site}</td>
+                                                        <td className="py-2 px-4">{entry.cleaner}</td>
+                                                        <td className="py-2 px-4">{entry.start} - {entry.finish}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                              </div>
-                        </div>
-                    </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
                 ) : (
                   <div className="rounded-lg p-6 min-h-[200px] flex items-center justify-center">
                       <p className="text-muted-foreground">No notes or statuses to report. Click refresh to check for updates.</p>
