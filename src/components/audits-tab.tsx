@@ -117,8 +117,8 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
               <TableRow>
                 <TableHead className="w-[20%]">Site</TableHead>
                 <TableHead className="w-[18%]">Audit Status</TableHead>
-                <TableHead className="w-[17%]">Auditor</TableHead>
-                <TableHead className="w-[35%]">Booked Date & Time</TableHead>
+                <TableHead className="w-[17%] hidden md:table-cell">Auditor</TableHead>
+                <TableHead className="w-[35%]">Booked</TableHead>
                 <TableHead className="w-[10%] text-right">Score (%)</TableHead>
               </TableRow>
             </TableHeader>
@@ -148,7 +148,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="align-top py-4">
+                    <TableCell className="align-top py-4 hidden md:table-cell">
                        <Select
                         value={audit?.auditor || 'Unassigned'}
                         onValueChange={(auditor) => handleAuditorChange(site.id, auditor)}
@@ -166,7 +166,7 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                       </Select>
                     </TableCell>
                      <TableCell className="align-top py-4">
-                       <div className="flex items-center gap-2">
+                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             <Input
                                 type="date"
                                 value={audit?.bookedDate || ''}

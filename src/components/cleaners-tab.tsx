@@ -52,7 +52,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Input
           placeholder="Enter new cleaner name..."
           value={newCleanerName}
@@ -71,7 +71,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
             <TableRow>
               <TableHead className="w-[25%]">Cleaner</TableHead>
               <TableHead className="w-[20%]">Rating</TableHead>
-              <TableHead className="w-[15%]">Holiday Allowance</TableHead>
+              <TableHead className="w-[15%] hidden md:table-cell">Holiday Allowance</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[10%] text-right"></TableHead>
             </TableRow>
@@ -104,7 +104,7 @@ export default function CleanersTab({ cleaners, onRatingChange, onNoteChange, on
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="align-top py-4">
+                <TableCell className="align-top py-4 hidden md:table-cell">
                   <Input
                     type="number"
                     value={cleaner.holidayAllowance || 20}

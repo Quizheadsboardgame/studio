@@ -152,7 +152,7 @@ export default function SuppliesTab({ sites, supplyOrders, firestore, onSetOrder
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Consumable</TableHead>
-                                        <TableHead>Ordering Code</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Ordering Code</TableHead>
                                         <TableHead className="w-[150px]">Quantity Ordered</TableHead>
                                         <TableHead className="w-[100px] text-right">Actions</TableHead>
                                     </TableRow>
@@ -170,7 +170,7 @@ export default function SuppliesTab({ sites, supplyOrders, firestore, onSetOrder
                                             return (
                                                 <TableRow key={consumable.id}>
                                                     <TableCell className="font-medium">{consumable.name}</TableCell>
-                                                    <TableCell>{consumable.orderingCode}</TableCell>
+                                                    <TableCell className="hidden sm:table-cell">{consumable.orderingCode}</TableCell>
                                                     <TableCell>
                                                         <Input 
                                                             type="number" 

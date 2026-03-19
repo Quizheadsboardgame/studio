@@ -123,8 +123,8 @@ export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemo
               <TableRow>
                 <TableHead className="w-[50px]">Done</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Site</TableHead>
-                <TableHead>Assignee</TableHead>
+                <TableHead className="hidden md:table-cell">Site</TableHead>
+                <TableHead className="hidden lg:table-cell">Assignee</TableHead>
                 <TableHead>Due Date</TableHead>
                 <TableHead className="w-[50px] text-right"></TableHead>
               </TableRow>
@@ -142,10 +142,10 @@ export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemo
                   <TableCell className={cn("font-medium", task.completed && 'line-through text-muted-foreground')}>
                     {task.description}
                   </TableCell>
-                  <TableCell className={cn(task.completed && 'text-muted-foreground')}>
+                  <TableCell className={cn(task.completed && 'text-muted-foreground', "hidden md:table-cell")}>
                     {task.site || 'N/A'}
                   </TableCell>
-                  <TableCell className={cn(task.completed && 'text-muted-foreground')}>
+                  <TableCell className={cn(task.completed && 'text-muted-foreground', "hidden lg:table-cell")}>
                     {task.assignee || 'Unassigned'}
                   </TableCell>
                   <TableCell className={cn(task.completed && 'text-muted-foreground')}>

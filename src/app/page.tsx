@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React from 'react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 
 export default function DashboardPage() {
@@ -572,14 +573,15 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {isLoading ? (
            <div className="space-y-4">
-              <Skeleton className="h-12 w-full md:w-[320px]" />
+              <Skeleton className="h-12 w-full" />
               <Skeleton className="h-96 w-full" />
             </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="mb-4">
+            {/* Mobile navigation */}
+            <div className="md:hidden mb-4">
               <Select value={activeTab} onValueChange={setActiveTab}>
-                <SelectTrigger className="w-full md:w-[320px] text-base font-medium h-12 bg-card border-border">
+                <SelectTrigger className="w-full text-base font-medium h-12 bg-card border-border">
                   <div className="flex items-center gap-3">
                     {ActiveIcon && <ActiveIcon className="h-5 w-5" />}
                     <span>{tabs.find(t => t.value === activeTab)?.label}</span>
@@ -596,6 +598,21 @@ export default function DashboardPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Desktop navigation */}
+            <div className="hidden md:block mb-4">
+                <ScrollArea className="w-full whitespace-nowrap">
+                    <TabsList className="inline-flex h-auto p-1">
+                        {tabs.map((tab) => (
+                            <TabsTrigger key={tab.value} value={tab.value} className="text-xs lg:text-sm px-2 lg:px-3">
+                                <tab.icon className="mr-2 h-4 w-4" />
+                                {tab.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
             </div>
             
             <TabsContent value="sites">

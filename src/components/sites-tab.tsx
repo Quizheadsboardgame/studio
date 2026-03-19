@@ -91,7 +91,7 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Input
           placeholder="Enter new site name..."
           value={newSiteName}
@@ -109,7 +109,7 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
           <TableHeader>
             <TableRow>
               <TableHead className="w-[25%]">Site</TableHead>
-              <TableHead className="w-[15%]">Site Code</TableHead>
+              <TableHead className="w-[15%] hidden md:table-cell">Site Code</TableHead>
               <TableHead className="w-[20%]">Status</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[10%]">Contacts</TableHead>
@@ -140,7 +140,7 @@ export default function SitesTab({ sites, onStatusChange, onNoteChange, onAddSit
                     site.name
                   )}
                 </TableCell>
-                <TableCell className="align-top py-4 text-muted-foreground">{site.siteCode}</TableCell>
+                <TableCell className="align-top py-4 text-muted-foreground hidden md:table-cell">{site.siteCode}</TableCell>
                 <TableCell className="align-top py-4">
                   <Select
                     value={site.status}
