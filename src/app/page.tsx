@@ -750,6 +750,25 @@ export default function DashboardPage() {
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
 
+  const primaryColorStyle = useMemo(() => {
+      if (!activeTabInfo) return {};
+      const HSL_DARK_FG = '0 0% 10%';
+      const HSL_LIGHT_FG = '0 0% 98%';
+
+      const colorMap = {
+          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
+          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
+          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+      };
+      
+      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
+
+      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
+  }, [activeTabInfo]);
+
   if (isUserLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen">
@@ -826,24 +845,6 @@ export default function DashboardPage() {
     }
   };
   
-  const primaryColorStyle = useMemo(() => {
-      if (!activeTabInfo) return {};
-      const HSL_DARK_FG = '0 0% 10%';
-      const HSL_LIGHT_FG = '0 0% 98%';
-
-      const colorMap = {
-          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
-          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
-          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-      };
-      
-      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
-
-      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
-  }, [activeTabInfo]);
 
   return (
     <SidebarProvider>
