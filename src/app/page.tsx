@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
@@ -28,9 +27,9 @@ import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/fir
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import React from 'react';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 
 export default function DashboardPage() {
@@ -39,26 +38,27 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('summary');
 
   const tabs = useMemo(() => [
-    { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
-    { value: 'audit-history', label: 'Audit History', icon: FileClock },
-    { value: 'audits', label: 'Audits', icon: FileCheck },
-    { value: 'availability', label: 'Cleaner Availability', icon: Clock },
-    { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-    { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-    { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
     { value: 'summary', label: 'Daily Summary', icon: FileText },
-    { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-    { value: 'gold-standard', label: 'Gold Standard', icon: Award },
-    { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
-    { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'sites', label: 'Site Performance', icon: LayoutDashboard },
-    { value: 'site-map', label: 'Site Map', icon: Map },
-    { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
+    { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
+    { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+    { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
+    { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+    { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
+    { value: 'audits', label: 'Audits', icon: FileCheck },
+    { value: 'audit-history', label: 'Audit History', icon: FileClock },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
+    { value: 'diary', label: 'Diary', icon: BookOpenCheck },
     { value: 'tasks', label: 'Tasks', icon: ListTodo },
+    { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
+    { value: 'availability', label: 'Cleaner Availability', icon: Clock },
+    { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
+    { value: 'site-map', label: 'Site Map', icon: Map },
+    { value: 'gold-standard', label: 'Gold Standard', icon: Award },
   ].sort((a, b) => a.label.localeCompare(b.label)), []);
+  
+  const activeTabDetails = useMemo(() => tabs.find(t => t.value === activeTab), [activeTab, tabs]);
 
-  const ActiveIcon = useMemo(() => tabs.find(t => t.value === activeTab)?.icon, [activeTab, tabs]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -631,265 +631,149 @@ export default function DashboardPage() {
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
-  return (
-    <div className="flex min-h-screen w-full flex-col bg-black">
-      <header className="sticky top-0 z-30 flex h-auto items-center justify-between gap-4 border-b border-border bg-black px-4 py-3 sm:h-20 sm:px-6 sm:py-0">
-          <div className="flex items-center gap-4">
-              <div className="p-2 relative">
-                  <svg
-                      className="h-8 w-8 text-excellerate-orange"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                  >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                   {outstandingTasksCount > 0 && (
-                    <div className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
-                        {outstandingTasksCount}
-                    </div>
-                  )}
-              </div>
-              <div className='flex flex-col justify-center'>
-                <h1 className="text-xl font-bold tracking-tight text-excellerate-orange font-headline">
-                    Excellerate Services
-                </h1>
-                <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
-              </div>
-          </div>
-          <div className="text-right">
-            <p className="font-semibold text-excellerate-orange text-sm sm:text-base">Manager: Owen Newton</p>
-            <p className="text-xs text-muted-foreground sm:text-sm">Assistant Manager: Nick Miller</p>
-          </div>
-      </header>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {isLoading ? (
-           <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-96 w-full" />
-            </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Mobile navigation */}
-            <div className="md:hidden mb-4">
-              <Select value={activeTab} onValueChange={setActiveTab}>
-                <SelectTrigger className="w-full text-base font-medium h-12 bg-card border-border">
-                  <div className="flex items-center gap-3">
-                    {ActiveIcon && <ActiveIcon className="h-5 w-5" />}
-                    <span>{tabs.find(t => t.value === activeTab)?.label}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {tabs.map((tab) => (
-                    <SelectItem key={tab.value} value={tab.value}>
-                      <div className="flex items-center gap-2">
-                        <tab.icon className="h-4 w-4" />
-                        <span>{tab.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Desktop navigation */}
-            <div className="hidden md:block mb-4">
-                <ScrollArea className="w-full whitespace-nowrap">
-                    <TabsList className="inline-flex h-auto p-1">
-                        {tabs.map((tab) => (
-                            <TabsTrigger key={tab.value} value={tab.value} className="text-xs lg:text-sm px-2 lg:px-3">
-                                <tab.icon className="mr-2 h-4 w-4" />
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-            </div>
-            
-            <TabsContent value="sites">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Site Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SitesTab 
-                    sites={sortedSites} 
-                    onNoteChange={(siteId, notes) => handleUpdateSite(siteId, { notes })}
-                    onAddSite={handleAddSite}
-                    onEditSite={(siteId, name) => handleUpdateSite(siteId, { name })}
-                    onRemoveSite={handleRemoveSite}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="cleaners">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cleaner Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CleanersTab 
-                    cleaners={sortedCleaners} 
-                    onUpdateCleaner={handleUpdateCleaner}
-                    onAddCleaner={handleAddCleaner}
-                    onRemoveCleaner={handleRemoveCleaner}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="availability">
-              <AvailabilityTab
-                cleaners={sortedCleaners}
-                onUpdateCleaner={handleUpdateCleaner}
-              />
-            </TabsContent>
-
-            <TabsContent value="company-schedule">
+  const renderActiveTab = () => {
+    switch (activeTab) {
+        case 'sites':
+            return (
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Company Schedule</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Site Performance</CardTitle></CardHeader>
                     <CardContent>
-                        <CompanyScheduleTab 
-                            schedule={sortedSchedule}
-                            sites={sortedSites}
-                            cleaners={sortedCleaners}
-                            onAdd={handleAddScheduleEntry}
-                            onUpdate={handleUpdateScheduleEntry}
-                            onRemove={handleRemoveScheduleEntry}
-                        />
+                        <SitesTab sites={sortedSites} onNoteChange={(siteId, notes) => handleUpdateSite(siteId, { notes })} onAddSite={handleAddSite} onEditSite={(siteId, name) => handleUpdateSite(siteId, { name })} onRemoveSite={handleRemoveSite} />
                     </CardContent>
                 </Card>
-            </TabsContent>
-            
-            <TabsContent value="leave-calendar">
-               <LeaveCalendarTab 
-                  cleaners={sortedCleaners}
-                  leave={leave || []}
-                  schedule={sortedSchedule || []}
-                  onAddLeave={handleAddLeave}
-                  onDeleteLeave={handleDeleteLeave}
-                  onUpdateLeave={handleUpdateLeave}
-               />
-            </TabsContent>
-            
-             <TabsContent value="supplies">
-                <SuppliesTab
-                    sites={sortedSites}
-                    firestore={firestore}
-                    supplyOrders={supplyOrders || []}
-                    onSetOrder={handleSetSupplyOrder}
-                    onAddConsumable={handleAddConsumable}
-                    onEditConsumable={handleEditConsumable}
-                    onRemoveConsumable={handleRemoveConsumable}
-                />
-            </TabsContent>
+            );
+        case 'cleaners':
+            return (
+                <Card>
+                    <CardHeader><CardTitle>Cleaner Performance</CardTitle></CardHeader>
+                    <CardContent>
+                        <CleanersTab cleaners={sortedCleaners} onUpdateCleaner={handleUpdateCleaner} onAddCleaner={handleAddCleaner} onRemoveCleaner={handleRemoveCleaner} />
+                    </CardContent>
+                </Card>
+            );
+        case 'availability':
+            return <AvailabilityTab cleaners={sortedCleaners} onUpdateCleaner={handleUpdateCleaner} />;
+        case 'company-schedule':
+            return (
+                <Card>
+                    <CardHeader><CardTitle>Company Schedule</CardTitle></CardHeader>
+                    <CardContent>
+                        <CompanyScheduleTab schedule={sortedSchedule} sites={sortedSites} cleaners={sortedCleaners} onAdd={handleAddScheduleEntry} onUpdate={handleUpdateScheduleEntry} onRemove={handleRemoveScheduleEntry} />
+                    </CardContent>
+                </Card>
+            );
+        case 'leave-calendar':
+            return <LeaveCalendarTab cleaners={sortedCleaners} leave={leave || []} schedule={sortedSchedule || []} onAddLeave={handleAddLeave} onDeleteLeave={handleDeleteLeave} onUpdateLeave={handleUpdateLeave} />;
+        case 'supplies':
+            return <SuppliesTab sites={sortedSites} firestore={firestore} supplyOrders={supplyOrders || []} onSetOrder={handleSetSupplyOrder} onAddConsumable={handleAddConsumable} onEditConsumable={handleEditConsumable} onRemoveConsumable={handleRemoveConsumable} />;
+        case 'audits':
+            return <AuditsTab sites={sortedSites} monthlyAudits={monthlyAudits || []} onSetAudit={handleSetMonthlyAudit} />;
+        case 'audit-history':
+            return <AuditHistoryTab sites={sortedSites} monthlyAudits={monthlyAudits || []} />;
+        case 'risk':
+            return <RiskDashboardTab sites={sortedSites} cleaners={sortedCleaners} />;
+        case 'diary':
+            return <DiaryTab sites={sortedSites} appointments={appointments || []} monthlyAudits={monthlyAudits || []} leave={leave || []} schedule={sortedSchedule || []} onAddAppointment={handleAddAppointment} onUpdateAppointment={handleUpdateAppointment} onRemoveAppointment={handleRemoveAppointment} />;
+        case 'action-plan':
+            return <ActionPlanTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} onUpdateActionPlan={handleUpdateActionPlan} onRemoveActionPlan={handleRemoveActionPlan} />;
+        case 'tasks':
+            return <TasksTab tasks={tasks || []} sites={sortedSites} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
+        case 'conversation-log':
+            return <ConversationLogTab cleaners={sortedCleaners} sites={sortedSites} conversationRecords={conversationRecords || []} onAddRecord={handleAddConversationRecord} onUpdateRecord={handleUpdateConversationRecord} onRemoveRecord={handleRemoveConversationRecord} />;
+        case 'site-portfolio':
+            return <SitePortfolioTab sites={sortedSites} cleaners={sortedCleaners} schedule={sortedSchedule} actionPlans={actionPlans || []} monthlyAudits={monthlyAudits || []} tasks={tasks || []} appointments={appointments || []} onUpdateSite={handleUpdateSite} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} onAddAppointment={handleAddAppointment} onUpdateAppointment={handleUpdateAppointment} onRemoveAppointment={handleRemoveAppointment} onAddScheduleEntry={handleAddScheduleEntry} onUpdateScheduleEntry={handleUpdateScheduleEntry} onRemoveScheduleEntry={handleRemoveScheduleEntry} />;
+        case 'site-map':
+            return <SiteMapTab sites={sortedSites} />;
+        case 'gold-standard':
+            return <GoldStandardTab sites={sortedSites} cleaners={sortedCleaners} />;
+        default:
+            return <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />;
+    }
+  };
 
-            <TabsContent value="audits">
-              <AuditsTab 
-                sites={sortedSites} 
-                monthlyAudits={monthlyAudits || []}
-                onSetAudit={handleSetMonthlyAudit}
-              />
-            </TabsContent>
-            
-            <TabsContent value="audit-history">
-              <AuditHistoryTab
-                sites={sortedSites}
-                monthlyAudits={monthlyAudits || []}
-              />
-            </TabsContent>
-
-             <TabsContent value="risk">
-                <RiskDashboardTab sites={sortedSites} cleaners={sortedCleaners} />
-            </TabsContent>
-
-            <TabsContent value="summary">
-              <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />
-            </TabsContent>
-            
-            <TabsContent value="diary">
-              <DiaryTab
-                sites={sortedSites}
-                appointments={appointments || []}
-                monthlyAudits={monthlyAudits || []}
-                leave={leave || []}
-                schedule={sortedSchedule || []}
-                onAddAppointment={handleAddAppointment}
-                onUpdateAppointment={handleUpdateAppointment}
-                onRemoveAppointment={handleRemoveAppointment}
-              />
-            </TabsContent>
-
-            <TabsContent value="action-plan">
-              <ActionPlanTab
-                sites={sortedSites}
-                cleaners={sortedCleaners}
-                actionPlans={actionPlans || []}
-                onUpdateActionPlan={handleUpdateActionPlan}
-                onRemoveActionPlan={handleRemoveActionPlan}
-              />
-            </TabsContent>
-
-            <TabsContent value="tasks">
-              <TasksTab
-                tasks={tasks || []}
-                sites={sortedSites}
-                onAddTask={handleAddTask}
-                onUpdateTask={handleUpdateTask}
-                onRemoveTask={handleRemoveTask}
-              />
-            </TabsContent>
-
-            <TabsContent value="conversation-log">
-              <ConversationLogTab
-                cleaners={sortedCleaners}
-                sites={sortedSites}
-                conversationRecords={conversationRecords || []}
-                onAddRecord={handleAddConversationRecord}
-                onUpdateRecord={handleUpdateConversationRecord}
-                onRemoveRecord={handleRemoveConversationRecord}
-              />
-            </TabsContent>
-            
-            <TabsContent value="site-portfolio">
-              <SitePortfolioTab
-                sites={sortedSites}
-                cleaners={sortedCleaners}
-                schedule={sortedSchedule}
-                actionPlans={actionPlans || []}
-                monthlyAudits={monthlyAudits || []}
-                tasks={tasks || []}
-                appointments={appointments || []}
-                onUpdateSite={handleUpdateSite}
-                onUpdateTask={handleUpdateTask}
-                onRemoveTask={handleRemoveTask}
-                onAddAppointment={handleAddAppointment}
-                onUpdateAppointment={handleUpdateAppointment}
-                onRemoveAppointment={handleRemoveAppointment}
-                onAddScheduleEntry={handleAddScheduleEntry}
-                onUpdateScheduleEntry={handleUpdateScheduleEntry}
-                onRemoveScheduleEntry={handleRemoveScheduleEntry}
-              />
-            </TabsContent>
-
-            <TabsContent value="site-map">
-              <SiteMapTab sites={sortedSites} />
-            </TabsContent>
-
-            <TabsContent value="gold-standard">
-              <GoldStandardTab sites={sortedSites} cleaners={sortedCleaners} />
-            </TabsContent>
-
-          </Tabs>
-        )}
-      </main>
-      <Toaster />
-    </div>
+  return (
+    <SidebarProvider>
+        <Sidebar>
+            <SidebarHeader>
+                <div className="flex items-center gap-3">
+                    <div className="p-2 relative bg-primary rounded-lg">
+                        <svg
+                            className="h-6 w-6 text-primary-foreground"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {outstandingTasksCount > 0 && (
+                        <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                            {outstandingTasksCount}
+                        </div>
+                        )}
+                    </div>
+                    <div className='flex flex-col'>
+                        <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                            Excellerate
+                        </h1>
+                        <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
+                    </div>
+                </div>
+            </SidebarHeader>
+            <SidebarContent>
+                <SidebarMenu>
+                    {tabs.map((tab) => (
+                        <SidebarMenuItem key={tab.value}>
+                            <SidebarMenuButton
+                                onClick={() => setActiveTab(tab.value)}
+                                isActive={activeTab === tab.value}
+                                className="justify-start"
+                                tooltip={tab.label}
+                            >
+                                <tab.icon />
+                                <span>{tab.label}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter>
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                        <AvatarFallback>ON</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold text-sm">Owen Newton</p>
+                        <p className="text-xs text-muted-foreground">Manager</p>
+                    </div>
+                </div>
+            </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+            <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
+                <div className="flex items-center gap-2">
+                    <SidebarTrigger className="md:hidden"/>
+                    {activeTabDetails?.icon && <activeTabDetails.icon className="h-5 w-5 text-muted-foreground" />}
+                    <h2 className="font-semibold text-lg">{activeTabDetails?.label}</h2>
+                </div>
+                <div className="text-right hidden sm:block">
+                    <p className="font-semibold text-sm">Assistant Manager: Nick Miller</p>
+                </div>
+            </header>
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+                {isLoading ? (
+                    <div className="space-y-4">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-96 w-full" />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        {renderActiveTab()}
+                    </div>
+                )}
+            </main>
+        </SidebarInset>
+        <Toaster />
+    </SidebarProvider>
   );
 }
-
