@@ -6,10 +6,19 @@ import {
   type Site, 
   type Cleaner, 
   type ScheduleEntry, 
-  type UserProfile
+  type UserProfile,
+  type ActionPlan,
+  type Task,
+  type ConversationRecord,
+  type GoodNewsRecord,
+  type MonthlyAudit,
+  type MonthlySupplyOrder,
+  type Appointment,
+  type Leave,
+  type Consumable
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -19,6 +28,16 @@ import ActionPlanTab from '@/components/action-plan-tab';
 import LeaveCalendarTab from '@/components/leave-calendar-tab';
 import AvailabilityTab from '@/components/availability-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
+import AuditsTab from '@/components/audits-tab';
+import AuditHistoryTab from '@/components/audit-history-tab';
+import ConversationLogTab from '@/components/conversation-log-tab';
+import GoodNewsCentreTab from '@/components/good-news-centre-tab';
+import SuppliesTab from '@/components/supplies-tab';
+import TasksTab from '@/components/tasks-tab';
+import DiaryTab from '@/components/diary-tab';
+import SiteMapTab from '@/components/site-map-tab';
+import SitePortfolioTab from '@/components/site-portfolio-tab';
+
 import { Toaster } from "@/components/ui/toaster";
 import { format, parseISO } from 'date-fns';
 import React from 'react';
@@ -33,7 +52,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
@@ -211,14 +230,9 @@ export default function DashboardPage() {
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Initial setup for new users (Auto-create first hub if none exist, or check for pre-provisioned ones)
+  // Initial setup for new users
   useEffect(() => {
     if (!isProfileLoading && user && (!allHubs || allHubs.length === 0)) {
-      // Check if a Hub already exists for this email (Pre-provisioned by Master)
-      const existingHubQuery = query(collection(firestore, 'userProfiles'), where('email', '==', user.email));
-      // Since we can't easily wait for a one-time fetch inside useEffect without async, 
-      // we'll rely on the subscription to handle it, but for the "No Hub Found" case:
-      
       const newProfileId = `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', newProfileId);
       setDoc(profileRef, {
@@ -230,7 +244,6 @@ export default function DashboardPage() {
         updatedAt: new Date().toISOString(),
       }, { merge: true });
     } else if (!isProfileLoading && user && allHubs && allHubs.length > 0) {
-      // Auto-associate UID if user logs in but isn't explicitly in the members map yet (matched by email)
       allHubs.forEach(hub => {
         if (hub.email === user.email && !hub.members[user.uid]) {
           updateDoc(doc(firestore, 'userProfiles', hub.id), {
@@ -242,42 +255,32 @@ export default function DashboardPage() {
     }
   }, [isProfileLoading, user, allHubs, firestore, isMasterUser]);
 
-  // --- Scoped Data Fetching ---
-  const sitesRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'sites') : null, [firestore, activeProfileId]);
-  const cleanersRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaners') : null, [firestore, activeProfileId]);
-  const scheduleRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaningScheduleEntries') : null, [firestore, activeProfileId]);
-  
+  // --- Hub-Scoped Data Hooks ---
+  const createHubRef = (sub: string) => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, sub) : null;
+
+  const sitesRef = useMemoFirebase(() => createHubRef('sites'), [firestore, activeProfileId]);
+  const cleanersRef = useMemoFirebase(() => createHubRef('cleaners'), [firestore, activeProfileId]);
+  const scheduleRef = useMemoFirebase(() => createHubRef('cleaningScheduleEntries'), [firestore, activeProfileId]);
+  const auditsRef = useMemoFirebase(() => createHubRef('audits'), [firestore, activeProfileId]);
+  const appointmentsRef = useMemoFirebase(() => createHubRef('appointments'), [firestore, activeProfileId]);
+  const tasksRef = useMemoFirebase(() => createHubRef('tasks'), [firestore, activeProfileId]);
+  const conversationsRef = useMemoFirebase(() => createHubRef('conversations'), [firestore, activeProfileId]);
+  const goodNewsRef = useMemoFirebase(() => createHubRef('goodNews'), [firestore, activeProfileId]);
+  const supplyOrdersRef = useMemoFirebase(() => createHubRef('supplyOrders'), [firestore, activeProfileId]);
+  const actionPlansRef = useMemoFirebase(() => createHubRef('actionPlans'), [firestore, activeProfileId]);
+  const leaveRef = useMemoFirebase(() => createHubRef('leave'), [firestore, activeProfileId]);
+
   const { data: sites = [] } = useCollection<Site>(sitesRef);
   const { data: cleaners = [] } = useCollection<Cleaner>(cleanersRef);
   const { data: schedule = [] } = useCollection<ScheduleEntry>(scheduleRef);
-
-  // --- Hub Management Action ---
-  const handleCreateHub = (name: string, ownerEmail: string) => {
-    if (!firestore) return;
-    const hubId = `hub-${Date.now()}`;
-    const hubRef = doc(firestore, 'userProfiles', hubId);
-    setDoc(hubRef, {
-      id: hubId,
-      name,
-      email: ownerEmail,
-      members: {}, // Client will be auto-added when they sign up with this email
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    toast({ title: 'Hub Provisioned', description: `${name} created. The client can now Sign Up with ${ownerEmail} to access it.` });
-  };
-
-  const handleUpdateHubMembers = (hubId: string, members: Record<string, string>) => {
-    if (!firestore) return;
-    updateDoc(doc(firestore, 'userProfiles', hubId), { members, updatedAt: new Date().toISOString() });
-    toast({ title: 'Membership Updated' });
-  };
-
-  const handleDeleteHub = (hubId: string) => {
-    if (!firestore || hubId === activeProfileId) return;
-    deleteDoc(doc(firestore, 'userProfiles', hubId));
-    toast({ title: 'Hub Removed' });
-  };
+  const { data: audits = [] } = useCollection<MonthlyAudit>(auditsRef);
+  const { data: appointments = [] } = useCollection<Appointment>(appointmentsRef);
+  const { data: tasks = [] } = useCollection<Task>(tasksRef);
+  const { data: conversations = [] } = useCollection<ConversationRecord>(conversationsRef);
+  const { data: goodNews = [] } = useCollection<GoodNewsRecord>(goodNewsRef);
+  const { data: supplyOrders = [] } = useCollection<MonthlySupplyOrder>(supplyOrdersRef);
+  const { data: actionPlans = [] } = useCollection<ActionPlan>(actionPlansRef);
+  const { data: leave = [] } = useCollection<Leave>(leaveRef);
 
   // --- Navigation Mapping ---
   const menuGroups = useMemo(() => {
@@ -290,6 +293,7 @@ export default function DashboardPage() {
           { value: 'summary', label: 'Daily Summary', icon: FileText },
           { value: 'risk', label: 'Risk Dashboard', icon: ShieldAlert },
           { value: 'gold-standard', label: 'Gold Standard', icon: Award },
+          { value: 'portfolio', label: 'Site Portfolio', icon: BookOpen },
         ],
       },
       {
@@ -300,6 +304,19 @@ export default function DashboardPage() {
           { value: 'sites', label: 'Sites', icon: Building2 },
           { value: 'cleaners', label: 'Cleaners', icon: Users },
           { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+          { value: 'tasks', label: 'To-Do List', icon: CheckSquare },
+          { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
+          { value: 'good-news', label: 'Good News Centre', icon: Heart },
+        ],
+      },
+      {
+        group: 'Operations',
+        icon: ClipboardCheck,
+        color: 'text-excellerate-lime',
+        items: [
+          { value: 'audits', label: 'Site Audits', icon: ClipboardCheck },
+          { value: 'audit-history', label: 'Audit History', icon: History },
+          { value: 'supplies', label: 'Supplies', icon: Package },
         ],
       },
       {
@@ -310,6 +327,15 @@ export default function DashboardPage() {
           { value: 'company-schedule', label: 'Schedule', icon: Calendar },
           { value: 'leave-calendar', label: 'Leave & Cover', icon: CalendarDays },
           { value: 'availability', label: 'Availability', icon: Clock },
+          { value: 'diary', label: 'Diary', icon: BookOpen },
+        ],
+      },
+      {
+        group: 'Utilities',
+        icon: Settings,
+        color: 'text-muted-foreground',
+        items: [
+          { value: 'directions', label: 'Site Directions', icon: Map },
         ],
       },
     ];
@@ -336,18 +362,18 @@ export default function DashboardPage() {
       return undefined;
   }, [activeTab, menuGroups]);
 
-  // --- Firestore Handlers (Scoped to Hub) ---
+  // --- Handlers (Scoped to Hub) ---
   const handleAddSite = (siteName: string) => {
     if (!sitesRef) return;
     const newDocRef = doc(sitesRef);
-    setDoc(newDocRef, {
+    setDocumentNonBlocking(newDocRef, {
       id: newDocRef.id,
       name: siteName,
       status: 'No Concerns',
       userProfileId: activeProfileId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    }, { merge: true });
   };
 
   const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
@@ -363,7 +389,7 @@ export default function DashboardPage() {
   const handleAddCleaner = (cleanerName: string) => {
     if (!cleanersRef) return;
     const newDocRef = doc(cleanersRef);
-    setDoc(newDocRef, {
+    setDocumentNonBlocking(newDocRef, {
       id: newDocRef.id,
       name: cleanerName,
       rating: 'No Concerns',
@@ -371,7 +397,7 @@ export default function DashboardPage() {
       userProfileId: activeProfileId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    }, { merge: true });
   };
 
   const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
@@ -384,16 +410,19 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(doc(cleanersRef, cleanerId));
   };
 
-  const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
-    if (!scheduleRef) return;
-    const newDocRef = doc(scheduleRef);
-    setDoc(newDocRef, {
-      id: newDocRef.id,
-      ...newEntry,
-      userProfileId: activeProfileId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+  const handleAddActionPlan = (plan: ActionPlan) => {
+    if (!actionPlansRef) return;
+    setDocumentNonBlocking(doc(actionPlansRef, plan.id), plan, { merge: true });
+  };
+
+  const handleUpdateActionPlan = (plan: ActionPlan) => {
+    if (!actionPlansRef) return;
+    updateDocumentNonBlocking(doc(actionPlansRef, plan.id), plan);
+  };
+
+  const handleRemoveActionPlan = (planId: string) => {
+    if (!actionPlansRef) return;
+    deleteDocumentNonBlocking(doc(actionPlansRef, planId));
   };
 
   if (isUserLoading) {
@@ -420,7 +449,19 @@ export default function DashboardPage() {
           <form onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
-            handleCreateHub(formData.get('name') as string, formData.get('email') as string);
+            const name = formData.get('name') as string;
+            const email = formData.get('email') as string;
+            if (!firestore) return;
+            const hubId = `hub-${Date.now()}`;
+            setDoc(doc(firestore, 'userProfiles', hubId), {
+              id: hubId,
+              name,
+              email,
+              members: {},
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            toast({ title: 'Hub Provisioned', description: `${name} created.` });
             (e.target as HTMLFormElement).reset();
           }} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="space-y-2 flex-1">
@@ -460,10 +501,10 @@ export default function DashboardPage() {
                     <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <MemberManagementDialog hub={hub} onUpdate={handleUpdateHubMembers} />
+                        <MemberManagementDialog hub={hub} onUpdate={(id, members) => updateDoc(doc(firestore!, 'userProfiles', id), { members })} />
                         <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
                         {hub.id !== activeProfileId && hub.id !== `hub-${user.uid}` && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHub(hub.id)} className="text-destructive h-8 w-8">
+                          <Button variant="ghost" size="icon" onClick={() => deleteDoc(doc(firestore!, 'userProfiles', hub.id))} className="text-destructive h-8 w-8">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -483,44 +524,47 @@ export default function DashboardPage() {
     if (activeTab === 'admin' && isMasterUser) return renderAdminTab();
     switch (activeTab) {
         case 'sites':
-            return (
-                <Card>
-                    <CardHeader><CardTitle>Site Performance</CardTitle></CardHeader>
-                    <CardContent>
-                        <SitesTab sites={sites || []} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={(id, name) => handleUpdateSite(id, { name })} onRemoveSite={handleRemoveSite} />
-                    </CardContent>
-                </Card>
-            );
+            return <SitesTab sites={sites} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={(id, name) => handleUpdateSite(id, { name })} onRemoveSite={handleRemoveSite} />;
         case 'cleaners':
-            return (
-                <Card>
-                    <CardHeader><CardTitle>Cleaner Performance</CardTitle></CardHeader>
-                    <CardContent>
-                        <CleanersTab cleaners={cleaners || []} onUpdateCleaner={handleUpdateCleaner} onAddCleaner={handleAddCleaner} onRemoveCleaner={handleRemoveCleaner} />
-                    </CardContent>
-                </Card>
-            );
+            return <CleanersTab cleaners={cleaners} onUpdateCleaner={handleUpdateCleaner} onAddCleaner={handleAddCleaner} onRemoveCleaner={handleRemoveCleaner} />;
         case 'availability':
-            return <AvailabilityTab cleaners={cleaners || []} onUpdateCleaner={handleUpdateCleaner} />;
+            return <AvailabilityTab cleaners={cleaners} onUpdateCleaner={handleUpdateCleaner} />;
         case 'company-schedule':
-            return (
-                <Card>
-                    <CardHeader><CardTitle>Company Schedule</CardTitle></CardHeader>
-                    <CardContent>
-                        <CompanyScheduleTab schedule={schedule || []} sites={sites || []} cleaners={cleaners || []} onAdd={handleAddScheduleEntry} onUpdate={(id, data) => updateDocumentNonBlocking(doc(scheduleRef!, id), data)} onRemove={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />
-                    </CardContent>
-                </Card>
-            );
+            return <CompanyScheduleTab schedule={schedule} sites={sites} cleaners={cleaners} onAdd={(e) => setDocumentNonBlocking(doc(scheduleRef!), { ...e, id: doc(scheduleRef!).id }, { merge: true })} onUpdate={(id, data) => updateDocumentNonBlocking(doc(scheduleRef!, id), data)} onRemove={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />;
         case 'leave-calendar':
-            return <LeaveCalendarTab cleaners={cleaners || []} leave={[]} schedule={schedule || []} onAddLeave={() => {}} onDeleteLeave={() => {}} onUpdateLeave={() => {}} />;
+            return <LeaveCalendarTab cleaners={cleaners} leave={leave} schedule={schedule} onAddLeave={(e) => setDocumentNonBlocking(doc(leaveRef!), { ...e, id: doc(leaveRef!).id, coverAssignments: [] }, { merge: true })} onDeleteLeave={(e) => deleteDocumentNonBlocking(doc(leaveRef!, e.id))} onUpdateLeave={(id, data) => updateDocumentNonBlocking(doc(leaveRef!, id), data)} />;
         case 'risk':
-            return <RiskDashboardTab sites={sites || []} cleaners={cleaners || []} />;
+            return <RiskDashboardTab sites={sites} cleaners={cleaners} />;
         case 'action-plan':
-            return <ActionPlanTab sites={sites || []} cleaners={cleaners || []} actionPlans={[]} onUpdateActionPlan={() => {}} onRemoveActionPlan={() => {}} />;
+            return <ActionPlanTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} onUpdateActionPlan={(p) => actionPlans.some(ap => ap.id === p.id) ? handleUpdateActionPlan(p) : handleAddActionPlan(p)} onRemoveActionPlan={handleRemoveActionPlan} />;
         case 'gold-standard':
-            return <GoldStandardTab sites={sites || []} cleaners={cleaners || []} />;
+            return <GoldStandardTab sites={sites} cleaners={cleaners} />;
+        case 'audits':
+            return <AuditsTab sites={sites} monthlyAudits={audits} onSetAudit={(siteId, date, data) => {
+                const id = `${siteId}-${date.getFullYear()}-${date.getMonth() + 1}`;
+                setDocumentNonBlocking(doc(auditsRef!, id), { ...data, id, siteId, year: date.getFullYear(), month: date.getMonth() + 1 }, { merge: true });
+            }} />;
+        case 'audit-history':
+            return <AuditHistoryTab sites={sites} monthlyAudits={audits} />;
+        case 'conversation-log':
+            return <ConversationLogTab cleaners={cleaners} sites={sites} conversationRecords={conversations} onAddRecord={(e) => setDocumentNonBlocking(doc(conversationsRef!), { ...e, id: doc(conversationsRef!).id }, { merge: true })} onUpdateRecord={(id, data) => updateDocumentNonBlocking(doc(conversationsRef!, id), data)} onRemoveRecord={(id) => deleteDocumentNonBlocking(doc(conversationsRef!, id))} />;
+        case 'good-news':
+            return <GoodNewsCentreTab records={goodNews} cleaners={cleaners} sites={sites} onAddRecord={(e) => setDocumentNonBlocking(doc(goodNewsRef!), { ...e, id: doc(goodNewsRef!).id }, { merge: true })} onUpdateRecord={(id, data) => updateDocumentNonBlocking(doc(goodNewsRef!, id), data)} onRemoveRecord={(id) => deleteDocumentNonBlocking(doc(goodNewsRef!, id))} />;
+        case 'supplies':
+            return <SuppliesTab sites={sites} supplyOrders={supplyOrders} firestore={firestore} onSetOrder={(siteId, consumableId, date, quantity) => {
+                const id = `${siteId}-${consumableId}-${date.getFullYear()}-${date.getMonth() + 1}`;
+                setDocumentNonBlocking(doc(supplyOrdersRef!, id), { id, siteId, consumableId, year: date.getFullYear(), month: date.getMonth() + 1, quantity }, { merge: true });
+            }} onAddConsumable={(siteId, data) => setDocumentNonBlocking(doc(collection(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables')), { ...data, id: doc(collection(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables')).id }, { merge: true })} onEditConsumable={(siteId, consumableId, data) => updateDocumentNonBlocking(doc(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables', consumableId), data)} onRemoveConsumable={(siteId, consumableId) => deleteDocumentNonBlocking(doc(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables', consumableId))} />;
+        case 'tasks':
+            return <TasksTab tasks={tasks} sites={sites} onAddTask={(e) => setDocumentNonBlocking(doc(tasksRef!), { ...e, id: doc(tasksRef!).id, completed: false }, { merge: true })} onUpdateTask={(id, data) => updateDocumentNonBlocking(doc(tasksRef!, id), data)} onRemoveTask={(id) => deleteDocumentNonBlocking(doc(tasksRef!, id))} />;
+        case 'diary':
+            return <DiaryTab sites={sites} appointments={appointments} monthlyAudits={audits} leave={leave} schedule={schedule} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id }, { merge: true })} onUpdateAppointment={(id, data) => updateDocumentNonBlocking(doc(appointmentsRef!, id), data)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} />;
+        case 'directions':
+            return <SiteMapTab sites={sites} />;
+        case 'portfolio':
+            return <SitePortfolioTab sites={sites} cleaners={cleaners} schedule={schedule} actionPlans={actionPlans} monthlyAudits={audits} tasks={tasks} appointments={appointments} onUpdateSite={handleUpdateSite} onUpdateTask={(id, d) => updateDocumentNonBlocking(doc(tasksRef!, id), d)} onRemoveTask={(id) => deleteDocumentNonBlocking(doc(tasksRef!, id))} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id }, { merge: true })} onUpdateAppointment={(id, d) => updateDocumentNonBlocking(doc(appointmentsRef!, id), d)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} onAddScheduleEntry={(e) => setDocumentNonBlocking(doc(scheduleRef!), { ...e, id: doc(scheduleRef!).id }, { merge: true })} onUpdateScheduleEntry={(id, d) => updateDocumentNonBlocking(doc(scheduleRef!, id), d)} onRemoveScheduleEntry={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />;
         default:
-            return <DailySummaryTab sites={sites || []} cleaners={cleaners || []} actionPlans={[]} schedule={schedule || []} leave={[]} />;
+            return <DailySummaryTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} schedule={schedule} leave={leave} />;
     }
   };
 
