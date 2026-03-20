@@ -130,6 +130,8 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
           operation: 'list',
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
+        // If listing fails due to permissions, we stop the restoration process for this collection
+        continue;
       }
       throw error;
     }
@@ -147,6 +149,8 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
               operation: 'list',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
+            // Skip consumables for this site if permissions fail
+            continue;
           }
           throw error;
         }

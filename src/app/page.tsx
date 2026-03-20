@@ -635,6 +635,7 @@ export default function DashboardPage() {
               path: colRef.path,
               operation: 'list'
             } satisfies SecurityRuleContext));
+            return; // Stop processing further to avoid more permission errors
           }
           throw error;
         }
@@ -645,14 +646,20 @@ export default function DashboardPage() {
       const profileRef = doc(firestore, 'userProfiles', activeProfileId);
       batch.delete(profileRef);
       
-      await batch.commit();
+      await batch.commit().catch(error => {
+        if (error.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `/userProfiles/${activeProfileId}`,
+            operation: 'write'
+          } satisfies SecurityRuleContext));
+        }
+        throw error;
+      });
       signOut(auth);
     } catch (error: any) {
-      if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `/userProfiles/${activeProfileId}`,
-          operation: 'write'
-        } satisfies SecurityRuleContext));
+      if (error.code !== 'permission-denied') {
+        // Only show generic toast for non-security errors
+        toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
       }
     }
   };
@@ -745,11 +752,43 @@ export default function DashboardPage() {
                     <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <TabConfigurationDialog hub={hub} onUpdate={(id, enabledTabs) => updateDoc(doc(firestore!, 'userProfiles', id), { enabledTabs })} />
-                        <MemberManagementDialog hub={hub} onUpdate={(id, members) => updateDoc(doc(firestore!, 'userProfiles', id), { members })} />
+                        <TabConfigurationDialog hub={hub} onUpdate={(id, enabledTabs) => {
+                          const ref = doc(firestore!, 'userProfiles', id);
+                          updateDoc(ref, { enabledTabs }).catch(e => {
+                            if (e.code === 'permission-denied') {
+                              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                                path: ref.path,
+                                operation: 'update',
+                                requestResourceData: { enabledTabs }
+                              }));
+                            }
+                          });
+                        }} />
+                        <MemberManagementDialog hub={hub} onUpdate={(id, members) => {
+                          const ref = doc(firestore!, 'userProfiles', id);
+                          updateDoc(ref, { members }).catch(e => {
+                            if (e.code === 'permission-denied') {
+                              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                                path: ref.path,
+                                operation: 'update',
+                                requestResourceData: { members }
+                              }));
+                            }
+                          });
+                        }} />
                         <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
                         {hub.id !== activeProfileId && hub.id !== `hub-${user.uid}` && (
-                          <Button variant="ghost" size="icon" onClick={() => deleteDoc(doc(firestore!, 'userProfiles', hub.id))} className="text-destructive h-8 w-8">
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            const ref = doc(firestore!, 'userProfiles', hub.id);
+                            deleteDoc(ref).catch(e => {
+                              if (e.code === 'permission-denied') {
+                                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                                  path: ref.path,
+                                  operation: 'delete'
+                                }));
+                              }
+                            });
+                          }} className="text-destructive h-8 w-8">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
