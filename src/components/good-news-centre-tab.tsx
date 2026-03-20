@@ -46,17 +46,17 @@ function GoodNewsDialog({ cleaners, sites, onSave, record, children }: GoodNewsD
         const recordData = {
             personName,
             personType,
-            siteName: siteName || undefined,
+            siteName: siteName || null,
             date,
             description,
             acknowledged,
-            acknowledgementNotes,
+            acknowledgementNotes: acknowledged ? (acknowledgementNotes || null) : null,
         };
 
         if (record) {
             onSave({ id: record.id, ...recordData });
         } else {
-            onSave(recordData);
+            onSave(recordData as Omit<GoodNewsRecord, 'id'>);
         }
         
         setIsOpen(false);

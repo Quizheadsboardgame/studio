@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -49,14 +48,14 @@ export function AppointmentDialog({ sites, onSave, appointment, defaultAssignee,
 
         const appointmentData = {
             title,
-            site: site || undefined,
+            site: site || null,
             date: date || format(new Date(), 'yyyy-MM-dd'),
             assignee,
-            startTime,
-            endTime,
-            notes,
-            recurrence,
-            recurrenceEndDate: (recurrence !== 'none' && recurrenceEndDate) ? recurrenceEndDate : undefined
+            startTime: startTime || null,
+            endTime: endTime || null,
+            notes: notes || null,
+            recurrence: recurrence || 'none',
+            recurrenceEndDate: (recurrence !== 'none' && recurrenceEndDate) ? recurrenceEndDate : null
         };
 
         if (appointment) {

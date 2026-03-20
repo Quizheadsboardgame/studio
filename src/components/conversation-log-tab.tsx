@@ -96,11 +96,11 @@ function ConversationDialog({ cleaners, sites, onSave, record, children }: Conve
         const recordData = {
             cleanerId,
             cleanerName: cleaner?.name || 'Unknown',
-            siteId: site?.id,
-            siteName: site?.name,
+            siteId: site?.id || null,
+            siteName: site?.name || null,
             date,
             issue,
-            notes,
+            notes: notes || null,
             followUpRequired,
         };
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -40,8 +39,8 @@ export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemo
     onAddTask({
       description: newTaskDesc,
       dueDate: newTaskDueDate || null,
-      assignee: newTaskAssignee,
-      site: newTaskSite || undefined,
+      assignee: newTaskAssignee || null,
+      site: newTaskSite || null,
     });
     setNewTaskDesc('');
     setNewTaskDueDate('');
