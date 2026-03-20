@@ -16,7 +16,7 @@ import {
   type UserProfile
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp, LogIn, LogOut, Loader2, Settings, Plus, Globe, Building2, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp, LogIn, LogOut, Loader2, Settings, Plus, Globe, Building2, Trash2, UserPlus } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -48,7 +48,7 @@ import { collection, query, where, doc, setDoc, serverTimestamp, getDocs, limit,
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,18 +60,24 @@ function LoginPage() {
   const [email, setEmail] = useState(MASTER_EMAIL);
   const [password, setPassword] = useState('cleanflow');
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const auth = useAuth();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast({ title: 'Account Created', description: 'Welcome to CleanFlow!' });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: isSignUp ? 'Sign Up Failed' : 'Login Failed',
         description: error.message,
       });
     } finally {
@@ -87,10 +93,10 @@ function LoginPage() {
             <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-lg shadow-primary/20">C</div>
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight">CleanFlow</CardTitle>
-          <CardDescription>Operation Hub Management</CardDescription>
+          <CardDescription>{isSignUp ? 'Create your operational account' : 'Operation Hub Management'}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="name@example.com" />
@@ -100,9 +106,18 @@ function LoginPage() {
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
             <Button type="submit" className="w-full h-11 text-lg font-semibold" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
-              Sign In
+              {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSignUp ? <UserPlus className="mr-2 h-5 w-5" /> : <LogIn className="mr-2 h-5 w-5" />)}
+              {isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              </button>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -460,7 +475,7 @@ export default function DashboardPage() {
                   <div className="px-2 mt-2">
                     <Select value={selectedHubId || ''} onValueChange={setSelectedHubId}>
                       <SelectTrigger className="h-8 text-xs bg-muted/50 border-none">
-                        < बिल्डिंग2 className="mr-2 h-3 w-3" />
+                        <Building2 className="mr-2 h-3 w-3" />
                         <SelectValue placeholder="Select Hub" />
                       </SelectTrigger>
                       <SelectContent>
