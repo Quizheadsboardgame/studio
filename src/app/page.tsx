@@ -17,6 +17,7 @@ import {
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX } from 'lucide-react';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -57,8 +58,11 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlo
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { restoreProfessionalData } from '@/lib/restore-seeder';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
+const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
+const CURRENT_RESTORATION_VERSION = 2;
 
 const ALL_AVAILABLE_TABS = [
   { id: 'summary', label: 'Daily Summary', group: 'Overview' },
@@ -310,40 +314,55 @@ export default function DashboardPage() {
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Initial setup for new users & Auto-restoration logic
+  // Restoration and Initial setup logic
   useEffect(() => {
-    if (!isProfileLoading && user && allHubs.length === 0) {
-      const newProfileId = `hub-${user.uid}`;
-      const profileRef = doc(firestore, 'userProfiles', newProfileId);
-      
-      setDoc(profileRef, {
-        id: newProfileId,
-        name: isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`,
-        email: user.email,
-        members: { [user.uid]: 'owner' },
-        enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isDeactivated: false,
-      }, { merge: true });
-    } else if (!isProfileLoading && user && allHubs.length > 0) {
-      allHubs.forEach(hub => {
-        // Auto-Reactivate account on login
-        if (hub.email === user.email && hub.isDeactivated) {
-          updateDoc(doc(firestore, 'userProfiles', hub.id), {
-            isDeactivated: false,
-            updatedAt: new Date().toISOString()
-          });
-          toast({ title: 'Welcome Back!', description: 'Your account has been automatically reactivated.' });
-        }
-        
-        if (hub.email === user.email && (!hub.members || !hub.members[user.uid])) {
-          updateDoc(doc(firestore, 'userProfiles', hub.id), {
-            [`members.${user.uid}`]: 'owner',
-            updatedAt: new Date().toISOString()
-          });
-        }
-      });
+    if (!isProfileLoading && user && firestore) {
+      const isTargetEmail = user.email?.toLowerCase() === RESTORATION_TARGET;
+      const targetHubId = allHubs.find(h => h.email?.toLowerCase() === RESTORATION_TARGET)?.id || `hub-${user.uid}`;
+      const profileRef = doc(firestore, 'userProfiles', targetHubId);
+
+      const performRestoration = async () => {
+        toast({ title: 'Restoring Data...', description: 'Recovering professional site and cleaner data.' });
+        await restoreProfessionalData(firestore, targetHubId);
+        await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
+        toast({ title: 'Restoration Complete', description: 'Your original Lot 4 data has been recovered.' });
+      };
+
+      if (allHubs.length === 0) {
+        // Brand new user
+        setDoc(profileRef, {
+          id: targetHubId,
+          name: isTargetEmail ? "Excellerate Services - Lot 4" : (isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`),
+          email: user.email,
+          members: { [user.uid]: 'owner' },
+          enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isDeactivated: false,
+          restorationVersion: isTargetEmail ? CURRENT_RESTORATION_VERSION : 0
+        }, { merge: true }).then(() => {
+          if (isTargetEmail) performRestoration();
+        });
+      } else {
+        // Existing user check for restoration or reactivation
+        allHubs.forEach(hub => {
+          if (hub.email?.toLowerCase() === user.email?.toLowerCase()) {
+            // Auto-Reactivate
+            if (hub.isDeactivated) {
+              updateDoc(doc(firestore, 'userProfiles', hub.id), { isDeactivated: false, updatedAt: new Date().toISOString() });
+              toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
+            }
+            // Ensure owner membership
+            if (!hub.members || !hub.members[user.uid]) {
+              updateDoc(doc(firestore, 'userProfiles', hub.id), { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
+            }
+            // Professional Data Restoration check
+            if (isTargetEmail && (hub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
+              performRestoration();
+            }
+          }
+        });
+      }
     }
   }, [isProfileLoading, user, allHubs, firestore, isMasterUser, toast]);
 

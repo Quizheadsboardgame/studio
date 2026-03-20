@@ -199,4 +199,5 @@ export type UserProfile = {
   members: Record<string, string>; // uid -> role
   enabledTabs?: string[]; // List of tab IDs enabled for this hub
   isDeactivated?: boolean; // New field for temporary deactivation
+  restorationVersion?: number; // Flag to track professional data restoration
 };
