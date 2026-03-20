@@ -206,8 +206,8 @@ function AddLeaveForm({ cleaners, onAddLeave }: { cleaners: Cleaner[], onAddLeav
 }
 
 export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave, onDeleteLeave, onUpdateLeave }: LeaveCalendarTabProps) {
-  const [filterStartDate, setFilterStartDate] = useState<string>('');
-  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [filterEndDate, setFilterEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const { toast } = useToast();
   
   const cleanerStats = useMemo(() => {
@@ -279,7 +279,7 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
     const groupedAbsences = absences.reduce((acc, current) => {
         const key = `${current.cleanerId}-${current.date}`;
         if (!acc[key]) {
-            const cleanerShifts = schedule.filter(s => s.cleaner === current.cleanerName);
+            const cleanerShifts = schedule.filter(s => s.cleaner.toLowerCase().includes(current.cleanerName.toLowerCase()));
             
             // De-duplicate shifts to prevent display issues from duplicate schedule entries
             const uniqueShifts: ScheduleEntry[] = [];
@@ -408,6 +408,11 @@ export default function LeaveCalendarTab({ cleaners, leave, schedule, onAddLeave
                     onChange={(e) => setFilterEndDate(e.target.value)}
                     className="w-full sm:w-auto"
                 />
+                <Button variant="outline" size="sm" onClick={() => {
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    setFilterStartDate(today);
+                    setFilterEndDate(today);
+                }}>Today</Button>
             </div>
           </div>
         </CardHeader>
