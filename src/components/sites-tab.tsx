@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Site } from '@/lib/data';
-import { PlusCircle, Pencil, Check, X, Trash2, UserSearch, Star } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X, Trash2, UserSearch, Star, Lock } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
 
 interface SitesTabProps {
   sites: Site[];
@@ -32,6 +33,8 @@ interface SitesTabProps {
 }
 
 export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, onRemoveSite }: SitesTabProps) {
+  const { user } = useFirebase();
+  const isReadOnly = !!user?.isAnonymous;
   const [newSiteName, setNewSiteName] = useState('');
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
   const [editedSiteName, setEditedSiteName] = useState('');
@@ -95,8 +98,9 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
           onChange={(e) => setNewSiteName(e.target.value)}
           className="max-w-sm"
           onKeyDown={(e) => { if (e.key === 'Enter') handleAddClick(); }}
+          disabled={isReadOnly}
         />
-        <Button onClick={handleAddClick} size="sm">
+        <Button onClick={handleAddClick} size="sm" disabled={isReadOnly}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Site
         </Button>
@@ -147,7 +151,7 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                 <TableCell className="py-2 align-top">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="notes" className="border-b-0">
-                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline">
+                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline" disabled={isReadOnly && !site.notes}>
                           {site.notes ? 'View/Edit Notes' : 'Add Notes'}
                       </AccordionTrigger>
                       <AccordionContent>
@@ -156,13 +160,18 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                           value={site.notes || ''}
                           onChange={(e) => onNoteChange(site.id, e.target.value)}
                           className="w-full min-h-[60px] resize-y"
+                          disabled={isReadOnly}
                         />
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
                 </TableCell>
                 <TableCell className="align-top py-4">
-                   {site.contacts && site.contacts.length > 0 ? (
+                   {isReadOnly ? (
+                        <Button variant="outline" size="sm" className="w-full" disabled>
+                            <Lock className="mr-2 h-4 w-4" /> Locked
+                        </Button>
+                   ) : site.contacts && site.contacts.length > 0 ? (
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" size="sm" className="w-full">
@@ -207,12 +216,12 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                       </>
                     ) : (
                       <>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(site)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(site)} disabled={isReadOnly}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" disabled={isReadOnly}>
                               <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           </AlertDialogTrigger>

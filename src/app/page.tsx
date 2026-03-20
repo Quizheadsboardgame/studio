@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -26,7 +24,7 @@ import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
-import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +35,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import LoginPage from '@/components/login-page';
 
 
 export default function DashboardPage() {
@@ -309,13 +308,6 @@ export default function DashboardPage() {
       setOpenCollapsibles(prevOpen => [...prevOpen, activeGroup.group]);
     }
   }, [activeTab, menuGroups, openCollapsibles]);
-
-
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [isUserLoading, user, auth]);
 
   // Seeding effect
   useEffect(() => {
@@ -753,11 +745,22 @@ export default function DashboardPage() {
       deleteDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId));
   };
 
-
   const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading || goodNewsRecordsLoading;
   const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
+
+  if (isUserLoading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Skeleton className="h-96 w-96" />
+        </div>
+    );
+  }
+
+  if (!user) {
+      return <LoginPage />;
+  }
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -937,16 +940,3 @@ export default function DashboardPage() {
     </SidebarProvider>
   );
 }
-
-    
-
-    
-
-
-
-    
-
-
-    
-
-    
