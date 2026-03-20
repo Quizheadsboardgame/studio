@@ -1,709 +1,265 @@
-
 {
   "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user account or an organization's profile within the CleanOps Hub, acting as a container for their specific sites, cleaners, and schedules.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name associated with the user profile, such as a company name or the user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address for identifying the user profile.",
+          "format": "email"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
     "Site": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Site",
       "type": "object",
-      "description": "Represents a physical location or area that requires cleaning services within the CleanOps Hub application.",
+      "description": "Represents a physical location or area that requires cleaning services, managed by a specific user profile.",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Site entity."
+        },
         "name": {
           "type": "string",
-          "description": "The common name or identifier for the cleaning site, e.g., 'Anne Mclaren' or 'MRC Epidemiology Level 3'."
-        },
-        "siteCode": {
-          "type": "string",
-          "description": "The unique code for the site, e.g., 'UOC1'."
+          "description": "The name of the cleaning site (e.g., \"Anne Mclaren\", \"Cedar\")."
         },
         "status": {
           "type": "string",
-          "description": "The current operational status of the site, indicating client satisfaction or required actions. Possible values include: 'N/A', 'Client happy', 'Operations request', 'Client concerns', 'Under control', 'Site under action plan', 'Site requires action plan'."
+          "description": "The current operational status of the site, indicating client satisfaction or issues (e.g., \"Client happy\", \"Operations request\", \"Client concerns\", \"Site under action plan\")."
         },
-        "notes": {
+        "userProfileId": {
           "type": "string",
-          "description": "Optional notes or comments about the site."
+          "description": "Reference to the UserProfile that owns and manages this site. (Relationship: UserProfile 1:N Site)"
         },
-        "additionalCleaners": {
-          "type": "array",
-          "description": "A list of cleaners who have been trained at or previously cleaned the site.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "The name of the cleaner."
-              },
-              "role": {
-                "type": "string",
-                "description": "The cleaner's association with the site.",
-                "enum": [
-                  "Trained",
-                  "Previously Cleaned"
-                ]
-              }
-            },
-            "required": [
-              "name",
-              "role"
-            ]
-          }
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the site was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the site was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
+        "id",
         "name",
-        "status"
+        "status",
+        "userProfileId",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "Cleaner": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Cleaner",
       "type": "object",
-      "description": "Represents an individual cleaner managed within the CleanOps Hub application, including their profile, performance rating, and leave tracking.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The full name of the cleaner, e.g., 'Alasdair Strachan'."
-        },
-        "rating": {
-          "type": "string",
-          "description": "The current performance rating of the cleaner, based on feedback or operational assessment. Possible values include: 'N/A', 'Excellent feedback', 'Site satisfied', 'Slight improvement needed', 'Needs retraining', 'Under action plan', 'Operational concerns'."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Optional notes or comments about the cleaner."
-        },
-        "holidayAllowance": {
-          "type": "number",
-          "description": "The total number of holiday days the cleaner is entitled to per year."
-        },
-        "holidayTaken": {
-          "type": "number",
-          "description": "The number of holiday days the cleaner has taken so far."
-        },
-        "sickDaysTaken": {
-          "type": "number",
-          "description": "The total number of sick days taken by the cleaner."
-        },
-        "availabilityStatus": {
-          "type": "string",
-          "description": "The cleaner's availability for extra hours.",
-          "enum": [
-            "Available",
-            "Unavailable",
-            "Available for Specific Lots"
-          ]
-        },
-        "availableLots": {
-          "type": "array",
-          "description": "Which lots the cleaner is available to work in for extra hours.",
-          "items": {
-            "type": "number",
-            "enum": [
-              1,
-              3,
-              4
-            ]
-          }
-        },
-        "availabilityNotes": {
-          "type": "string",
-          "description": "Notes regarding the cleaner's availability."
-        }
-      },
-      "required": [
-        "name",
-        "rating",
-        "holidayAllowance",
-        "holidayTaken",
-        "sickDaysTaken"
-      ]
-    },
-    "Leave": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Leave",
-      "type": "object",
-      "description": "Represents a single day of absence (holiday or sickness) for a cleaner.",
-      "properties": {
-        "cleanerId": {
-          "type": "string",
-          "description": "The ID of the cleaner taking leave."
-        },
-        "cleanerName": {
-          "type": "string",
-          "description": "The name of the cleaner taking leave."
-        },
-        "type": {
-          "type": "string",
-          "enum": [
-            "holiday",
-            "sick"
-          ],
-          "description": "The type of leave."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date of the leave (YYYY-MM-DD)."
-        },
-        "coverAssignments": {
-          "type": "array",
-          "description": "A list of cover assignments for the leave day.",
-          "items": {
-            "$ref": "#/backend/entities/CoverAssignment"
-          }
-        }
-      },
-      "required": [
-        "cleanerId",
-        "cleanerName",
-        "type",
-        "date"
-      ]
-    },
-    "CoverAssignment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CoverAssignment",
-      "type": "object",
-      "description": "Represents the assignment of a cover cleaner to a specific shift.",
-      "properties": {
-        "site": {
-          "type": "string",
-          "description": "The site of the shift being covered."
-        },
-        "coverCleanerName": {
-          "type": "string",
-          "description": "The name of the cleaner providing cover."
-        }
-      },
-      "required": [
-        "site",
-        "coverCleanerName"
-      ]
-    },
-    "ActionPlanTask": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ActionPlanTask",
-      "type": "object",
-      "description": "A single task within an action plan.",
+      "description": "Represents an individual cleaner, including their personal details and performance rating, managed by a specific user profile.",
       "properties": {
         "id": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "dueDate": {
           "type": "string",
-          "format": "date"
+          "description": "Unique identifier for the Cleaner entity."
         },
-        "completed": {
-          "type": "boolean"
-        },
-        "beforeImageUrl": {
+        "name": {
           "type": "string",
-          "description": "URL of the 'before' image for the task."
+          "description": "The full name of the cleaner."
         },
-        "afterImageUrl": {
+        "performanceRating": {
           "type": "string",
-          "description": "URL of the 'after' image for the task."
+          "description": "The performance rating of the cleaner, based on feedback or operational assessment (e.g., \"Excellent feedback\", \"Site satisfied\", \"Needs retraining\")."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that manages this cleaner. (Relationship: UserProfile 1:N Cleaner)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the cleaner profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the cleaner profile was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
-        "description",
-        "dueDate",
-        "completed"
-      ]
-    },
-    "ActionPlan": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ActionPlan",
-      "type": "object",
-      "description": "An action plan for a site or a cleaner.",
-      "properties": {
-        "targetName": {
-          "type": "string"
-        },
-        "targetType": {
-          "type": "string",
-          "enum": [
-            "site",
-            "cleaner"
-          ]
-        },
-        "tasks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/ActionPlanTask"
-          }
-        },
-        "notes": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "targetName",
-        "targetType",
-        "tasks"
-      ]
-    },
-    "ScheduleEntry": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ScheduleEntry",
-      "type": "object",
-      "description": "Represents a single entry in the cleaning schedule.",
-      "properties": {
-        "site": {
-          "type": "string",
-          "description": "The name of the site being cleaned."
-        },
-        "cleaner": {
-          "type": "string",
-          "description": "The name of the cleaner assigned."
-        },
-        "start": {
-          "type": "string",
-          "description": "The start time of the shift."
-        },
-        "finish": {
-          "type": "string",
-          "description": "The finish time of the shift."
-        }
-      },
-      "required": [
-        "site",
-        "cleaner",
-        "start",
-        "finish"
-      ]
-    },
-    "Consumable": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Consumable",
-      "type": "object",
-      "description": "A consumable supply item for a site, including its name and ordering code.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the supply item."
-        },
-        "orderingCode": {
-          "type": "string",
-          "description": "The ordering code for the item."
-        }
-      },
-      "required": [
         "name",
-        "orderingCode"
+        "performanceRating",
+        "userProfileId",
+        "createdAt",
+        "updatedAt"
       ]
     },
-    "MonthlySupplyOrder": {
+    "CleaningScheduleEntry": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MonthlySupplyOrder",
+      "title": "CleaningScheduleEntry",
       "type": "object",
-      "description": "Represents the quantity of a consumable ordered for a specific site in a given month.",
+      "description": "Represents a single entry in the cleaning schedule, linking a specific site to a cleaner with designated start and end times for a user profile.",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CleaningScheduleEntry entity."
+        },
         "siteId": {
-          "type": "string"
-        },
-        "consumableId": {
-          "type": "string"
-        },
-        "month": {
-          "type": "number",
-          "description": "The month of the order (1-12)."
-        },
-        "year": {
-          "type": "number",
-          "description": "The year of the order."
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity ordered for the month."
-        }
-      },
-      "required": [
-        "siteId",
-        "consumableId",
-        "month",
-        "year",
-        "quantity"
-      ]
-    },
-     "MonthlyAudit": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Monthly Audit",
-      "type": "object",
-      "description": "Represents a site audit for a specific month.",
-      "properties": {
-        "siteId": {
-          "type": "string"
-        },
-        "month": {
-          "type": "number"
-        },
-        "year": {
-          "type": "number"
-        },
-        "status": {
           "type": "string",
-          "enum": [
-            "Not Booked",
-            "Emailed Client",
-            "Booked",
-            "Completed"
-          ],
-          "description": "The current status of the audit for the site."
+          "description": "Reference to the Site entity scheduled for cleaning. (Relationship: Site 1:N CleaningScheduleEntry)"
         },
-        "score": {
-          "type": "number"
-        },
-        "bookedDate": {
+        "cleanerId": {
           "type": "string",
-          "format": "date",
-          "description": "The date the audit is booked for or was completed on."
-        },
-        "bookedTime": {
-          "type": "string",
-          "description": "The time the audit is booked for."
-        },
-        "auditor": {
-            "type": "string",
-            "description": "The person assigned to conduct the audit.",
-            "enum": [
-                "Manager",
-                "Supervisor",
-                "Mobile Cleaner",
-                "Unassigned"
-            ]
-        }
-      },
-      "required": [
-        "siteId",
-        "month",
-        "year"
-      ]
-    },
-    "Appointment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Appointment",
-      "type": "object",
-      "description": "A general appointment or event in the diary.",
-      "properties": {
-        "title": {
-          "type": "string",
-          "description": "The title of the appointment."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date of the appointment (YYYY-MM-DD)."
-        },
-        "assignee": {
-            "type": "string",
-            "description": "The person this appointment is assigned to.",
-            "enum": [
-                "Manager",
-                "Supervisor",
-                "Mobile Cleaner"
-            ]
-        },
-        "site": {
-          "type": "string",
-          "description": "The site associated with the appointment."
+          "description": "Reference to the Cleaner entity assigned to perform the cleaning task at the site. (Relationship: Cleaner 1:N CleaningScheduleEntry)"
         },
         "startTime": {
           "type": "string",
-          "description": "The start time of the appointment."
+          "description": "The scheduled start time for the cleaning task (e.g., \"23:30\")."
         },
         "endTime": {
           "type": "string",
-          "description": "The end time of the appointment."
+          "description": "The scheduled end time for the cleaning task (e.g., \"01:45\")."
         },
-        "notes": {
+        "userProfileId": {
           "type": "string",
-          "description": "Optional notes for the appointment."
+          "description": "Reference to the UserProfile that owns and manages this schedule entry. (Relationship: UserProfile 1:N CleaningScheduleEntry)"
         },
-        "recurrence": {
+        "createdAt": {
           "type": "string",
-          "description": "The recurrence frequency of the appointment.",
-          "enum": [
-            "none",
-            "daily",
-            "weekly",
-            "monthly"
-          ]
+          "description": "Timestamp indicating when the schedule entry was created.",
+          "format": "date-time"
         },
-        "recurrenceEndDate": {
+        "updatedAt": {
           "type": "string",
-          "format": "date",
-          "description": "The end date for the recurring appointment (YYYY-MM-DD)."
+          "description": "Timestamp indicating when the schedule entry was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
-        "title",
-        "date",
-        "assignee"
-      ]
-    },
-    "Task": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Task",
-      "type": "object",
-      "description": "A single to-do item or task.",
-      "properties": {
-        "description": {
-          "type": "string",
-          "description": "The description of the task."
-        },
-        "dueDate": {
-          "type": "string",
-          "format": "date",
-          "description": "The due date of the task (YYYY-MM-DD)."
-        },
-        "completed": {
-          "type": "boolean",
-          "description": "Whether the task is completed or not."
-        },
-        "assignee": {
-          "type": "string",
-          "description": "The person this task is assigned to.",
-          "enum": [
-            "Manager",
-            "Supervisor",
-            "Mobile Cleaner",
-            "Unassigned"
-          ]
-        },
-        "site": {
-          "type": "string",
-          "description": "The site associated with the task."
-        }
-      },
-      "required": [
-        "description",
-        "completed"
-      ]
-    },
-    "ConversationRecord": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ConversationRecord",
-      "type": "object",
-      "description": "Represents a record of a conversation held with a cleaner.",
-      "properties": {
-        "cleanerId": {
-          "type": "string",
-          "description": "The ID of the cleaner involved in the conversation."
-        },
-        "cleanerName": {
-          "type": "string",
-          "description": "The name of the cleaner."
-        },
-        "siteId": {
-          "type": "string",
-          "description": "The ID of the site where the conversation is relevant."
-        },
-        "siteName": {
-          "type": "string",
-          "description": "The name of the site."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date the conversation took place (YYYY-MM-DD)."
-        },
-        "issue": {
-          "type": "string",
-          "description": "A summary of the issue discussed."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Detailed notes about the conversation."
-        },
-        "followUpRequired": {
-          "type": "boolean",
-          "description": "Whether a follow-up meeting is required."
-        }
-      },
-      "required": [
+        "id",
+        "siteId",
         "cleanerId",
-        "cleanerName",
-        "date",
-        "issue",
-        "followUpRequired"
-      ]
-    },
-    "GoodNewsRecord": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GoodNewsRecord",
-      "type": "object",
-      "description": "Represents a record of positive feedback or exceptional performance.",
-      "properties": {
-        "personName": {
-          "type": "string",
-          "description": "The name of the person (cleaner or client contact) receiving praise."
-        },
-        "personType": {
-          "type": "string",
-          "description": "The type of person.",
-          "enum": ["Cleaner", "Client"]
-        },
-        "siteName": {
-          "type": "string",
-          "description": "The name of the site related to the event."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date the event occurred (YYYY-MM-DD)."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the positive event or feedback."
-        },
-        "acknowledged": {
-          "type": "boolean",
-          "description": "Whether the person has been formally acknowledged."
-        },
-        "acknowledgementNotes": {
-          "type": "string",
-          "description": "Notes on how the person was acknowledged (e.g., 'Voucher given')."
-        }
-      },
-      "required": [
-        "personName",
-        "personType",
-        "date",
-        "description",
-        "acknowledged"
+        "startTime",
+        "endTime",
+        "userProfileId",
+        "createdAt",
+        "updatedAt"
       ]
     }
   },
   "auth": {
-    "providers": []
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/sites/{siteId}",
+        "path": "/userProfiles/{userProfileId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Top-level collection for user or organization profiles. Each document represents a distinct operational hub. It includes a `members` map for collaborative authorization, where keys are Firebase UIDs and values are roles (e.g., 'owner', 'admin', 'viewer'). The document ID `{userProfileId}` is a unique, generated identifier for the profile.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier for a specific UserProfile document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/userProfiles/{userProfileId}/sites/{siteId}",
         "definition": {
           "entityName": "Site",
           "schema": {
             "$ref": "#/backend/entities/Site"
           },
-          "description": "Top-level collection storing details about each physical cleaning site."
+          "description": "Subcollection storing physical cleaning sites, each belonging to a specific UserProfile. Documents in this collection include the denormalized `userProfileId` and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the parent UserProfile."
+            },
+            {
+              "name": "siteId",
+              "description": "The unique identifier for a specific Site document within a UserProfile."
+            }
+          ]
         }
       },
       {
-        "path": "/cleaners/{cleanerId}",
+        "path": "/userProfiles/{userProfileId}/cleaners/{cleanerId}",
         "definition": {
           "entityName": "Cleaner",
           "schema": {
             "$ref": "#/backend/entities/Cleaner"
           },
-          "description": "Top-level collection storing profiles and performance ratings for each cleaner."
+          "description": "Subcollection storing cleaner profiles, each managed by a specific UserProfile. Documents in this collection include the denormalized `userProfileId` and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the parent UserProfile."
+            },
+            {
+              "name": "cleanerId",
+              "description": "The unique identifier for a specific Cleaner document within a UserProfile."
+            }
+          ]
         }
       },
       {
-        "path": "/actionPlans/{actionPlanId}",
+        "path": "/userProfiles/{userProfileId}/cleaningScheduleEntries/{scheduleEntryId}",
         "definition": {
-          "entityName": "ActionPlan",
+          "entityName": "CleaningScheduleEntry",
           "schema": {
-            "$ref": "#/backend/entities/ActionPlan"
+            "$ref": "#/backend/entities/CleaningScheduleEntry"
           },
-          "description": "Collection storing action plans for sites and cleaners."
-        }
-      },
-      {
-        "path": "/leave/{leaveId}",
-        "definition": {
-          "entityName": "Leave",
-          "schema": {
-            "$ref": "#/backend/entities/Leave"
-          },
-          "description": "Collection storing all leave records (holiday and sickness) for cleaners."
-        }
-      },
-      {
-        "path": "/schedule/{scheduleEntryId}",
-        "definition": {
-          "entityName": "ScheduleEntry",
-          "schema": {
-            "$ref": "#/backend/entities/ScheduleEntry"
-          },
-          "description": "Top-level collection storing the cleaning schedule."
-        }
-      },
-      {
-        "path": "/sites/{siteId}/consumables/{consumableId}",
-        "definition": {
-          "entityName": "Consumable",
-          "schema": {
-            "$ref": "#/backend/entities/Consumable"
-          },
-          "description": "Sub-collection storing consumable items specific to a site."
-        }
-      },
-      {
-        "path": "/supplyOrders/{orderId}",
-        "definition": {
-          "entityName": "MonthlySupplyOrder",
-          "schema": {
-            "$ref": "#/backend/entities/MonthlySupplyOrder"
-          },
-          "description": "Collection storing monthly supply order records for all sites. The document ID is a composite key: {siteId}-{consumableId}-{yyyy}-{MM}."
-        }
-      },
-      {
-        "path": "/monthlyAudits/{auditId}",
-        "definition": {
-          "entityName": "MonthlyAudit",
-          "schema": {
-            "$ref": "#/backend/entities/MonthlyAudit"
-          },
-          "description": "Collection storing monthly audit records for all sites. The document ID is a composite key: {siteId}-{yyyy}-{MM}."
-        }
-      },
-      {
-        "path": "/appointments/{appointmentId}",
-        "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Collection storing general diary appointments."
-        }
-      },
-      {
-        "path": "/tasks/{taskId}",
-        "definition": {
-          "entityName": "Task",
-          "schema": {
-            "$ref": "#/backend/entities/Task"
-          },
-          "description": "Collection storing general to-do tasks."
-        }
-      },
-      {
-        "path": "/conversationRecords/{recordId}",
-        "definition": {
-          "entityName": "ConversationRecord",
-          "schema": {
-            "$ref": "#/backend/entities/ConversationRecord"
-          },
-          "description": "Collection storing records of conversations with cleaners."
-        }
-      },
-      {
-        "path": "/goodNewsRecords/{recordId}",
-        "definition": {
-          "entityName": "GoodNewsRecord",
-          "schema": {
-            "$ref": "#/backend/entities/GoodNewsRecord"
-          },
-          "description": "Collection storing records of positive feedback and exceptional performance."
+          "description": "Subcollection storing individual entries in the cleaning schedule, each belonging to a specific UserProfile. Documents in this collection include the denormalized `userProfileId`, `siteId`, `cleanerId`, and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the parent UserProfile."
+            },
+            {
+              "name": "scheduleEntryId",
+              "description": "The unique identifier for a specific CleaningScheduleEntry document within a UserProfile."
+            }
+          ]
         }
       }
-    ]
+    ],
+    "reasoning": "The recommended Firestore structure is designed to support a multi-tenant application where each 'UserProfile' acts as an independent operational hub, owning its own sites, cleaners, and schedules. The core strategy hinges on structural segregation and authorization independence through denormalization.\n\n1.  **Authorization Independence (CRITICAL):** To eliminate the need for `get()` calls in security rules, which break atomic operations and complicate debugging, the authorization context (specifically, the `members` map from the `UserProfile`) is denormalized into all subcollection documents (`Site`, `Cleaner`, `CleaningScheduleEntry`). This means each site, cleaner, and schedule entry document will contain a copy of the `members` map from its owning UserProfile. This allows security rules to evaluate permissions directly on the document being accessed, ensuring atomic writes and simpler, more predictable rule evaluation. A Cloud Function would be responsible for updating these denormalized `members` maps in subcollection documents when the parent `UserProfile`'s `members` change.\n\n2.  **Structural Segregation (Homogeneous Security Posture):** All entities belonging to a specific UserProfile (Sites, Cleaners, Cleaning Schedule Entries) are grouped under their respective `userProfileId` in a hierarchical path (e.g., `/userProfiles/{userProfileId}/sites/{siteId}`). This ensures that all documents within a given subcollection share the same security requirements tied to their parent `UserProfile`'s membership.\n\n3.  **Access Modeling & QAPs (Queries as Permissions):**\n    *   **UserProfiles:** The `/userProfiles/{userProfileId}` collection uses a 'membership map' (`members: { [uid]: 'role' }`) within each `UserProfile` document itself. This allows multiple Firebase authenticated users (`request.auth.uid`) to be associated with and manage a single `UserProfile`. To list profiles a user has access to, a query like `db.collection('userProfiles').where('members.' + auth.uid, 'exists')` can be used. This directly enforces that only profiles where the user is a member are returned, satisfying QAPs for `list` operations on the top-level entity.\n    *   **Subcollections (Sites, Cleaners, CleaningScheduleEntries):** For subcollections like `/userProfiles/{userProfileId}/sites/{siteId}`, the `userProfileId` in the path and the denormalized `members` map in each document facilitate secure and efficient `list` operations. For example, to list all sites for a specific `userProfileId` that the authenticated user has access to, a query would look like `db.collection('userProfiles').doc(userProfileId).collection('sites').where('members.' + auth.uid, 'in', ['owner', 'admin', 'viewer'])`. This combination of path-based scoping and denormalized permissions ensures secure `list` queries without complex rule dependencies or inefficient cross-document reads.\n\n4.  **Data Clarity and Predictability:** Consistent path naming (`userProfiles`, `{userProfileId}`, `sites`, etc.) and the explicit `userProfileId` field within child entities (which aligns with the path structure) enhance clarity. The `status` field in `Site` and `performanceRating` in `Cleaner` explicitly model state, rather than inferring it, simplifying data interpretation and rule writing.\n\nThis design prioritizes robust security, simplified rule sets, and efficient querying for a multi-tenant application, while explicitly addressing the needs for authorization independence and QAPs."
   }
 }

@@ -1,9 +1,153 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // wide open rules for a blank canvas development experience
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * CleanOps Hub Security Rules
+     * 
+     * Core Philosophy: 
+     * This ruleset implements a multi-tenant authorization model where each 'UserProfile' 
+     * acts as an isolated operational hub. Access is governed by a membership map 
+     * (members: { [uid]: role }) stored directly on the profile and denormalized into 
+     * child documents.
+     * 
+     * Data Structure: 
+     * The hierarchy is strictly organized under /userProfiles/{userProfileId}. 
+     * All operational data (Sites, Cleaners, Schedules) are subcollections of a specific 
+     * UserProfile to ensure structural segregation.
+     * 
+     * Key Security Decisions:
+     * 1. Authorization Independence: To optimize performance and ensure atomic 
+     *    operations, the 'members' map is denormalized from the UserProfile into every 
+     *    site, cleaner, and schedule entry. This allows rules to check permissions 
+     *    without cross-document lookups (get() calls) for single-document access.
+     * 2. Role-Based Access: Permissions are differentiated by roles within the 
+     *    membership map (e.g., 'owner', 'admin', 'viewer').
+     * 3. Relational Integrity: Rules strictly enforce that any document created within 
+     *    a userProfile subcollection must contain a 'userProfileId' field matching 
+     *     the parent path ID.
+     * 4. Secure Listing: List operations are secured by verifying the requester's 
+     *    membership in the parent UserProfile, ensuring users can only query 
+     *    data within hubs they belong to.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** @description Checks if the request is from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the user is a member of the provided document data's members map. */
+    function isMember(data) {
+      return isSignedIn() && data.members.keys().hasAny([request.auth.uid]);
+    }
+
+    /** @description Checks if the user has a specific role in the document's members map. */
+    function hasRole(data, role) {
+      return isSignedIn() && data.members[request.auth.uid] == role;
+    }
+
+    /** @description Checks if the user is an 'owner' or 'admin'. */
+    function isAtLeastAdmin(data) {
+      return isSignedIn() && (data.members[request.auth.uid] == 'owner' || data.members[request.auth.uid] == 'admin');
+    }
+
+    /** @description Helper for destructive operations that require both ownership and existence. */
+    function isExistingOwner(data) {
+      return resource != null && hasRole(data, 'owner');
+    }
+
+    /** @description Fetches the parent UserProfile document to check membership for list operations. */
+    function getParentProfile(userProfileId) {
+      return get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the top-level UserProfile documents.
+     * @path /userProfiles/{userProfileId}
+     * @allow (create) User creates their own profile and sets themselves as 'owner'.
+     * @deny (update) A 'viewer' attempts to modify the profile's name.
+     * @principle Uses a membership map to support multi-user collaboration on a single profile hub.
+     */
+    match /userProfiles/{userProfileId} {
+      allow get: if isMember(resource.data);
+      allow list: if isSignedIn() && resource.data.members[request.auth.uid] != null;
+      
+      allow create: if isSignedIn() 
+        && request.resource.data.id == userProfileId
+        && request.resource.data.members[request.auth.uid] == 'owner';
+      
+      allow update: if resource != null && isAtLeastAdmin(resource.data);
+      allow delete: if isExistingOwner(resource.data);
+    }
+
+    /**
+     * @description Rules for Sites managed under a UserProfile.
+     * @path /userProfiles/{userProfileId}/sites/{siteId}
+     * @allow (get) A member of the profile hub reads a site document.
+     * @deny (create) An authenticated user attempts to create a site in a hub they don't belong to.
+     * @principle Enforces path-based scoping and validates denormalized membership for fast authorization.
+     */
+    match /userProfiles/{userProfileId}/sites/{siteId} {
+      allow get: if isMember(resource.data);
+      allow list: if isSignedIn() && request.auth.uid in getParentProfile(userProfileId).members;
+
+      allow create: if isSignedIn() 
+        && request.resource.data.userProfileId == userProfileId
+        && isAtLeastAdmin(getParentProfile(userProfileId));
+      
+      allow update: if resource != null 
+        && isAtLeastAdmin(resource.data)
+        && request.resource.data.userProfileId == resource.data.userProfileId;
+      
+      allow delete: if resource != null && isAtLeastAdmin(resource.data);
+    }
+
+    /**
+     * @description Rules for Cleaners managed under a UserProfile.
+     * @path /userProfiles/{userProfileId}/cleaners/{cleanerId}
+     * @allow (update) An 'admin' updates a cleaner's performance rating.
+     * @deny (delete) A 'viewer' attempts to delete a cleaner record.
+     * @principle Ensures that only authorized hub members can manage cleaner staff data.
+     */
+    match /userProfiles/{userProfileId}/cleaners/{cleanerId} {
+      allow get: if isMember(resource.data);
+      allow list: if isSignedIn() && request.auth.uid in getParentProfile(userProfileId).members;
+
+      allow create: if isSignedIn() 
+        && request.resource.data.userProfileId == userProfileId
+        && isAtLeastAdmin(getParentProfile(userProfileId));
+      
+      allow update: if resource != null 
+        && isAtLeastAdmin(resource.data)
+        && request.resource.data.userProfileId == resource.data.userProfileId;
+      
+      allow delete: if resource != null && isAtLeastAdmin(resource.data);
+    }
+
+    /**
+     * @description Rules for Cleaning Schedule Entries.
+     * @path /userProfiles/{userProfileId}/cleaningScheduleEntries/{scheduleEntryId}
+     * @allow (list) A profile member retrieves all scheduled cleanings for their hub.
+     * @deny (create) User provides a userProfileId in the body that differs from the URL path.
+     * @principle Maintains relational integrity between the schedule and its parent organizational hub.
+     */
+    match /userProfiles/{userProfileId}/cleaningScheduleEntries/{scheduleEntryId} {
+      allow get: if isMember(resource.data);
+      allow list: if isSignedIn() && request.auth.uid in getParentProfile(userProfileId).members;
+
+      allow create: if isSignedIn() 
+        && request.resource.data.userProfileId == userProfileId
+        && isAtLeastAdmin(getParentProfile(userProfileId));
+      
+      allow update: if resource != null 
+        && isAtLeastAdmin(resource.data)
+        && request.resource.data.userProfileId == resource.data.userProfileId;
+      
+      allow delete: if resource != null && isAtLeastAdmin(resource.data);
     }
   }
 }
