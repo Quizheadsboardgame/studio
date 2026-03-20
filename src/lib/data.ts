@@ -1,5 +1,6 @@
 
 
+
 export type SiteStatus =
   | 'Gold Star Site'
   | 'Client happy'
@@ -20,13 +21,6 @@ export const siteStatuses: SiteStatus[] = [
 export type AuditStatus = 'Not Booked' | 'Emailed Client' | 'Booked' | 'Completed';
 export const auditStatuses: AuditStatus[] = ['Not Booked', 'Emailed Client', 'Booked', 'Completed'];
 
-export type Contact = {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-};
-
 export type AdditionalCleaner = {
   name: string;
   role: 'Trained' | 'Previously Cleaned';
@@ -38,11 +32,10 @@ export type Site = {
   siteCode?: string;
   status: SiteStatus;
   notes?: string;
-  contacts?: Contact[];
   additionalCleaners?: AdditionalCleaner[];
 };
 
-const clientData: { [key: string]: { siteCode: string; contacts: Omit<Contact, 'id'>[] } } = {
+const clientData: { [key: string]: { siteCode: string; contacts: Omit<{ id: string; name: string; phone?: string; email?: string; }, 'id'>[] } } = {
   "ACCI LEVEL 6": { siteCode: "UOC117", contacts: [{ name: "RHODA KUC", phone: "62564", email: "rek22@medschl.cam.ac.uk" }] },
   "ANNE MCLAREN": { siteCode: "UOC1", contacts: [{ name: "SALLY-ANNE THOMAS", phone: "01223 336762", email: "sat55@cam.ac.uk" }] },
   "BARTON HOUSE": { siteCode: "UOC119", contacts: [{ name: "CHLOE CALEY LIGHT", phone: "", email: "Chloe.caley-Light@bioresource.nihr.ac.uk" }] },
@@ -96,21 +89,15 @@ const allSiteNames = [
     "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER", "X RAY BLOCK RADIOLOGY LEVEL 5"
 ];
 
-let contactIdCounter = 0;
 export const initialSites: Omit<Site, 'id'>[] = [...new Set(allSiteNames)]
     .sort((a, b) => a.localeCompare(b))
     .map(name => {
         const details = clientData[name];
-        const contactsWithIds = details?.contacts.map(contact => ({
-            ...contact,
-            id: `contact-${++contactIdCounter}`
-        })) || [];
         return {
             name,
             siteCode: details?.siteCode || '',
             status: 'No Concerns' as SiteStatus,
             notes: '',
-            contacts: contactsWithIds,
         };
     });
 

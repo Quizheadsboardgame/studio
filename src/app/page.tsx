@@ -25,7 +25,6 @@ import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
-import UserAuthStatus from '@/components/user-auth-status';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,47 +36,46 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import LoginPage from '@/components/login-page';
 
 
 export default function DashboardPage() {
-  const { firestore, auth, user, isUserLoading } = useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
   
   // --- DATA FETCHING ---
-  const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
+  const sitesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'sites') : null, [firestore]);
   const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
 
-  const cleanersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'cleaners') : null, [firestore, user]);
+  const cleanersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'cleaners') : null, [firestore]);
   const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
 
-  const actionPlansCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
+  const actionPlansCollection = useMemoFirebase(() => firestore ? collection(firestore, 'actionPlans') : null, [firestore]);
   const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
   
-  const leaveCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'leave') : null, [firestore, user]);
+  const leaveCollection = useMemoFirebase(() => firestore ? collection(firestore, 'leave') : null, [firestore]);
   const { data: leave, isLoading: leaveLoading } = useCollection<Leave>(leaveCollection);
 
-  const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
+  const scheduleCollection = useMemoFirebase(() => firestore ? collection(firestore, 'schedule') : null, [firestore]);
   const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
   
-  const supplyOrdersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplyOrders') : null, [firestore, user]);
+  const supplyOrdersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'supplyOrders') : null, [firestore]);
   const { data: supplyOrders, isLoading: supplyOrdersLoading } = useCollection<MonthlySupplyOrder>(supplyOrdersCollection);
   
-  const monthlyAuditsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'monthlyAudits') : null, [firestore, user]);
+  const monthlyAuditsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'monthlyAudits') : null, [firestore]);
   const { data: monthlyAudits, isLoading: monthlyAuditsLoading } = useCollection<MonthlyAudit>(monthlyAuditsCollection);
   
-  const appointmentsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'appointments') : null, [firestore, user]);
+  const appointmentsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'appointments') : null, [firestore]);
   const { data: appointments, isLoading: appointmentsLoading } = useCollection<Appointment>(appointmentsCollection);
 
-  const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
+  const tasksCollection = useMemoFirebase(() => firestore ? collection(firestore, 'tasks') : null, [firestore]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
   
-  const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
+  const conversationRecordsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'conversationRecords') : null, [firestore]);
   const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
 
-  const goodNewsRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'goodNewsRecords') : null, [firestore, user]);
+  const goodNewsRecordsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'goodNewsRecords') : null, [firestore]);
   const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
 
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
@@ -130,7 +128,7 @@ export default function DashboardPage() {
       const completedSiteIds = new Set(auditsForCurrentMonth.filter(a => a.status === 'Completed').map(a => a.siteId));
       return sites.length - completedSiteIds.size;
   }, [monthlyAudits, sites]);
-
+  
   const menuGroups = useMemo(() => [
     {
       group: 'Overview',
@@ -215,7 +213,7 @@ export default function DashboardPage() {
       const fallbackItem = allTabs.find(t => t.value === activeTab);
       return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
   }, [activeTab, menuGroups, allTabs]);
-  
+
   const primaryColorStyle = useMemo(() => {
       if (!activeTabInfo) return {};
       const HSL_DARK_FG = '0 0% 10%';
@@ -234,8 +232,7 @@ export default function DashboardPage() {
 
       return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
   }, [activeTabInfo]);
-
-
+  
   // --- DERIVED DATA & NOTIFICATION COUNTS ---
   const calculatedSites = useMemo(() => {
     if (!sites || !actionPlans || !monthlyAudits) {
@@ -347,7 +344,7 @@ export default function DashboardPage() {
 
   // Seeding effect
   useEffect(() => {
-    if (!firestore || !user) return;
+    if (!firestore) return;
 
     const seedDatabase = async () => {
       const SEED_VERSION = 'db_seeded_with_availability_v1';
@@ -439,7 +436,6 @@ export default function DashboardPage() {
                 if (initialSiteData) {
                     batch.update(docSnap.ref, {
                         siteCode: initialSiteData.siteCode,
-                        contacts: initialSiteData.contacts,
                     });
                     updatesMade = true;
                 }
@@ -479,11 +475,11 @@ export default function DashboardPage() {
 
     seedDatabase();
 
-  }, [firestore, user, toast]);
+  }, [firestore, toast]);
 
   // Annual holiday reset effect
   useEffect(() => {
-    if (!firestore || !user || !cleaners || cleaners.length === 0) return;
+    if (!firestore || !cleaners || cleaners.length === 0) return;
 
     const performAnnualHolidayReset = async () => {
       const today = new Date();
@@ -521,16 +517,16 @@ export default function DashboardPage() {
     };
     
     performAnnualHolidayReset();
-  }, [firestore, user, cleaners, toast]);
+  }, [firestore, cleaners, toast]);
 
   // --- CRUD HANDLERS ---
   const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), updatedData);
   };
 
   const handleSetMonthlyAudit = (siteId: string, date: Date, auditData: Partial<Omit<MonthlyAudit, 'id' | 'siteId' | 'month' | 'year'>>) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${format(date, 'yyyy-MM')}`;
@@ -547,22 +543,22 @@ export default function DashboardPage() {
   };
 
   const handleAddSite = (siteName: string) => {
-    if (siteName.trim() === '' || !sitesCollection || user?.isAnonymous) return;
+    if (siteName.trim() === '' || !sitesCollection) return;
     addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'No Concerns', notes: '' });
   };
 
   const handleRemoveSite = (siteId: string) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'sites', siteId));
   };
   
   const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), updatedData);
   };
 
   const handleAddCleaner = (cleanerName: string) => {
-    if (cleanerName.trim() === '' || !cleanersCollection || user?.isAnonymous) return;
+    if (cleanerName.trim() === '' || !cleanersCollection) return;
     const newCleanerData = initialCleaners.find(c => c.name === cleanerName) || {
       name: cleanerName,
       rating: 'No Concerns',
@@ -578,22 +574,22 @@ export default function DashboardPage() {
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId));
   };
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
-    if (!firestore || !actionPlansCollection || user?.isAnonymous) return;
+    if (!firestore || !actionPlansCollection) return;
     setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
 
   const handleRemoveActionPlan = (planId: string) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'actionPlans', planId));
   };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
-    if (!leaveCollection || !firestore || user?.isAnonymous) return;
+    if (!leaveCollection || !firestore) return;
     addDocumentNonBlocking(leaveCollection, { ...newLeaveData, coverAssignments: [] });
 
     if (!cleaners) {
@@ -613,7 +609,7 @@ export default function DashboardPage() {
   };
 
   const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
-    if (!firestore || !leave || !cleaners || user?.isAnonymous) return;
+    if (!firestore || !leave || !cleaners) return;
 
     const originalLeave = leave.find(l => l.id === leaveId);
     if (!originalLeave) return;
@@ -648,7 +644,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteLeave = (leaveToDelete: Leave) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
 
     if (!cleaners) {
@@ -668,22 +664,22 @@ export default function DashboardPage() {
   };
   
   const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
-    if (!scheduleCollection || user?.isAnonymous) return;
+    if (!scheduleCollection) return;
     addDocumentNonBlocking(scheduleCollection, newEntry);
   };
 
   const handleUpdateScheduleEntry = (entryId: string, updatedEntry: Partial<Omit<ScheduleEntry, 'id'>>) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       updateDocumentNonBlocking(doc(firestore, 'schedule', entryId), updatedEntry);
   };
 
   const handleRemoveScheduleEntry = (entryId: string) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
   };
   
   const handleSetSupplyOrder = (siteId: string, consumableId: string, date: Date, quantity: number) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${consumableId}-${format(date, 'yyyy-MM')}`;
@@ -704,99 +700,87 @@ export default function DashboardPage() {
   };
 
   const handleAddConsumable = (siteId: string, consumableData: Omit<Consumable, 'id'>) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     const consumablesCollection = collection(firestore, 'sites', siteId, 'consumables');
     addDocumentNonBlocking(consumablesCollection, consumableData);
   };
 
   const handleEditConsumable = (siteId: string, consumableId: string, consumableData: Partial<Omit<Consumable, 'id'>>) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
     updateDocumentNonBlocking(consumableDocRef, consumableData);
   };
 
   const handleRemoveConsumable = (siteId: string, consumableId: string) => {
-    if (!firestore || user?.isAnonymous) return;
+    if (!firestore) return;
     const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
     deleteDocumentNonBlocking(consumableDocRef);
   };
   
   const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
-    if (!appointmentsCollection || user?.isAnonymous) return;
+    if (!appointmentsCollection) return;
     addDocumentNonBlocking(appointmentsCollection, newAppointment);
   };
 
   const handleUpdateAppointment = (appointmentId: string, updatedData: Partial<Omit<Appointment, 'id'>>) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       updateDocumentNonBlocking(doc(firestore, 'appointments', appointmentId), updatedData);
   };
 
   const handleRemoveAppointment = (appointmentId: string) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'appointments', appointmentId));
   };
   
   const handleAddTask = (newTaskData: Omit<Task, 'id' | 'completed'>) => {
-    if (!tasksCollection || user?.isAnonymous) return;
+    if (!tasksCollection) return;
     addDocumentNonBlocking(tasksCollection, { ...newTaskData, completed: false });
   };
 
   const handleUpdateTask = (taskId: string, updatedData: Partial<Omit<Task, 'id'>>) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       updateDocumentNonBlocking(doc(firestore, 'tasks', taskId), updatedData);
   };
 
   const handleRemoveTask = (taskId: string) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'tasks', taskId));
   };
 
   const handleAddConversationRecord = (newRecordData: Omit<ConversationRecord, 'id'>) => {
-    if (!conversationRecordsCollection || user?.isAnonymous) return;
+    if (!conversationRecordsCollection) return;
     addDocumentNonBlocking(conversationRecordsCollection, newRecordData);
   };
 
   const handleUpdateConversationRecord = (recordId: string, updatedData: Partial<Omit<ConversationRecord, 'id'>>) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       updateDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId), updatedData);
   };
 
   const handleRemoveConversationRecord = (recordId: string) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId));
   };
 
   const handleAddGoodNewsRecord = (newRecordData: Omit<GoodNewsRecord, 'id'>) => {
-    if (!goodNewsRecordsCollection || user?.isAnonymous) return;
+    if (!goodNewsRecordsCollection) return;
     addDocumentNonBlocking(goodNewsRecordsCollection, newRecordData);
   };
 
   const handleUpdateGoodNewsRecord = (recordId: string, updatedData: Partial<Omit<GoodNewsRecord, 'id'>>) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       updateDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId), updatedData);
   };
 
   const handleRemoveGoodNewsRecord = (recordId: string) => {
-      if (!firestore || user?.isAnonymous) return;
+      if (!firestore) return;
       deleteDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId));
   };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading || goodNewsRecordsLoading;
+  const isLoading = sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading || goodNewsRecordsLoading;
   const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
-
-  if (isUserLoading) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-            <Skeleton className="h-96 w-96" />
-        </div>
-    );
-  }
-
-  if (!user) {
-      return <LoginPage />;
-  }
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -940,7 +924,6 @@ export default function DashboardPage() {
                     {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
                     <h2 className="font-semibold text-lg">{activeTabInfo?.label}</h2>
                 </div>
-                <UserAuthStatus />
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
                 {isLoading ? (

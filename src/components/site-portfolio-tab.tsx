@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Site, Cleaner, ScheduleEntry, ActionPlan, MonthlyAudit, Task, Appointment, AdditionalCleaner, Contact } from '@/lib/data';
+import type { Site, Cleaner, ScheduleEntry, ActionPlan, MonthlyAudit, Task, Appointment, AdditionalCleaner } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -11,129 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { User, Users, Star, PlusCircle, Trash2, UserSearch, Pencil, Check, X } from 'lucide-react';
+import { User, Users, Star, PlusCircle, Trash2, Pencil, Check, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { AppointmentDialog } from './appointment-dialog';
 
-interface ManageContactsDialogProps {
-  site: Site;
-  onUpdateSite: (siteId: string, data: Partial<Omit<Site, 'id'>>) => void;
-  children: React.ReactNode;
-}
-
-function ManageContactsDialog({ site, onUpdateSite, children }: ManageContactsDialogProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [editingContactId, setEditingContactId] = useState<string | null>(null);
-    const [contactName, setContactName] = useState('');
-    const [contactEmail, setContactEmail] = useState('');
-    const [contactPhone, setContactPhone] = useState('');
-    const { toast } = useToast();
-
-    const startEditing = (contact: Contact) => {
-        setEditingContactId(contact.id);
-        setContactName(contact.name);
-        setContactEmail(contact.email || '');
-        setContactPhone(contact.phone || '');
-    };
-
-    const cancelEditing = () => {
-        setEditingContactId(null);
-        setContactName('');
-        setContactEmail('');
-        setContactPhone('');
-    };
-
-    const handleSave = () => {
-        if (!contactName.trim()) {
-            toast({ variant: "destructive", title: "Name is required" });
-            return;
-        }
-
-        const currentContacts = site.contacts || [];
-        let updatedContacts: Contact[];
-
-        if (editingContactId) {
-            updatedContacts = currentContacts.map(c => 
-                c.id === editingContactId 
-                ? { ...c, name: contactName, email: contactEmail, phone: contactPhone } 
-                : c
-            );
-        } else {
-            updatedContacts = [
-                ...currentContacts, 
-                { id: `contact-${Date.now()}`, name: contactName, email: contactEmail, phone: contactPhone }
-            ];
-        }
-
-        onUpdateSite(site.id, { contacts: updatedContacts });
-        cancelEditing();
-    };
-    
-    const handleRemove = (contactId: string) => {
-        const updatedContacts = (site.contacts || []).filter(c => c.id !== contactId);
-        onUpdateSite(site.id, { contacts: updatedContacts });
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle>Manage Contacts for {site.name}</DialogTitle>
-                    <DialogDescription>Add, edit, or remove client contacts for this site.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                    {(site.contacts || []).map(contact => (
-                        <div key={contact.id} className="border p-3 rounded-lg">
-                           {editingContactId === contact.id ? (
-                                <div className="space-y-2">
-                                     <Input placeholder="Name" value={contactName} onChange={e => setContactName(e.target.value)} />
-                                     <Input placeholder="Email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
-                                     <Input placeholder="Phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
-                                     <div className="flex gap-2 justify-end">
-                                        <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
-                                        <Button size="sm" onClick={handleSave}>Save</Button>
-                                     </div>
-                                </div>
-                           ) : (
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold">{contact.name}</p>
-                                        <p className="text-sm text-muted-foreground">{contact.email}</p>
-                                        <p className="text-sm text-muted-foreground">{contact.phone}</p>
-                                    </div>
-                                    <div className="flex gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => startEditing(contact)}><Pencil className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemove(contact.id)}><Trash2 className="h-4 w-4" /></Button>
-                                    </div>
-                                </div>
-                           )}
-                        </div>
-                    ))}
-
-                    {!editingContactId && (
-                         <div className="border-t pt-4 space-y-2">
-                             <h4 className="font-semibold">Add New Contact</h4>
-                             <Input placeholder="Name" value={contactName} onChange={e => setContactName(e.target.value)} />
-                             <Input placeholder="Email (Optional)" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
-                             <Input placeholder="Phone (Optional)" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
-                             <div className="flex justify-end">
-                                <Button onClick={handleSave}><PlusCircle className="mr-2 h-4 w-4" /> Add Contact</Button>
-                             </div>
-                        </div>
-                    )}
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild><Button onClick={() => {setIsOpen(false); cancelEditing();}}>Done</Button></DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 interface AssociatedCleanersDialogProps {
   site: Site;
@@ -437,34 +321,10 @@ export default function SitePortfolioTab({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Site Information</CardTitle>
-                            <ManageContactsDialog site={selectedSite} onUpdateSite={onUpdateSite}>
-                                <Button variant="outline" size="sm">Manage Contacts</Button>
-                            </ManageContactsDialog>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
                             <p><strong>Site Code:</strong> {selectedSite.siteCode || 'N/A'}</p>
                             <p><strong>Status:</strong> {selectedSite.status}</p>
-                            {selectedSite.contacts && selectedSite.contacts.length > 0 && (
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="link" className="p-0 h-auto">
-                                          <UserSearch className="mr-2" /> View {selectedSite.contacts.length} Contact(s)
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                      <div className="space-y-4">
-                                        <h4 className="font-medium">Contacts for {selectedSite.name}</h4>
-                                        {selectedSite.contacts.map((c, i) => (
-                                            <div key={i} className="border-t pt-2">
-                                              <p className="font-semibold">{c.name}</p>
-                                              {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
-                                              {c.phone && <p className="text-xs text-muted-foreground">Tel: {c.phone}</p>}
-                                            </div>
-                                        ))}
-                                      </div>
-                                    </PopoverContent>
-                                </Popover>
-                            )}
                         </CardContent>
                     </Card>
                     <Card>

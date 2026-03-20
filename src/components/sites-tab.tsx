@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Site } from '@/lib/data';
-import { PlusCircle, Pencil, Check, X, Trash2, UserSearch, Star, Lock } from 'lucide-react';
+import { PlusCircle, Pencil, Check, X, Trash2, Star } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import {
@@ -20,9 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
 
 interface SitesTabProps {
   sites: Site[];
@@ -33,8 +31,6 @@ interface SitesTabProps {
 }
 
 export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, onRemoveSite }: SitesTabProps) {
-  const { user } = useFirebase();
-  const isReadOnly = !!user?.isAnonymous;
   const [newSiteName, setNewSiteName] = useState('');
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
   const [editedSiteName, setEditedSiteName] = useState('');
@@ -98,9 +94,8 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
           onChange={(e) => setNewSiteName(e.target.value)}
           className="max-w-sm"
           onKeyDown={(e) => { if (e.key === 'Enter') handleAddClick(); }}
-          disabled={isReadOnly}
         />
-        <Button onClick={handleAddClick} size="sm" disabled={isReadOnly}>
+        <Button onClick={handleAddClick} size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Site
         </Button>
@@ -113,7 +108,6 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
               <TableHead className="w-[15%] hidden md:table-cell">Site Code</TableHead>
               <TableHead className="w-[20%]">Status</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead className="w-[10%]">Contacts</TableHead>
               <TableHead className="w-[120px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -151,7 +145,7 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                 <TableCell className="py-2 align-top">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="notes" className="border-b-0">
-                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline" disabled={isReadOnly && !site.notes}>
+                      <AccordionTrigger className="py-2 text-sm font-normal hover:no-underline" disabled={!site.notes}>
                           {site.notes ? 'View/Edit Notes' : 'Add Notes'}
                       </AccordionTrigger>
                       <AccordionContent>
@@ -160,48 +154,10 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                           value={site.notes || ''}
                           onChange={(e) => onNoteChange(site.id, e.target.value)}
                           className="w-full min-h-[60px] resize-y"
-                          disabled={isReadOnly}
                         />
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-                </TableCell>
-                <TableCell className="align-top py-4">
-                   {isReadOnly ? (
-                        <Button variant="outline" size="sm" className="w-full" disabled>
-                            <Lock className="mr-2 h-4 w-4" /> Locked
-                        </Button>
-                   ) : site.contacts && site.contacts.length > 0 ? (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full">
-                                  <UserSearch className="mr-2 h-4 w-4" /> 
-                                  {site.contacts.length}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80">
-                                <div className="grid gap-4">
-                                    <div className="space-y-1">
-                                        <h4 className="font-medium leading-none">Client Contacts</h4>
-                                        <p className="text-sm text-muted-foreground">
-                                            {site.name}
-                                        </p>
-                                    </div>
-                                    <div className="grid gap-4">
-                                        {site.contacts.map((contact, index) => (
-                                            <div key={index} className="grid gap-1">
-                                                <p className="text-sm font-medium leading-none">{contact.name}</p>
-                                                {contact.email && <p className="text-sm text-muted-foreground">{contact.email}</p>}
-                                                {contact.phone && <p className="text-sm text-muted-foreground">Tel: {contact.phone}</p>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    ) : (
-                        <span className="text-sm text-muted-foreground">None</span>
-                    )}
                 </TableCell>
                  <TableCell className="align-top py-4 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -216,12 +172,12 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
                       </>
                     ) : (
                       <>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(site)} disabled={isReadOnly}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(site)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={isReadOnly}>
+                            <Button variant="ghost" size="icon">
                               <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           </AlertDialogTrigger>
@@ -245,7 +201,7 @@ export default function SitesTab({ sites, onNoteChange, onAddSite, onEditSite, o
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No sites found. Add one to get started.
                 </TableCell>
               </TableRow>

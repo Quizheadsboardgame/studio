@@ -22,13 +22,6 @@
           "type": "string",
           "description": "Optional notes or comments about the site."
         },
-        "contacts": {
-          "type": "array",
-          "description": "A list of client contacts for the site.",
-          "items": {
-            "$ref": "#/backend/entities/Contact"
-          }
-        },
         "additionalCleaners": {
           "type": "array",
           "description": "A list of cleaners who have been trained at or previously cleaned the site.",
@@ -58,29 +51,6 @@
       "required": [
         "name",
         "status"
-      ]
-    },
-    "Contact": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Contact",
-      "type": "object",
-      "description": "Represents a client contact for a site.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the contact person."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The phone number of the contact person."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the contact person."
-        }
-      },
-      "required": [
-        "name"
       ]
     },
     "Cleaner": {
@@ -609,10 +579,7 @@
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": []
   },
   "firestore": {
     "structure": [
