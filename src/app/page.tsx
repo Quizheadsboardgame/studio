@@ -107,10 +107,15 @@ export default function DashboardPage() {
   
   useEffect(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
-    if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
-      setOpenCollapsibles(prev => [...prev, activeGroup.group]);
+    if (activeGroup) {
+      setOpenCollapsibles(prevOpen => {
+        if (!prevOpen.includes(activeGroup.group)) {
+          return [...prevOpen, activeGroup.group];
+        }
+        return prevOpen;
+      });
     }
-  }, [activeTab, menuGroups, openCollapsibles]);
+  }, [activeTab, menuGroups]);
 
 
   useEffect(() => {
@@ -862,5 +867,7 @@ export default function DashboardPage() {
     </SidebarProvider>
   );
 }
+
+    
 
     
