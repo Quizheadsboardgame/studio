@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -184,6 +184,9 @@ const Sidebar = React.forwardRef<
       return (
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent side={side} className="w-[--sidebar-width-mobile] p-0" style={{'--sidebar-width-mobile': SIDEBAR_WIDTH_MOBILE} as React.CSSProperties}>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Sidebar</SheetTitle>
+              </SheetHeader>
               <div
                 data-sidebar="sidebar"
                 className="flex h-full w-full flex-col bg-sidebar"
