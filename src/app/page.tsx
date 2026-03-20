@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -29,8 +30,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import React from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarMenuSub } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 export default function DashboardPage() {
@@ -38,28 +40,71 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
 
-  const tabs = useMemo(() => [
-    { value: 'summary', label: 'Daily Summary', icon: FileText },
-    { value: 'sites', label: 'Site Performance', icon: LayoutDashboard },
-    { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-    { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
-    { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
-    { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-    { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
-    { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
-    { value: 'audits', label: 'Audits', icon: FileCheck },
-    { value: 'audit-history', label: 'Audit History', icon: FileClock },
-    { value: 'supplies', label: 'Supply Orders', icon: Package },
-    { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-    { value: 'tasks', label: 'Tasks', icon: ListTodo },
-    { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
-    { value: 'availability', label: 'Cleaner Availability', icon: Clock },
-    { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
-    { value: 'site-map', label: 'Site Map', icon: Map },
-    { value: 'gold-standard', label: 'Gold Standard', icon: Award },
-  ].sort((a, b) => a.label.localeCompare(b.label)), []);
+  const menuGroups = useMemo(() => [
+    {
+      group: 'Overview',
+      icon: LayoutDashboard,
+      items: [
+        { value: 'summary', label: 'Daily Summary', icon: FileText },
+        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
+        { value: 'gold-standard', label: 'Gold Standard', icon: Award },
+      ],
+    },
+    {
+      group: 'Management',
+      icon: Users,
+      items: [
+        { value: 'sites', label: 'Site Performance', icon: Briefcase },
+        { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
+        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
+      ],
+    },
+    {
+      group: 'Scheduling',
+      icon: Calendar,
+      items: [
+        { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
+        { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
+        { value: 'availability', label: 'Cleaner Availability', icon: Clock },
+        { value: 'diary', label: 'Diary', icon: BookOpenCheck },
+        { value: 'tasks', label: 'Tasks', icon: ListTodo },
+      ],
+    },
+    {
+      group: 'Logistics',
+      icon: Package,
+      items: [
+        { value: 'audits', label: 'Audits', icon: FileCheck },
+        { value: 'audit-history', label: 'Audit History', icon: FileClock },
+        { value: 'supplies', label: 'Supply Orders', icon: Package },
+      ],
+    },
+    {
+      group: 'Site Hub',
+      icon: Briefcase,
+      items: [
+        { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
+        { value: 'site-map', label: 'Site Map', icon: Map },
+      ],
+    },
+  ], []);
+
+  const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
+  const activeTabDetails = useMemo(() => allTabs.find(t => t.value === activeTab), [activeTab, allTabs]);
+
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
+    const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
+    return activeGroup ? [activeGroup.group] : [];
+  });
   
-  const activeTabDetails = useMemo(() => tabs.find(t => t.value === activeTab), [activeTab, tabs]);
+  useEffect(() => {
+    const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
+    if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
+      setOpenCollapsibles(prev => [...prev, activeGroup.group]);
+    }
+  }, [activeTab, menuGroups, openCollapsibles]);
 
 
   useEffect(() => {
@@ -725,21 +770,51 @@ export default function DashboardPage() {
                 </div>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarMenu>
-                    {tabs.map((tab) => (
-                        <SidebarMenuItem key={tab.value}>
-                            <SidebarMenuButton
-                                onClick={() => setActiveTab(tab.value)}
-                                isActive={activeTab === tab.value}
-                                className="justify-start"
-                                tooltip={tab.label}
-                            >
-                                <tab.icon />
-                                <span>{tab.label}</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
+              <SidebarMenu>
+                  {menuGroups.map((group) => (
+                      <Collapsible
+                          key={group.group}
+                          open={openCollapsibles.includes(group.group)}
+                          onOpenChange={(isOpen) =>
+                              setOpenCollapsibles((prev) =>
+                                  isOpen
+                                      ? [...prev, group.group]
+                                      : prev.filter((g) => g !== group.group)
+                              )
+                          }
+                          className="w-full"
+                      >
+                          <SidebarMenuItem>
+                              <CollapsibleTrigger asChild>
+                                  <SidebarMenuButton className="justify-between w-full">
+                                      <div className="flex items-center gap-2">
+                                          <group.icon />
+                                          <span>{group.group}</span>
+                                      </div>
+                                      <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" style={{ transform: openCollapsibles.includes(group.group) ? 'rotate(90deg)' : 'none' }}/>
+                                  </SidebarMenuButton>
+                              </CollapsibleTrigger>
+                          </SidebarMenuItem>
+                          <CollapsibleContent>
+                              <SidebarMenuSub>
+                                  {group.items.map((item) => (
+                                      <SidebarMenuItem key={item.value}>
+                                          <SidebarMenuButton
+                                              onClick={() => setActiveTab(item.value)}
+                                              isActive={activeTab === item.value}
+                                              className="justify-start w-full"
+                                              tooltip={item.label}
+                                          >
+                                              <item.icon />
+                                              <span>{item.label}</span>
+                                          </SidebarMenuButton>
+                                      </SidebarMenuItem>
+                                  ))}
+                              </SidebarMenuSub>
+                          </CollapsibleContent>
+                      </Collapsible>
+                  ))}
+              </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
                 <div className="flex items-center gap-3">
@@ -781,3 +856,5 @@ export default function DashboardPage() {
     </SidebarProvider>
   );
 }
+
+    
