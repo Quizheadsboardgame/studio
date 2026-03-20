@@ -1,6 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Explicit rules for all collections defined in backend.json
+    match /sites/{siteId} { allow read, write: if true; }
+    match /cleaners/{cleanerId} { allow read, write: if true; }
+    match /actionPlans/{actionPlanId} { allow read, write: if true; }
+    match /leave/{leaveId} { allow read, write: if true; }
+    match /schedule/{scheduleEntryId} { allow read, write: if true; }
+    match /supplyOrders/{orderId} { allow read, write: if true; }
+    match /monthlyAudits/{auditId} { allow read, write: if true; }
+    match /appointments/{appointmentId} { allow read, write: if true; }
+    match /tasks/{taskId} { allow read, write: if true; }
+    match /conversationRecords/{recordId} { allow read, write: if true; }
+    match /goodNewsRecords/{recordId} { allow read, write: if true; }
+    
+    // Sub-collections
+    match /sites/{siteId}/consumables/{consumableId} { allow read, write: if true; }
+
+    // Fallback for any other paths
     match /{document=**} {
       allow read, write: if true;
     }
