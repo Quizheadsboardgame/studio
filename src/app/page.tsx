@@ -29,9 +29,9 @@ import { useFirebase, useCollection, useMemoFirebase, initiateAnonymousSignIn, a
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, startOfToday } from 'date-fns';
 import React from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarMenuSub } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarMenuSub, SidebarMenuBadge } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -42,14 +42,182 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
 
+  // --- DATA FETCHING ---
+  const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
+  const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
+
+  const cleanersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'cleaners') : null, [firestore, user]);
+  const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
+
+  const actionPlansCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
+  const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
+  
+  const leaveCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'leave') : null, [firestore, user]);
+  const { data: leave, isLoading: leaveLoading } = useCollection<Leave>(leaveCollection);
+
+  const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
+  const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
+  
+  const supplyOrdersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplyOrders') : null, [firestore, user]);
+  const { data: supplyOrders, isLoading: supplyOrdersLoading } = useCollection<MonthlySupplyOrder>(supplyOrdersCollection);
+  
+  const monthlyAuditsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'monthlyAudits') : null, [firestore, user]);
+  const { data: monthlyAudits, isLoading: monthlyAuditsLoading } = useCollection<MonthlyAudit>(monthlyAuditsCollection);
+  
+  const appointmentsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'appointments') : null, [firestore, user]);
+  const { data: appointments, isLoading: appointmentsLoading } = useCollection<Appointment>(appointmentsCollection);
+
+  const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
+  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
+  
+  const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
+  const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
+
+  const goodNewsRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'goodNewsRecords') : null, [firestore, user]);
+  const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
+
+  // --- DERIVED DATA & NOTIFICATION COUNTS ---
+  const calculatedSites = useMemo(() => {
+    if (!sites || !actionPlans || !monthlyAudits) {
+        return sites || [];
+    }
+
+    return sites.map(site => {
+        let newStatus: SiteStatus;
+
+        // 1. Check for action plans
+        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
+        if (siteActionPlan) {
+            newStatus = 'Site under action plan';
+            return { ...site, status: newStatus };
+        }
+
+        // 2. Check latest audit score
+        const siteAudits = monthlyAudits
+            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
+            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
+
+        if (siteAudits.length > 0) {
+            const latestAudit = siteAudits[0];
+            if (latestAudit.score === 100) {
+                newStatus = 'Gold Star Site';
+            } else if (latestAudit.score >= 99) {
+                newStatus = 'Client happy';
+            } else if (latestAudit.score >= 96) {
+                newStatus = 'Client concerns';
+            } else {
+                newStatus = 'Site requires action plan';
+            }
+        } else {
+            newStatus = 'No Concerns'; // Default if no audits
+        }
+        
+        return { ...site, status: newStatus };
+    });
+  }, [sites, actionPlans, monthlyAudits]);
+
+  const calculatedCleaners = useMemo(() => {
+    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
+        return cleaners || [];
+    }
+
+    return cleaners.map(cleaner => {
+        let newRating: CleanerPerformance;
+
+        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
+        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
+        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
+        
+        const cleanerSites = cleanerSiteNames.flatMap(name =>
+            calculatedSites.filter(s => name.toLowerCase().includes(s.name.toLowerCase()))
+        ).filter((value, index, self) => self.findIndex(s => s.id === value.id) === index);
+        
+        if (cleanerActionPlan) {
+            newRating = 'Under action plan';
+        }
+        else if (records.some(r => r.followUpRequired)) {
+            newRating = 'Operational concerns';
+        }
+        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
+             newRating = 'Needs retraining';
+        }
+        else if (records.length > 0) {
+            newRating = 'Slight improvement needed';
+        }
+        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
+            newRating = 'Gold Star Cleaner';
+        }
+        else if (cleanerSites.length > 0) {
+            newRating = 'Site satisfied';
+        }
+        else {
+            newRating = 'No Concerns';
+        }
+
+        return { ...cleaner, rating: newRating };
+    });
+  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
+
+  const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
+
+  const uniqueSchedule = useMemo(() => {
+    if (!schedule) return [];
+    const seen = new Set<string>();
+    return schedule.filter(entry => {
+        const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+  }, [schedule]);
+
+  const todaysAbsences = useMemo(() => {
+    if (!leave) return [];
+    return leave.filter(l => isToday(parseISO(l.date)));
+  }, [leave]);
+
+  const todaysShiftsToCover = useMemo(() => {
+    if (!todaysAbsences || !uniqueSchedule) return [];
+     return todaysAbsences.flatMap(absence => {
+        const cleanerSchedule = uniqueSchedule.filter(s => s.cleaner === absence.cleanerName);
+        if (cleanerSchedule.length > 0) {
+            return cleanerSchedule.map(shift => {
+                const coverAssignment = absence.coverAssignments?.find(a => a.site === shift.site);
+                return { isCovered: !!coverAssignment };
+            });
+        }
+        return [];
+    });
+  }, [todaysAbsences, uniqueSchedule]);
+  
+  const uncoveredShiftsCount = useMemo(() => todaysShiftsToCover.filter(shift => !shift.isCovered).length, [todaysShiftsToCover]);
+  const unacknowledgedGoodNewsCount = useMemo(() => goodNewsRecords ? goodNewsRecords.filter(r => !r.acknowledged).length : 0, [goodNewsRecords]);
+  const redRiskSitesCount = useMemo(() => calculatedSites.filter(s => s.status === 'Site under action plan' || s.status === 'Site requires action plan').length, [calculatedSites]);
+  const overdueActionPlanTasksCount = useMemo(() => {
+    if (!actionPlans) return 0;
+    const today = startOfToday();
+    return actionPlans.flatMap(p => p.tasks).filter(t => !t.completed && t.dueDate && parseISO(t.dueDate) < today).length;
+  }, [actionPlans]);
+  const followUpConversationsCount = useMemo(() => conversationRecords ? conversationRecords.filter(r => r.followUpRequired).length : 0, [conversationRecords]);
+  const pendingAuditsCount = useMemo(() => {
+      if (!sites || !monthlyAudits) return 0;
+      const currentMonthDate = new Date();
+      const year = currentMonthDate.getFullYear();
+      const month = currentMonthDate.getMonth() + 1;
+      const auditsForCurrentMonth = monthlyAudits.filter(audit => audit.year === year && audit.month === month);
+      const completedSiteIds = new Set(auditsForCurrentMonth.filter(a => a.status === 'Completed').map(a => a.siteId));
+      return sites.length - completedSiteIds.size;
+  }, [monthlyAudits, sites]);
+
+  // --- MENU CONFIGURATION ---
   const menuGroups = useMemo(() => [
     {
       group: 'Overview',
       icon: LayoutDashboard,
       color: 'text-excellerate-orange',
       items: [
-        { value: 'summary', label: 'Daily Summary', icon: FileText },
-        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
+        { value: 'summary', label: 'Daily Summary', icon: FileText, notificationCount: uncoveredShiftsCount },
+        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, notificationCount: redRiskSitesCount },
         { value: 'gold-standard', label: 'Gold Standard', icon: Award },
       ],
     },
@@ -60,7 +228,7 @@ export default function DashboardPage() {
       items: [
         { value: 'sites', label: 'Site Performance', icon: Briefcase },
         { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, notificationCount: overdueActionPlanTasksCount },
       ],
     },
     {
@@ -68,8 +236,8 @@ export default function DashboardPage() {
       icon: MessageSquare,
       color: 'text-excellerate-purple',
       items: [
-        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
-        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp },
+        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, notificationCount: followUpConversationsCount },
+        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, notificationCount: unacknowledgedGoodNewsCount },
       ]
     },
     {
@@ -78,11 +246,11 @@ export default function DashboardPage() {
       color: 'text-excellerate-teal',
       items: [
         { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
+        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, notificationCount: uncoveredShiftsCount },
         { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
         { value: 'availability', label: 'Cleaner Availability', icon: Clock },
         { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-        { value: 'tasks', label: 'Tasks', icon: ListTodo },
+        { value: 'tasks', label: 'Tasks', icon: ListTodo, notificationCount: outstandingTasksCount },
       ],
     },
     {
@@ -90,7 +258,7 @@ export default function DashboardPage() {
       icon: Package,
       color: 'text-excellerate-red',
       items: [
-        { value: 'audits', label: 'Audits', icon: FileCheck },
+        { value: 'audits', label: 'Audits', icon: FileCheck, notificationCount: pendingAuditsCount },
         { value: 'audit-history', label: 'Audit History', icon: FileClock },
         { value: 'supplies', label: 'Supply Orders', icon: Package },
       ],
@@ -104,7 +272,15 @@ export default function DashboardPage() {
         { value: 'site-map', label: 'Site Map', icon: Map },
       ],
     },
-  ], []);
+  ], [
+      outstandingTasksCount,
+      uncoveredShiftsCount,
+      unacknowledgedGoodNewsCount,
+      redRiskSitesCount,
+      overdueActionPlanTasksCount,
+      followUpConversationsCount,
+      pendingAuditsCount,
+  ]);
 
   const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
   
@@ -148,13 +324,11 @@ export default function DashboardPage() {
     if (!firestore || !user) return;
 
     const seedDatabase = async () => {
-      // Using a new key to force re-evaluation for users with old data.
       const SEED_VERSION = 'db_seeded_with_availability_v1';
       if (sessionStorage.getItem(SEED_VERSION)) {
         return;
       }
 
-      // Check if the sites collection is empty.
       const sitesCollectionRef = collection(firestore, 'sites');
       const sitesQuery = query(sitesCollectionRef, limit(1));
       const sitesSnapshot = await getDocs(sitesQuery);
@@ -162,17 +336,14 @@ export default function DashboardPage() {
       const batch = writeBatch(firestore);
 
       if (sitesSnapshot.empty) {
-        // FULL SEED for a new database
         console.log('Database appears empty. Seeding data...');
         toast({ title: "Setting up your app", description: "Please wait while we populate some initial data." });
 
-        // Sites
         initialSites.forEach(siteData => {
           const siteRef = doc(sitesCollectionRef);
           batch.set(siteRef, siteData);
         });
         
-        // Cleaners
         const cleanersCollectionRef = collection(firestore, 'cleaners');
         const cleanerNameToIdMap = new Map<string, string>();
         initialCleaners.forEach(cleanerData => {
@@ -181,14 +352,12 @@ export default function DashboardPage() {
           batch.set(cleanerRef, cleanerData);
         });
         
-        // Schedule
         const scheduleCollectionRef = collection(firestore, 'schedule');
         initialSchedule.forEach(scheduleData => {
           const scheduleRef = doc(scheduleCollectionRef);
           batch.set(scheduleRef, scheduleData);
         });
 
-        // Leave
         const leaveCollectionRef = collection(firestore, 'leave');
         const cleanerUpdates: { [key: string]: { holidayTaken: number; sickDaysTaken: number } } = {};
         initialLeave.forEach(leaveData => {
@@ -212,7 +381,6 @@ export default function DashboardPage() {
           }
         });
         
-        // Update cleaner leave counts
         for (const cleanerId in cleanerUpdates) {
           const cleanerRef = doc(firestore, 'cleaners', cleanerId);
           const originalCleanerData = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
@@ -234,14 +402,12 @@ export default function DashboardPage() {
           toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
         }
       } else {
-        // UPDATE existing sites with siteCode and contacts
         console.log('Database already exists. Checking for data updates...');
         
         const allSitesSnapshot = await getDocs(sitesCollectionRef);
         let updatesMade = false;
         allSitesSnapshot.forEach(docSnap => {
             const existingSiteData = docSnap.data();
-            // Check if data is old (lacks siteCode)
             if (existingSiteData.siteCode === undefined) {
                 const initialSiteData = initialSites.find(s => s.name === existingSiteData.name);
                 if (initialSiteData) {
@@ -254,7 +420,6 @@ export default function DashboardPage() {
             }
         });
 
-        // Check for cleaner data updates (add availability fields)
         const cleanersCollectionRef = collection(firestore, 'cleaners');
         const allCleanersSnapshot = await getDocs(cleanersCollectionRef);
         allCleanersSnapshot.forEach(docSnap => {
@@ -282,7 +447,6 @@ export default function DashboardPage() {
             console.log('Data is already up to date.');
         }
         
-        // Mark as seeded regardless of whether an update was needed, to prevent re-running this logic.
         sessionStorage.setItem(SEED_VERSION, 'true');
       }
     };
@@ -291,131 +455,6 @@ export default function DashboardPage() {
 
   }, [firestore, user, toast]);
 
-  const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
-  const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
-
-  const cleanersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'cleaners') : null, [firestore, user]);
-  const { data: cleaners, isLoading: cleanersLoading } = useCollection<Cleaner>(cleanersCollection);
-
-  const actionPlansCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'actionPlans') : null, [firestore, user]);
-  const { data: actionPlans, isLoading: actionPlansLoading } = useCollection<ActionPlan>(actionPlansCollection);
-  
-  const leaveCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'leave') : null, [firestore, user]);
-  const { data: leave, isLoading: leaveLoading } = useCollection<Leave>(leaveCollection);
-
-  const scheduleCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'schedule') : null, [firestore, user]);
-  const { data: schedule, isLoading: scheduleLoading } = useCollection<ScheduleEntry>(scheduleCollection);
-  
-  const supplyOrdersCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'supplyOrders') : null, [firestore, user]);
-  const { data: supplyOrders, isLoading: supplyOrdersLoading } = useCollection<MonthlySupplyOrder>(supplyOrdersCollection);
-  
-  const monthlyAuditsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'monthlyAudits') : null, [firestore, user]);
-  const { data: monthlyAudits, isLoading: monthlyAuditsLoading } = useCollection<MonthlyAudit>(monthlyAuditsCollection);
-  
-  const appointmentsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'appointments') : null, [firestore, user]);
-  const { data: appointments, isLoading: appointmentsLoading } = useCollection<Appointment>(appointmentsCollection);
-
-  const tasksCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'tasks') : null, [firestore, user]);
-  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksCollection);
-  
-  const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
-  const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
-
-  const goodNewsRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'goodNewsRecords') : null, [firestore, user]);
-  const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
-
-  const calculatedSites = useMemo(() => {
-    if (!sites || !actionPlans || !monthlyAudits) {
-        return sites || [];
-    }
-
-    return sites.map(site => {
-        let newStatus: SiteStatus;
-
-        // 1. Check for action plans
-        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
-        if (siteActionPlan) {
-            newStatus = 'Site under action plan';
-            return { ...site, status: newStatus };
-        }
-
-        // 2. Check latest audit score
-        const siteAudits = monthlyAudits
-            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
-            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
-
-        if (siteAudits.length > 0) {
-            const latestAudit = siteAudits[0];
-            if (latestAudit.score === 100) {
-                newStatus = 'Gold Star Site';
-            } else if (latestAudit.score >= 99) {
-                newStatus = 'Client happy';
-            } else if (latestAudit.score >= 96) {
-                newStatus = 'Client concerns';
-            } else {
-                newStatus = 'Site requires action plan';
-            }
-        } else {
-            newStatus = 'No Concerns'; // Default if no audits
-        }
-        
-        return { ...site, status: newStatus };
-    });
-  }, [sites, actionPlans, monthlyAudits]);
-
-
-  const calculatedCleaners = useMemo(() => {
-    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
-        return cleaners || [];
-    }
-
-    return cleaners.map(cleaner => {
-        let newRating: CleanerPerformance;
-
-        // Get data specific to the cleaner
-        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
-        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
-        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
-        
-        const cleanerSites = cleanerSiteNames.flatMap(name =>
-            calculatedSites.filter(s => name.toLowerCase().includes(s.name.toLowerCase()))
-        ).filter((value, index, self) => self.findIndex(s => s.id === value.id) === index);
-        
-        // --- Determine Rating based on hierarchy ---
-
-        // 1. Highest priority: direct action plan on cleaner
-        if (cleanerActionPlan) {
-            newRating = 'Under action plan';
-        }
-        // 2. Conversation that requires follow up
-        else if (records.some(r => r.followUpRequired)) {
-            newRating = 'Operational concerns';
-        }
-        // 3. Cleaner works at a "bad" site
-        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
-             newRating = 'Needs retraining';
-        }
-        // 4. Any conversation log (but no follow-up required)
-        else if (records.length > 0) {
-            newRating = 'Slight improvement needed';
-        }
-        // 5. GOLD STAR: No negative indicators AND all sites are Gold Star or Client Happy
-        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
-            newRating = 'Gold Star Cleaner';
-        }
-        // 6. Site satisfied: Works at sites, but not all are Gold Star, and no negative indicators
-        else if (cleanerSites.length > 0) {
-            newRating = 'Site satisfied';
-        }
-        // 7. Default if no other conditions met
-        else {
-            newRating = 'No Concerns';
-        }
-
-        return { ...cleaner, rating: newRating };
-    });
-  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
-
   // Annual holiday reset effect
   useEffect(() => {
     if (!firestore || !user || !cleaners || cleaners.length === 0) return;
@@ -423,7 +462,7 @@ export default function DashboardPage() {
     const performAnnualHolidayReset = async () => {
       const today = new Date();
       const currentYear = today.getFullYear();
-      const resetMonth = 3; // April is month 3 (0-indexed)
+      const resetMonth = 3; 
 
       const resetKey = `holiday_reset_year_${currentYear}`;
 
@@ -431,7 +470,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Check if it's April 1st or later
       if (today.getMonth() >= resetMonth) {
         console.log(`Performing annual holiday reset for ${currentYear}...`);
         
@@ -439,7 +477,6 @@ export default function DashboardPage() {
         
         cleaners.forEach(cleaner => {
           const cleanerRef = doc(firestore, 'cleaners', cleaner.id);
-          // Only reset holidayTaken, preserve custom holidayAllowance
           batch.update(cleanerRef, {
             holidayTaken: 0
           });
@@ -460,6 +497,7 @@ export default function DashboardPage() {
     performAnnualHolidayReset();
   }, [firestore, user, cleaners, toast]);
 
+  // --- CRUD HANDLERS ---
   const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
     if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), updatedData);
@@ -554,7 +592,6 @@ export default function DashboardPage() {
     const originalLeave = leave.find(l => l.id === leaveId);
     if (!originalLeave) return;
 
-    // If type is changing, we need to adjust cleaner stats
     if (updatedData.type && updatedData.type !== originalLeave.type) {
         const cleaner = cleaners.find(c => c.id === originalLeave.cleanerId);
         if (cleaner) {
@@ -636,7 +673,6 @@ export default function DashboardPage() {
     if (quantity > 0) {
       setDocumentNonBlocking(doc(firestore, 'supplyOrders', docId), orderData, { merge: true });
     } else {
-      // If quantity is 0 or less, we can remove the document.
       deleteDocumentNonBlocking(doc(firestore, 'supplyOrders', docId));
     }
   };
@@ -724,7 +760,6 @@ export default function DashboardPage() {
   const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
-  const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -876,6 +911,7 @@ export default function DashboardPage() {
                                           >
                                               <item.icon className={cn(activeTab === item.value && group.color)} />
                                               <span>{item.label}</span>
+                                              {(item.notificationCount ?? 0) > 0 && <SidebarMenuBadge>{item.notificationCount}</SidebarMenuBadge>}
                                           </SidebarMenuButton>
                                       </SidebarMenuItem>
                                   ))}
@@ -930,3 +966,6 @@ export default function DashboardPage() {
 
     
 
+
+
+    
