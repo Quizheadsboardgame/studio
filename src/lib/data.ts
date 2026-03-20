@@ -198,4 +198,5 @@ export type UserProfile = {
   updatedAt: string;
   members: Record<string, string>; // uid -> role
   enabledTabs?: string[]; // List of tab IDs enabled for this hub
+  isDeactivated?: boolean; // New field for temporary deactivation
 };

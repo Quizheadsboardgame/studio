@@ -16,7 +16,7 @@ import {
   type Leave,
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -36,6 +36,7 @@ import DiaryTab from '@/components/diary-tab';
 import SiteMapTab from '@/components/site-map-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
 import MonthlyLeaveCalendar from '@/components/monthly-leave-calendar';
+import AccountSettingsTab from '@/components/account-settings-tab';
 
 import { Toaster } from "@/components/ui/toaster";
 import { format, parseISO } from 'date-fns';
@@ -46,7 +47,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -279,7 +280,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('summary');
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Management', 'Operations', 'Scheduling', 'Utilities', 'Master Control']);
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Management', 'Operations', 'Scheduling', 'Utilities', 'Account Settings', 'Master Control']);
 
   const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()), [user]);
 
@@ -309,7 +310,7 @@ export default function DashboardPage() {
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Initial setup for new users
+  // Initial setup for new users & Auto-restoration logic
   useEffect(() => {
     if (!isProfileLoading && user && allHubs.length === 0) {
       const newProfileId = `hub-${user.uid}`;
@@ -323,9 +324,19 @@ export default function DashboardPage() {
         enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        isDeactivated: false,
       }, { merge: true });
     } else if (!isProfileLoading && user && allHubs.length > 0) {
       allHubs.forEach(hub => {
+        // Auto-Reactivate account on login
+        if (hub.email === user.email && hub.isDeactivated) {
+          updateDoc(doc(firestore, 'userProfiles', hub.id), {
+            isDeactivated: false,
+            updatedAt: new Date().toISOString()
+          });
+          toast({ title: 'Welcome Back!', description: 'Your account has been automatically reactivated.' });
+        }
+        
         if (hub.email === user.email && (!hub.members || !hub.members[user.uid])) {
           updateDoc(doc(firestore, 'userProfiles', hub.id), {
             [`members.${user.uid}`]: 'owner',
@@ -334,7 +345,7 @@ export default function DashboardPage() {
         }
       });
     }
-  }, [isProfileLoading, user, allHubs, firestore, isMasterUser]);
+  }, [isProfileLoading, user, allHubs, firestore, isMasterUser, toast]);
 
   // --- Hub-Scoped Data Hooks ---
   const createHubRef = (sub: string) => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, sub) : null;
@@ -423,6 +434,14 @@ export default function DashboardPage() {
           { value: 'directions', label: 'Site Directions', icon: Map },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
+      {
+        group: 'Account Settings',
+        icon: UserCog,
+        color: 'text-slate-500',
+        items: [
+          { value: 'settings', label: 'Hub Management', icon: ShieldX },
+        ],
+      },
     ];
 
     if (isMasterUser) {
@@ -510,6 +529,39 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(doc(actionPlansRef, planId));
   };
 
+  // --- Account Management Logic ---
+  const handleDeactivate = async () => {
+    if (!activeProfileId) return;
+    await updateDoc(doc(firestore, 'userProfiles', activeProfileId), { 
+      isDeactivated: true,
+      updatedAt: new Date().toISOString()
+    });
+    signOut(auth);
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!activeProfileId || !firestore) return;
+    const batch = writeBatch(firestore);
+    
+    // Collections to wipe
+    const collectionsToWipe = [
+      'sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 
+      'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
+    ];
+
+    for (const col of collectionsToWipe) {
+      const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
+      const snapshot = await getDocs(colRef);
+      snapshot.forEach(d => batch.delete(d.ref));
+    }
+
+    // Finally delete the profile
+    batch.delete(doc(firestore, 'userProfiles', activeProfileId));
+    
+    await batch.commit();
+    signOut(auth);
+  };
+
   if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -546,6 +598,7 @@ export default function DashboardPage() {
               enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
+              isDeactivated: false,
             });
             toast({ title: 'Hub Provisioned', description: `${name} created.` });
             (e.target as HTMLFormElement).reset();
@@ -610,6 +663,8 @@ export default function DashboardPage() {
   const renderActiveTab = () => {
     if (activeTab === 'admin' && isMasterUser) return renderAdminTab();
     switch (activeTab) {
+        case 'settings':
+            return <AccountSettingsTab userProfile={activeProfile!} onDeactivate={handleDeactivate} onDeleteData={handleDeleteAllData} />;
         case 'sites':
             return <SitesTab sites={sites} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={(id, name) => handleUpdateSite(id, { name })} onRemoveSite={handleRemoveSite} />;
         case 'cleaners':
@@ -645,11 +700,11 @@ export default function DashboardPage() {
         case 'tasks':
             return <TasksTab tasks={tasks} sites={sites} onAddTask={(e) => setDocumentNonBlocking(doc(tasksRef!), { ...e, id: doc(tasksRef!).id, completed: false }, { merge: true })} onUpdateTask={(id, data) => updateDocumentNonBlocking(doc(tasksRef!, id), data)} onRemoveTask={(id) => deleteDocumentNonBlocking(doc(tasksRef!, id))} />;
         case 'diary':
-            return <DiaryTab sites={sites} appointments={appointments} monthlyAudits={audits} leave={leave} schedule={schedule} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id }, { merge: true })} onUpdateAppointment={(id, data) => updateDocumentNonBlocking(doc(appointmentsRef!, id), data)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} />;
+            return <DiaryTab sites={sites} appointments={appointments} monthlyAudits={audits} leave={leave} schedule={schedule} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id, title: e.title || '', date: e.date || '', assignee: e.assignee || '', site: e.site || null, startTime: e.startTime || null, endTime: e.endTime || null, notes: e.notes || null, recurrence: e.recurrence || 'none', recurrenceEndDate: e.recurrenceEndDate || null }, { merge: true })} onUpdateAppointment={(id, data) => updateDocumentNonBlocking(doc(appointmentsRef!, id), data)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} />;
         case 'directions':
             return <SiteMapTab sites={sites} />;
         case 'portfolio':
-            return <SitePortfolioTab sites={sites} cleaners={cleaners} schedule={schedule} actionPlans={actionPlans} monthlyAudits={audits} tasks={tasks} appointments={appointments} onUpdateSite={handleUpdateSite} onUpdateTask={(id, d) => updateDocumentNonBlocking(doc(tasksRef!, id), d)} onRemoveTask={(id) => deleteDocumentNonBlocking(doc(tasksRef!, id))} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id }, { merge: true })} onUpdateAppointment={(id, d) => updateDocumentNonBlocking(doc(appointmentsRef!, id), d)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} onAddScheduleEntry={(e) => setDocumentNonBlocking(doc(scheduleRef!), { ...e, id: doc(scheduleRef!).id }, { merge: true })} onUpdateScheduleEntry={(id, d) => updateDocumentNonBlocking(doc(scheduleRef!, id), d)} onRemoveScheduleEntry={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />;
+            return <SitePortfolioTab sites={sites} cleaners={cleaners} schedule={schedule} actionPlans={actionPlans} monthlyAudits={audits} tasks={tasks} appointments={appointments} onUpdateSite={handleUpdateSite} onUpdateTask={(id, d) => updateDocumentNonBlocking(doc(tasksRef!, id), d)} onRemoveTask={(id) => deleteDocumentNonBlocking(doc(tasksRef!, id))} onAddAppointment={(e) => setDocumentNonBlocking(doc(appointmentsRef!), { ...e, id: doc(appointmentsRef!).id, title: e.title || '', date: e.date || '', assignee: e.assignee || '', site: e.site || null, startTime: e.startTime || null, endTime: e.endTime || null, notes: e.notes || null, recurrence: e.recurrence || 'none', recurrenceEndDate: e.recurrenceEndDate || null }, { merge: true })} onUpdateAppointment={(id, d) => updateDocumentNonBlocking(doc(appointmentsRef!, id), d)} onRemoveAppointment={(id) => deleteDocumentNonBlocking(doc(appointmentsRef!, id))} onAddScheduleEntry={(e) => setDocumentNonBlocking(doc(scheduleRef!), { ...e, id: doc(scheduleRef!).id }, { merge: true })} onUpdateScheduleEntry={(id, d) => updateDocumentNonBlocking(doc(scheduleRef!, id), d)} onRemoveScheduleEntry={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />;
         default:
             return <DailySummaryTab sites={sites} cleaners={cleaners} actionPlans={actionPlans} schedule={schedule} leave={leave} />;
     }
