@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp, Brain } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -44,6 +45,37 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
+  
+  const activeTabInfo = useMemo(() => {
+      for (const group of menuGroups) {
+          const item = group.items.find(i => i.value === activeTab);
+          if (item) {
+              return { ...item, groupColor: group.color };
+          }
+      }
+      const fallbackItem = allTabs.find(t => t.value === activeTab);
+      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
+  }, [activeTab, menuGroups, allTabs]);
+  
+  const primaryColorStyle = useMemo(() => {
+      if (!activeTabInfo) return {};
+      const HSL_DARK_FG = '0 0% 10%';
+      const HSL_LIGHT_FG = '0 0% 98%';
+
+      const colorMap = {
+          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
+          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
+          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+      };
+      
+      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
+
+      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
+  }, [activeTabInfo]);
+
 
   // --- DATA FETCHING ---
   const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
@@ -287,36 +319,6 @@ export default function DashboardPage() {
 
   const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
   
-  const activeTabInfo = useMemo(() => {
-      for (const group of menuGroups) {
-          const item = group.items.find(i => i.value === activeTab);
-          if (item) {
-              return { ...item, groupColor: group.color };
-          }
-      }
-      const fallbackItem = allTabs.find(t => t.value === activeTab);
-      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
-  }, [activeTab, menuGroups, allTabs]);
-  
-  const primaryColorStyle = useMemo(() => {
-      if (!activeTabInfo) return {};
-      const HSL_DARK_FG = '0 0% 10%';
-      const HSL_LIGHT_FG = '0 0% 98%';
-
-      const colorMap = {
-          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
-          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
-          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-      };
-      
-      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
-
-      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
-  }, [activeTabInfo]);
-
 
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
@@ -326,7 +328,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
     if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
-      setOpenCollapsibles(prevOpen => [...prevOpen, activeGroup.group]);
+      setOpenCollapsibles((prevOpen) =>
+          prevOpen.includes(activeGroup.group) ? prevOpen : [...prevOpen, activeGroup.group]
+      );
     }
   }, [activeTab, menuGroups]);
 
@@ -510,12 +514,12 @@ export default function DashboardPage() {
 
   // --- CRUD HANDLERS ---
   const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     updateDocumentNonBlocking(doc(firestore, 'sites', siteId), updatedData);
   };
 
   const handleSetMonthlyAudit = (siteId: string, date: Date, auditData: Partial<Omit<MonthlyAudit, 'id' | 'siteId' | 'month' | 'year'>>) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${format(date, 'yyyy-MM')}`;
@@ -532,22 +536,22 @@ export default function DashboardPage() {
   };
 
   const handleAddSite = (siteName: string) => {
-    if (siteName.trim() === '' || !sitesCollection) return;
+    if (siteName.trim() === '' || !sitesCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(sitesCollection, { name: siteName, status: 'No Concerns', notes: '' });
   };
 
   const handleRemoveSite = (siteId: string) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     deleteDocumentNonBlocking(doc(firestore, 'sites', siteId));
   };
   
   const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     updateDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId), updatedData);
   };
 
   const handleAddCleaner = (cleanerName: string) => {
-    if (cleanerName.trim() === '' || !cleanersCollection) return;
+    if (cleanerName.trim() === '' || !cleanersCollection || user?.isAnonymous) return;
     const newCleanerData = initialCleaners.find(c => c.name === cleanerName) || {
       name: cleanerName,
       rating: 'No Concerns',
@@ -563,22 +567,22 @@ export default function DashboardPage() {
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     deleteDocumentNonBlocking(doc(firestore, 'cleaners', cleanerId));
   };
 
   const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
-    if (!firestore || !actionPlansCollection) return;
+    if (!firestore || !actionPlansCollection || user?.isAnonymous) return;
     setDocumentNonBlocking(doc(actionPlansCollection, updatedPlan.id), updatedPlan, { merge: true });
   };
 
   const handleRemoveActionPlan = (planId: string) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     deleteDocumentNonBlocking(doc(firestore, 'actionPlans', planId));
   };
   
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
-    if (!leaveCollection || !firestore) return;
+    if (!leaveCollection || !firestore || user?.isAnonymous) return;
     addDocumentNonBlocking(leaveCollection, { ...newLeaveData, coverAssignments: [] });
 
     if (!cleaners) {
@@ -598,7 +602,7 @@ export default function DashboardPage() {
   };
 
   const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
-    if (!firestore || !leave || !cleaners) return;
+    if (!firestore || !leave || !cleaners || user?.isAnonymous) return;
 
     const originalLeave = leave.find(l => l.id === leaveId);
     if (!originalLeave) return;
@@ -633,7 +637,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteLeave = (leaveToDelete: Leave) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
 
     if (!cleaners) {
@@ -653,22 +657,22 @@ export default function DashboardPage() {
   };
   
   const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
-    if (!scheduleCollection) return;
+    if (!scheduleCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(scheduleCollection, newEntry);
   };
 
   const handleUpdateScheduleEntry = (entryId: string, updatedEntry: Partial<Omit<ScheduleEntry, 'id'>>) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       updateDocumentNonBlocking(doc(firestore, 'schedule', entryId), updatedEntry);
   };
 
   const handleRemoveScheduleEntry = (entryId: string) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       deleteDocumentNonBlocking(doc(firestore, 'schedule', entryId));
   };
   
   const handleSetSupplyOrder = (siteId: string, consumableId: string, date: Date, quantity: number) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${consumableId}-${format(date, 'yyyy-MM')}`;
@@ -689,80 +693,80 @@ export default function DashboardPage() {
   };
 
   const handleAddConsumable = (siteId: string, consumableData: Omit<Consumable, 'id'>) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     const consumablesCollection = collection(firestore, 'sites', siteId, 'consumables');
     addDocumentNonBlocking(consumablesCollection, consumableData);
   };
 
   const handleEditConsumable = (siteId: string, consumableId: string, consumableData: Partial<Omit<Consumable, 'id'>>) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
     updateDocumentNonBlocking(consumableDocRef, consumableData);
   };
 
   const handleRemoveConsumable = (siteId: string, consumableId: string) => {
-    if (!firestore) return;
+    if (!firestore || user?.isAnonymous) return;
     const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
     deleteDocumentNonBlocking(consumableDocRef);
   };
   
   const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
-    if (!appointmentsCollection) return;
+    if (!appointmentsCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(appointmentsCollection, newAppointment);
   };
 
   const handleUpdateAppointment = (appointmentId: string, updatedData: Partial<Omit<Appointment, 'id'>>) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       updateDocumentNonBlocking(doc(firestore, 'appointments', appointmentId), updatedData);
   };
 
   const handleRemoveAppointment = (appointmentId: string) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       deleteDocumentNonBlocking(doc(firestore, 'appointments', appointmentId));
   };
   
   const handleAddTask = (newTaskData: Omit<Task, 'id' | 'completed'>) => {
-    if (!tasksCollection) return;
+    if (!tasksCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(tasksCollection, { ...newTaskData, completed: false });
   };
 
   const handleUpdateTask = (taskId: string, updatedData: Partial<Omit<Task, 'id'>>) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       updateDocumentNonBlocking(doc(firestore, 'tasks', taskId), updatedData);
   };
 
   const handleRemoveTask = (taskId: string) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       deleteDocumentNonBlocking(doc(firestore, 'tasks', taskId));
   };
 
   const handleAddConversationRecord = (newRecordData: Omit<ConversationRecord, 'id'>) => {
-    if (!conversationRecordsCollection) return;
+    if (!conversationRecordsCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(conversationRecordsCollection, newRecordData);
   };
 
   const handleUpdateConversationRecord = (recordId: string, updatedData: Partial<Omit<ConversationRecord, 'id'>>) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       updateDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId), updatedData);
   };
 
   const handleRemoveConversationRecord = (recordId: string) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       deleteDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId));
   };
 
   const handleAddGoodNewsRecord = (newRecordData: Omit<GoodNewsRecord, 'id'>) => {
-    if (!goodNewsRecordsCollection) return;
+    if (!goodNewsRecordsCollection || user?.isAnonymous) return;
     addDocumentNonBlocking(goodNewsRecordsCollection, newRecordData);
   };
 
   const handleUpdateGoodNewsRecord = (recordId: string, updatedData: Partial<Omit<GoodNewsRecord, 'id'>>) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       updateDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId), updatedData);
   };
 
   const handleRemoveGoodNewsRecord = (recordId: string) => {
-      if (!firestore) return;
+      if (!firestore || user?.isAnonymous) return;
       deleteDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId));
   };
 
@@ -790,7 +794,7 @@ export default function DashboardPage() {
                 <Card>
                     <CardHeader><CardTitle>Site Performance</CardTitle></CardHeader>
                     <CardContent>
-                        <SitesTab sites={sortedSites} onNoteChange={(siteId, notes) => handleUpdateSite(siteId, { notes })} onAddSite={handleAddSite} onEditSite={(siteId, name) => handleUpdateSite(siteId, { name })} onRemoveSite={handleRemoveSite} />
+                        <SitesTab sites={sortedSites} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={handleUpdateSite} onRemoveSite={handleRemoveSite} />
                     </CardContent>
                 </Card>
             );
@@ -854,7 +858,7 @@ export default function DashboardPage() {
             <SidebarHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-1 relative">
-                        <Brain className="h-8 w-8 text-sidebar-foreground" />
+                        <Image src="https://i.ibb.co/6g4VpWd/Cleanflow-logo.png" alt="CleanFlow Logo" width={32} height={32} />
                         {outstandingTasksCount > 0 && (
                         <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                             {outstandingTasksCount}
