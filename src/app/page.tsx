@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { type Site, type Cleaner, type ActionPlan, type Leave, type ScheduleEntry, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp } from 'lucide-react';
@@ -30,6 +30,7 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('summary');
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const outstandingTasksCount = useMemo(() => tasks.filter(t => !t.completed).length, [tasks]);
 
   const uncoveredShiftsCount = useMemo(() => {
+    if (!leave || !schedule) return 0;
     const todaysAbsences = leave.filter(l => isToday(parseISO(l.date)));
     const uniqueScheduleMap = new Map();
     schedule.forEach(item => {
@@ -308,18 +310,7 @@ export default function DashboardPage() {
   };
 
   const handleAddConsumable = (siteId: string, consumableData: any) => {
-    // In local state, consumables are sub-collection. 
-    // For simplicity in a local blank canvas, we'll just update the site object
-    setSites(prev => prev.map(s => {
-        if (s.id === siteId) {
-            // Local sites don't have a consumables array in the type definition, 
-            // but we can track them locally if needed. 
-            // For now, site portfolio logic fetches them from a separate query.
-            // Let's just mock the success.
-            return s;
-        }
-        return s;
-    }));
+    // Local blank canvas handles site-specific consumables via props in sub-components if needed
   };
 
   const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
@@ -446,6 +437,7 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
+        <FirebaseErrorListener />
         <Sidebar collapsible={isMobile ? 'offcanvas' : 'icon'}>
             <SidebarHeader>
                 <div className="flex items-center gap-3">
