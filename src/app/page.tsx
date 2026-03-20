@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -190,7 +190,7 @@ export default function DashboardPage() {
       color: 'text-excellerate-lime',
       items: [
         { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
-        { value: 'site-map', label: 'Site Map', icon: Map },
+        { value: 'site-map', label: 'Site Map', icon: MapIcon },
       ],
     },
   ], [
