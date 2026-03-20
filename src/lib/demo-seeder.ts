@@ -83,8 +83,8 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   const hubRef = doc(firestore, 'userProfiles', hubId);
   const hubSnap = await getDoc(hubRef);
 
-  // Using isDemoSeededV4 to force re-seed after batching fixes
-  if (hubSnap.exists() && hubSnap.data().isDemoSeededV4) {
+  // Bumped to V5 to include Action Plans
+  if (hubSnap.exists() && hubSnap.data().isDemoSeededV5) {
     return;
   }
 
@@ -103,44 +103,48 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       'company-schedule', 'leave-calendar', 'monthly-leave', 
       'availability', 'diary', 'directions'
     ],
-    isDemoSeededV4: true,
+    isDemoSeededV5: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }, { merge: true });
 
   // 2. Seed Sites
   const siteIds: string[] = [];
+  const sitesMap: Record<string, any> = {};
   SITES.forEach((name, index) => {
     const siteRef = doc(collection(firestore, 'userProfiles', hubId, 'sites'));
-    siteIds.push(siteRef.id);
-    bm.set(siteRef, {
+    const siteData = {
       id: siteRef.id,
       name,
       siteCode: `SITE-00${index + 1}`,
-      status: index === 0 ? 'Gold Star Site' : (index % 3 === 0 ? 'Client concerns' : 'No Concerns'),
+      status: index === 0 ? 'Gold Star Site' : (index % 3 === 0 ? 'Site under action plan' : 'No Concerns'),
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+    siteIds.push(siteRef.id);
+    sitesMap[name] = siteData;
+    bm.set(siteRef, siteData);
   });
 
   // 3. Seed Cleaners
   const cleanerIds: string[] = [];
-  const cleanerMap: Record<string, string> = {};
+  const cleanerMap: Record<string, any> = {};
   CLEANERS.forEach((c, index) => {
     const cleanerRef = doc(collection(firestore, 'userProfiles', hubId, 'cleaners'));
-    cleanerIds.push(cleanerRef.id);
-    cleanerMap[c.name] = cleanerRef.id;
-    bm.set(cleanerRef, {
+    const cleanerData = {
       id: cleanerRef.id,
       name: c.name,
-      rating: index === 0 ? 'Gold Star Cleaner' : (index % 5 === 0 ? 'Needs retraining' : 'No Concerns'),
+      rating: index === 0 ? 'Gold Star Cleaner' : (index % 5 === 0 ? 'Under action plan' : 'No Concerns'),
       notes: `Role: ${c.role}`,
       holidayAllowance: 20,
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+    cleanerIds.push(cleanerRef.id);
+    cleanerMap[c.name] = cleanerData;
+    bm.set(cleanerRef, cleanerData);
   });
 
   // 4. Seed Audit History 2026
@@ -204,7 +208,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
 
     await bm.set(leaveRef, {
       id: leaveRef.id,
-      cleanerId: cleanerMap[cleanerName],
+      cleanerId: cleanerMap[cleanerName].id,
       cleanerName,
       type: month % 4 === 0 ? 'sick' : 'holiday',
       date: leaveDate,
@@ -214,7 +218,35 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     });
   }
 
-  // 8. Seed Diary Appointments - EVERY DAY FOR ALL DIARIES
+  // 8. Seed Action Plans
+  // A Site Action Plan
+  const siteActionPlanRef = doc(firestore, 'userProfiles', hubId, 'actionPlans', sitesMap["Emergency Dept"].id);
+  await bm.set(siteActionPlanRef, {
+    id: sitesMap["Emergency Dept"].id,
+    targetName: "Emergency Dept",
+    targetType: "site",
+    notes: "Site standards have slipped in the waiting area. Immediate attention required.",
+    tasks: [
+      { id: "ap-task-1", description: "Deep clean high-frequency touch points", dueDate: format(new Date(), 'yyyy-MM-dd'), completed: false },
+      { id: "ap-task-2", description: "Review and update COSHH logs", dueDate: format(addDays(new Date(), 2), 'yyyy-MM-dd'), completed: false },
+      { id: "ap-task-3", description: "Shadow new morning team for quality check", dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'), completed: true }
+    ]
+  });
+
+  // A Cleaner Action Plan
+  const cleanerActionPlanRef = doc(firestore, 'userProfiles', hubId, 'actionPlans', cleanerMap["Fiona Gallagher"].id);
+  await bm.set(cleanerActionPlanRef, {
+    id: cleanerMap["Fiona Gallagher"].id,
+    targetName: "Fiona Gallagher",
+    targetType: "cleaner",
+    notes: "Improvement plan for supervision consistency across multiple lots.",
+    tasks: [
+      { id: "ap-task-4", description: "Complete advanced supervision training module", dueDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'), completed: false },
+      { id: "ap-task-5", description: "Conduct 5 joint audits with manager", dueDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'), completed: false }
+    ]
+  });
+
+  // 9. Seed Diary Appointments - EVERY DAY FOR ALL DIARIES
   const start2026 = startOfYear(new Date('2026-01-01'));
   const end2026 = endOfYear(new Date('2026-12-31'));
   const allDaysOf2026 = eachDayOfInterval({ start: start2026, end: end2026 });
