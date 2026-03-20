@@ -22,13 +22,13 @@ service cloud.firestore {
       // Allow users to list profiles they are a member of
       allow list: if isSignedIn() && (
         userProfileId == 'hub-' + request.auth.uid || 
-        request.auth.uid in resource.data.members
+        resource.data.members[request.auth.uid] != null
       );
 
       // Single document access
       allow get: if isSignedIn() && (
         userProfileId == 'hub-' + request.auth.uid || 
-        request.auth.uid in resource.data.members
+        resource.data.members[request.auth.uid] != null
       );
       
       // Allow creation during sign-up
@@ -40,8 +40,9 @@ service cloud.firestore {
         resource.data.members[request.auth.uid] == 'owner'
       );
 
-      // --- Hub-Scoped Data (Subcollections) ---
-      match /{collectionName}/{docId} {
+      // --- Hub-Scoped Data (Recursive Subcollections) ---
+      // This matches any path deep within a Hub (sites, cleaners, consumables, etc.)
+      match /{allPaths=**} {
         allow read, write: if isMaster();
         
         allow list, get: if isSignedIn() && (

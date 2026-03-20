@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -685,7 +686,7 @@ export default function DashboardPage() {
         case 'good-news':
             return <GoodNewsCentreTab records={goodNews} cleaners={cleaners} sites={sites} onAddRecord={(e) => setDocumentNonBlocking(doc(goodNewsRef!), { ...e, id: doc(goodNewsRef!).id }, { merge: true })} onUpdateRecord={(id, data) => updateDocumentNonBlocking(doc(goodNewsRef!, id), data)} onRemoveRecord={(id) => deleteDocumentNonBlocking(doc(goodNewsRef!, id))} />;
         case 'supplies':
-            return <SuppliesTab sites={sites} supplyOrders={supplyOrders} firestore={firestore} onSetOrder={(siteId, consumableId, date, quantity) => {
+            return <SuppliesTab sites={sites} supplyOrders={supplyOrders} firestore={firestore} activeProfileId={activeProfileId!} onSetOrder={(siteId, consumableId, date, quantity) => {
                 const id = `${siteId}-${consumableId}-${date.getFullYear()}-${date.getMonth() + 1}`;
                 setDocumentNonBlocking(doc(supplyOrdersRef!, id), { id, siteId, consumableId, year: date.getFullYear(), month: date.getMonth() + 1, quantity }, { merge: true });
             }} onAddConsumable={(siteId, data) => setDocumentNonBlocking(doc(collection(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables')), { ...data, id: doc(collection(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables')).id }, { merge: true })} onEditConsumable={(siteId, consumableId, data) => updateDocumentNonBlocking(doc(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables', consumableId), data)} onRemoveConsumable={(siteId, consumableId) => deleteDocumentNonBlocking(doc(firestore!, 'userProfiles', activeProfileId!, 'sites', siteId, 'consumables', consumableId))} />;

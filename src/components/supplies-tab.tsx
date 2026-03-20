@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -83,17 +84,18 @@ interface SuppliesTabProps {
   sites: Site[];
   supplyOrders: MonthlySupplyOrder[];
   firestore: Firestore | null;
+  activeProfileId: string;
   onSetOrder: (siteId: string, consumableId: string, date: Date, quantity: number) => void;
   onAddConsumable: (siteId: string, data: Omit<Consumable, 'id'>) => void;
   onEditConsumable: (siteId: string, consumableId: string, data: Partial<Omit<Consumable, 'id'>>) => void;
   onRemoveConsumable: (siteId: string, consumableId: string) => void;
 }
 
-export default function SuppliesTab({ sites, supplyOrders, firestore, onSetOrder, onAddConsumable, onEditConsumable, onRemoveConsumable }: SuppliesTabProps) {
+export default function SuppliesTab({ sites, supplyOrders, firestore, activeProfileId, onSetOrder, onAddConsumable, onEditConsumable, onRemoveConsumable }: SuppliesTabProps) {
     const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
     const [currentDate, setCurrentDate] = useState(new Date());
 
-    const consumablesCollection = useMemoFirebase(() => (firestore && selectedSiteId) ? collection(firestore, 'sites', selectedSiteId, 'consumables') : null, [firestore, selectedSiteId]);
+    const consumablesCollection = useMemoFirebase(() => (firestore && selectedSiteId && activeProfileId) ? collection(firestore, 'userProfiles', activeProfileId, 'sites', selectedSiteId, 'consumables') : null, [firestore, selectedSiteId, activeProfileId]);
     const { data: consumables, isLoading: consumablesLoading } = useCollection<Consumable>(consumablesCollection);
     
     const ordersForMonth = useMemo(() => {
