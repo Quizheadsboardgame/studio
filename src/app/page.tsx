@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -25,7 +26,7 @@ import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +79,70 @@ export default function DashboardPage() {
   const goodNewsRecordsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'goodNewsRecords') : null, [firestore]);
   const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
 
+  const menuGroups = useMemo(() => [
+    {
+      group: 'Overview',
+      icon: LayoutDashboard,
+      color: 'text-excellerate-orange',
+      items: [
+        { value: 'summary', label: 'Daily Summary', icon: FileText, notificationCount: 0 }, // counts updated below
+        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, notificationCount: 0 },
+        { value: 'gold-standard', label: 'Gold Standard', icon: Award },
+      ],
+    },
+    {
+      group: 'Management',
+      icon: Users,
+      color: 'text-excellerate-blue',
+      items: [
+        { value: 'sites', label: 'Site Performance', icon: Briefcase },
+        { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
+        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, notificationCount: 0 },
+      ],
+    },
+    {
+      group: 'Communications',
+      icon: MessageSquare,
+      color: 'text-excellerate-purple',
+      items: [
+        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, notificationCount: 0 },
+        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, notificationCount: 0 },
+      ]
+    },
+    {
+      group: 'Scheduling',
+      icon: Calendar,
+      color: 'text-excellerate-teal',
+      items: [
+        { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, notificationCount: 0 },
+        { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
+        { value: 'availability', label: 'Cleaner Availability', icon: Clock },
+        { value: 'diary', label: 'Diary', icon: BookOpenCheck },
+        { value: 'tasks', label: 'Tasks', icon: ListTodo, notificationCount: 0 },
+      ],
+    },
+    {
+      group: 'Logistics',
+      icon: Package,
+      color: 'text-excellerate-red',
+      items: [
+        { value: 'audits', label: 'Audits', icon: FileCheck, notificationCount: 0 },
+        { value: 'audit-history', label: 'Audit History', icon: FileClock },
+        { value: 'supplies', label: 'Supply Orders', icon: Package },
+      ],
+    },
+    {
+      group: 'Site Hub',
+      icon: Briefcase,
+      color: 'text-excellerate-lime',
+      items: [
+        { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
+        { value: 'site-map', label: 'Site Map', icon: MapIcon },
+      ],
+    },
+  ], []);
+
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
   const uncoveredShiftsCount = useMemo(() => {
@@ -128,83 +193,29 @@ export default function DashboardPage() {
       const completedSiteIds = new Set(auditsForCurrentMonth.filter(a => a.status === 'Completed').map(a => a.siteId));
       return sites.length - completedSiteIds.size;
   }, [monthlyAudits, sites]);
-  
-  const menuGroups = useMemo(() => [
-    {
-      group: 'Overview',
-      icon: LayoutDashboard,
-      color: 'text-excellerate-orange',
-      items: [
-        { value: 'summary', label: 'Daily Summary', icon: FileText, notificationCount: uncoveredShiftsCount },
-        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, notificationCount: redRiskSitesCount },
-        { value: 'gold-standard', label: 'Gold Standard', icon: Award },
-      ],
-    },
-    {
-      group: 'Management',
-      icon: Users,
-      color: 'text-excellerate-blue',
-      items: [
-        { value: 'sites', label: 'Site Performance', icon: Briefcase },
-        { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, notificationCount: overdueActionPlanTasksCount },
-      ],
-    },
-    {
-      group: 'Communications',
-      icon: MessageSquare,
-      color: 'text-excellerate-purple',
-      items: [
-        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, notificationCount: followUpConversationsCount },
-        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, notificationCount: unacknowledgedGoodNewsCount },
-      ]
-    },
-    {
-      group: 'Scheduling',
-      icon: Calendar,
-      color: 'text-excellerate-teal',
-      items: [
-        { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, notificationCount: uncoveredShiftsCount },
-        { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
-        { value: 'availability', label: 'Cleaner Availability', icon: Clock },
-        { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-        { value: 'tasks', label: 'Tasks', icon: ListTodo, notificationCount: outstandingTasksCount },
-      ],
-    },
-    {
-      group: 'Logistics',
-      icon: Package,
-      color: 'text-excellerate-red',
-      items: [
-        { value: 'audits', label: 'Audits', icon: FileCheck, notificationCount: pendingAuditsCount },
-        { value: 'audit-history', label: 'Audit History', icon: FileClock },
-        { value: 'supplies', label: 'Supply Orders', icon: Package },
-      ],
-    },
-    {
-      group: 'Site Hub',
-      icon: Briefcase,
-      color: 'text-excellerate-lime',
-      items: [
-        { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
-        { value: 'site-map', label: 'Site Map', icon: MapIcon },
-      ],
-    },
-  ], [
-      outstandingTasksCount,
-      uncoveredShiftsCount,
-      unacknowledgedGoodNewsCount,
-      redRiskSitesCount,
-      overdueActionPlanTasksCount,
-      followUpConversationsCount,
-      pendingAuditsCount,
-  ]);
 
-  const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
+  const menuGroupsWithCounts = useMemo(() => {
+    return menuGroups.map(group => ({
+      ...group,
+      items: group.items.map(item => {
+        let count = 0;
+        if (item.value === 'summary') count = uncoveredShiftsCount;
+        if (item.value === 'risk') count = redRiskSitesCount;
+        if (item.value === 'action-plan') count = overdueActionPlanTasksCount;
+        if (item.value === 'conversation-log') count = followUpConversationsCount;
+        if (item.value === 'good-news-centre') count = unacknowledgedGoodNewsCount;
+        if (item.value === 'leave-calendar') count = uncoveredShiftsCount;
+        if (item.value === 'tasks') count = outstandingTasksCount;
+        if (item.value === 'audits') count = pendingAuditsCount;
+        return { ...item, notificationCount: count };
+      })
+    }));
+  }, [menuGroups, uncoveredShiftsCount, redRiskSitesCount, overdueActionPlanTasksCount, followUpConversationsCount, unacknowledgedGoodNewsCount, outstandingTasksCount, pendingAuditsCount]);
+
+  const allTabs = useMemo(() => menuGroupsWithCounts.flatMap(g => g.items), [menuGroupsWithCounts]);
   
   const activeTabInfo = useMemo(() => {
-      for (const group of menuGroups) {
+      for (const group of menuGroupsWithCounts) {
           const item = group.items.find(i => i.value === activeTab);
           if (item) {
               return { ...item, groupColor: group.color };
@@ -212,7 +223,7 @@ export default function DashboardPage() {
       }
       const fallbackItem = allTabs.find(t => t.value === activeTab);
       return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
-  }, [activeTab, menuGroups, allTabs]);
+  }, [activeTab, menuGroupsWithCounts, allTabs]);
 
   const primaryColorStyle = useMemo(() => {
       if (!activeTabInfo) return {};
@@ -329,18 +340,18 @@ export default function DashboardPage() {
   // --- MENU CONFIGURATION ---
 
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
-    const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
+    const activeGroup = menuGroupsWithCounts.find(g => g.items.some(i => i.value === activeTab));
     return activeGroup ? [activeGroup.group] : [];
   });
   
   useEffect(() => {
-    const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
+    const activeGroup = menuGroupsWithCounts.find(g => g.items.some(i => i.value === activeTab));
     if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
       setOpenCollapsibles((prevOpen) =>
           prevOpen.includes(activeGroup.group) ? prevOpen : [...prevOpen, activeGroup.group]
       );
     }
-  }, [activeTab, menuGroups]);
+  }, [activeTab, menuGroupsWithCounts]);
 
   // Seeding effect
   useEffect(() => {
@@ -354,7 +365,20 @@ export default function DashboardPage() {
 
       const sitesCollectionRef = collection(firestore, 'sites');
       const sitesQuery = query(sitesCollectionRef, limit(1));
-      const sitesSnapshot = await getDocs(sitesQuery);
+      
+      let sitesSnapshot;
+      try {
+        sitesSnapshot = await getDocs(sitesQuery);
+      } catch (e: any) {
+        if (e.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'sites',
+            operation: 'list',
+          }));
+          return;
+        }
+        throw e;
+      }
 
       const batch = writeBatch(firestore);
 
@@ -420,14 +444,35 @@ export default function DashboardPage() {
           toast({ title: "Setup Complete", description: "Your application data has been loaded." });
           console.log('Database seeding complete.');
           sessionStorage.setItem(SEED_VERSION, 'true');
-        } catch (error) {
-          console.error('Error seeding database:', error);
-          toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
+        } catch (error: any) {
+          if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: 'batch',
+              operation: 'write',
+            }));
+          } else {
+            toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
+          }
         }
       } else {
         console.log('Database already exists. Checking for data updates...');
         
-        const allSitesSnapshot = await getDocs(sitesCollectionRef);
+        let allSitesSnapshot;
+        let allCleanersSnapshot;
+        try {
+          allSitesSnapshot = await getDocs(sitesCollectionRef);
+          allCleanersSnapshot = await getDocs(collection(firestore, 'cleaners'));
+        } catch (e: any) {
+          if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: 'sites/cleaners',
+              operation: 'list',
+            }));
+            return;
+          }
+          throw e;
+        }
+
         let updatesMade = false;
         allSitesSnapshot.forEach(docSnap => {
             const existingSiteData = docSnap.data();
@@ -442,8 +487,6 @@ export default function DashboardPage() {
             }
         });
 
-        const cleanersCollectionRef = collection(firestore, 'cleaners');
-        const allCleanersSnapshot = await getDocs(cleanersCollectionRef);
         allCleanersSnapshot.forEach(docSnap => {
             const existingCleanerData = docSnap.data();
             if (existingCleanerData.availabilityStatus === undefined) {
@@ -461,9 +504,15 @@ export default function DashboardPage() {
                 await batch.commit();
                 toast({ title: "Data Update", description: "Your application data has been updated." });
                 console.log('Data update complete.');
-            } catch (error) {
-                console.error('Error updating data:', error);
-                toast({ variant: 'destructive', title: "Update Failed", description: "Could not update your application data." });
+            } catch (error: any) {
+                if (error.code === 'permission-denied') {
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'batch',
+                    operation: 'write',
+                  }));
+                } else {
+                  toast({ variant: 'destructive', title: "Update Failed", description: "Could not update your application data." });
+                }
             }
         } else {
             console.log('Data is already up to date.');
@@ -509,9 +558,15 @@ export default function DashboardPage() {
           toast({ title: "Holiday Balances Reset", description: `Cleaners' holiday days taken have been reset for ${currentYear}.` });
           localStorage.setItem(resetKey, 'true');
           console.log("Annual holiday reset complete.");
-        } catch (error) {
-          console.error("Error performing annual holiday reset:", error);
-          toast({ variant: 'destructive', title: "Reset Failed", description: "Could not reset holiday balances." });
+        } catch (error: any) {
+          if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: 'cleaners',
+              operation: 'write',
+            }));
+          } else {
+            toast({ variant: 'destructive', title: "Reset Failed", description: "Could not reset holiday balances." });
+          }
         }
       }
     };
@@ -593,7 +648,6 @@ export default function DashboardPage() {
     addDocumentNonBlocking(leaveCollection, { ...newLeaveData, coverAssignments: [] });
 
     if (!cleaners) {
-      console.warn("Cannot update leave counts: cleaners data not available yet.");
       return;
     }
     const cleaner = cleaners.find(c => c.id === newLeaveData.cleanerId);
@@ -648,7 +702,6 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
 
     if (!cleaners) {
-      console.warn("Cannot update leave counts: cleaners data not available yet.");
       return;
     }
     const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
@@ -870,7 +923,7 @@ export default function DashboardPage() {
             </SidebarHeader>
             <SidebarContent>
               <SidebarMenu>
-                  {menuGroups.map((group) => (
+                  {menuGroupsWithCounts.map((group) => (
                       <Collapsible
                           key={group.group}
                           open={openCollapsibles.includes(group.group)}
