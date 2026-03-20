@@ -45,37 +45,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
-  
-  const activeTabInfo = useMemo(() => {
-      for (const group of menuGroups) {
-          const item = group.items.find(i => i.value === activeTab);
-          if (item) {
-              return { ...item, groupColor: group.color };
-          }
-      }
-      const fallbackItem = allTabs.find(t => t.value === activeTab);
-      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
-  }, [activeTab, menuGroups, allTabs]);
-  
-  const primaryColorStyle = useMemo(() => {
-      if (!activeTabInfo) return {};
-      const HSL_DARK_FG = '0 0% 10%';
-      const HSL_LIGHT_FG = '0 0% 98%';
-
-      const colorMap = {
-          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
-          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
-          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-      };
-      
-      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
-
-      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
-  }, [activeTabInfo]);
-
 
   // --- DATA FETCHING ---
   const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
@@ -319,6 +288,36 @@ export default function DashboardPage() {
 
   const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
   
+  const activeTabInfo = useMemo(() => {
+      for (const group of menuGroups) {
+          const item = group.items.find(i => i.value === activeTab);
+          if (item) {
+              return { ...item, groupColor: group.color };
+          }
+      }
+      const fallbackItem = allTabs.find(t => t.value === activeTab);
+      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
+  }, [activeTab, menuGroups, allTabs]);
+  
+  const primaryColorStyle = useMemo(() => {
+      if (!activeTabInfo) return {};
+      const HSL_DARK_FG = '0 0% 10%';
+      const HSL_LIGHT_FG = '0 0% 98%';
+
+      const colorMap = {
+          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
+          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
+          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+      };
+      
+      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
+
+      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
+  }, [activeTabInfo]);
+
 
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
