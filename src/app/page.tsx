@@ -752,7 +752,7 @@ export default function DashboardPage() {
         <SidebarInset>
             <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
                 <div className="flex items-center gap-2">
-                    <SidebarTrigger className="md:hidden"/>
+                    <SidebarTrigger />
                     {activeTabDetails?.icon && <activeTabDetails.icon className="h-5 w-5 text-muted-foreground" />}
                     <h2 className="font-semibold text-lg">{activeTabDetails?.label}</h2>
                 </div>

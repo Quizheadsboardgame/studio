@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .multi-color-hover {
+    position: relative;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+  .multi-color-hover:hover, .multi-color-hover[data-state=open] {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+  .multi-color-hover::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 3px;
+    background: linear-gradient(to bottom, #f37021, #00a99d, #0054a6, #e2231a);
+    transform: scaleY(0);
+    transition: transform 0.2s ease-in-out;
+    border-radius: 99px;
+  }
+  .multi-color-hover:hover::after, .multi-color-hover[data-state=open]::after {
+    transform: scaleY(1);
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 98%;
