@@ -3,39 +3,39 @@
 import { Firestore, collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 
 const PROFESSIONAL_SITES = [
-  'CLINICAL SCHOOLS',
-  'ISLAND RESEARCH BUILDING - IRB',
-  'CLIFFORD ALLBUTT BUILDING - CAB',
-  'GRANTCHESTER HOUSE',
-  'JEFFREY CHEAH (CAPELLA)',
-  'BARTON HOUSE',
-  'COTON HOUSE',
-  'IMS LEVELS 4&5',
-  'MRC EPIDEMIOLOGY LEVEL 3',
-  'ACCI LEVEL 6',
-  'OBS',
-  'OLD IMS - LAB BLOCK 4',
-  'MEDICINE LEVEL 5',
-  'NEURO SPACE',
-  'PAEDIATRICS LEVEL 8',
-  'P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4',
-  'SURGERY & RHEUMATOLOGY LEVEL 6 HUB',
-  'SURGERY LEVEL 9',
-  'X RAY BLOCK RADIOLOGY LEVEL 5',
-  'CEDAR',
-  'TMS F&G LEVEL 2',
-  'WBIC RPU BASEMENT',
-  'WOLFSON BRAIN',
-  'HERSCHEL SMITH BUILDING - HSB',
-  'EAST FORVIE',
-  'JOHN VAN GEEST - JVG',
-  'WEST FORVIE',
-  'STRAGEWAYS (SLR)',
-  'HLRI',
-  'ANNE MCLAREN',
-  'BAY 13',
-  'E7 BUILDING',
-  'POST DOC BUILDING'
+  { name: 'CLINICAL SCHOOLS', code: '1' },
+  { name: 'ISLAND RESEARCH BUILDING - IRB', code: '2' },
+  { name: 'BAY 13', code: '2' },
+  { name: 'CLIFFORD ALLBUTT BUILDING - CAB', code: '4' },
+  { name: 'GRANTCHESTER HOUSE', code: '4' },
+  { name: 'JEFFREY CHEAH (CAPELLA)', code: '5' },
+  { name: 'BARTON HOUSE', code: '6' },
+  { name: 'COTON HOUSE', code: '6' },
+  { name: 'IMS LEVELS 4&5', code: '7' },
+  { name: 'MRC EPIDEMIOLOGY LEVEL 3', code: '7' },
+  { name: 'ACCI LEVEL 6', code: '8' },
+  { name: 'OBS', code: '9' },
+  { name: 'OLD IMS - LAB BLOCK 4', code: '10' },
+  { name: 'MEDICINE LEVEL 5', code: '10' },
+  { name: 'NEURO SPACE', code: '10' },
+  { name: 'PAEDIATRICS LEVEL 8', code: '10' },
+  { name: 'P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4', code: '10' },
+  { name: 'SURGERY & RHEUMATOLOGY LEVEL 6 HUB', code: '10' },
+  { name: 'SURGERY LEVEL 9', code: '10' },
+  { name: 'X RAY BLOCK RADIOLOGY LEVEL 5', code: '11' },
+  { name: 'CEDAR', code: '12' },
+  { name: 'TMS F&G LEVEL 2', code: '12' },
+  { name: 'WBIC RPU BASEMENT', code: '13' },
+  { name: 'WOLFSON BRAIN', code: '13' },
+  { name: 'HERSCHEL SMITH BUILDING - HSB', code: '14' },
+  { name: 'EAST FORVIE', code: '14' },
+  { name: 'JOHN VAN GEEST - JVG', code: '14' },
+  { name: 'WEST FORVIE', code: '14' },
+  { name: 'STRAGEWAYS (SLR)', code: '15' },
+  { name: 'HLRI', code: '17' },
+  { name: 'ANNE MCLAREN', code: 'Not on map' },
+  { name: 'E7 BUILDING', code: 'Not on map' },
+  { name: 'POST DOC BUILDING', code: 'Not on map' }
 ];
 
 const PROFESSIONAL_CLEANERS = [
@@ -116,12 +116,13 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
   }
   await bm.commit();
 
-  // 2. Re-import Sites (Lot 4 Specific)
-  for (const siteName of PROFESSIONAL_SITES) {
+  // 2. Re-import Sites (Lot 4 Specific with codes)
+  for (const siteInfo of PROFESSIONAL_SITES) {
     const siteRef = doc(collection(db, 'userProfiles', hubId, 'sites'));
     await bm.add(siteRef, {
       id: siteRef.id,
-      name: siteName,
+      name: siteInfo.name,
+      siteCode: siteInfo.code,
       status: 'No Concerns',
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
