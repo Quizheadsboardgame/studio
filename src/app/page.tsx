@@ -14,10 +14,9 @@ import {
   type MonthlySupplyOrder,
   type Appointment,
   type Leave,
-  type Consumable
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, Rocket } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -57,7 +56,6 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlo
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { seedDemoData } from '@/lib/demo-seeder';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 
@@ -89,7 +87,6 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,49 +110,8 @@ function LoginPage() {
     }
   };
 
-  const handleLaunchDemo = async () => {
-    setLoading(true);
-    try {
-      const demoEmail = 'demo@cleanflow.com';
-      const demoPass = 'cleanflow';
-      
-      let userCred;
-      try {
-        userCred = await signInWithEmailAndPassword(auth, demoEmail, demoPass);
-      } catch (e) {
-        userCred = await createUserWithEmailAndPassword(auth, demoEmail, demoPass);
-      }
-      
-      const uid = userCred.user.uid;
-      const hubId = `hub-${uid}`;
-      
-      await seedDemoData(firestore, hubId, demoEmail);
-      toast({ title: 'Demo Launched', description: 'Welcome to the Demo Operational Hub.' });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Demo Failed',
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md mb-6">
-        <Button 
-          variant="outline" 
-          className="w-full h-12 bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary font-bold shadow-sm"
-          onClick={handleLaunchDemo}
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Rocket className="mr-2 h-5 w-5" />}
-          LAUNCH DEMO ACCOUNT
-        </Button>
-      </div>
-
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
@@ -359,12 +315,6 @@ export default function DashboardPage() {
       const newProfileId = `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', newProfileId);
       
-      // Auto-import for specific account
-      if (user.email?.toLowerCase() === 'owen.newton@excellerateservices.com') {
-        seedDemoData(firestore, newProfileId, user.email, true);
-        return;
-      }
-
       setDoc(profileRef, {
         id: newProfileId,
         name: isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`,
@@ -416,8 +366,6 @@ export default function DashboardPage() {
 
   // --- Navigation Mapping ---
   const menuGroups = useMemo(() => {
-    // If master is configuring a hub, they might want to see all tabs to test them
-    // but typically we should respect the Hub's settings.
     const enabledTabs = activeProfile?.enabledTabs || ALL_AVAILABLE_TABS.map(t => t.id);
 
     const groups = [
@@ -687,8 +635,6 @@ export default function DashboardPage() {
             }} />;
         case 'audit-history':
             return <AuditHistoryTab sites={sites} monthlyAudits={audits} />;
-        case 'conversation-log':
-            return <ConversationLogTab cleaners={cleaners} sites={sites} conversationRecords={conversations} onAddRecord={(e) => setDocumentNonBlocking(doc(conversationsRef!), { ...e, id: doc(conversationsRef!).id }, { merge: true })} onUpdateRecord={(id, data) => updateDocumentNonBlocking(doc(conversationsRef!, id), data)} onRemoveRecord={(id) => deleteDocumentNonBlocking(doc(conversationsRef!, id))} />;
         case 'good-news':
             return <GoodNewsCentreTab records={goodNews} cleaners={cleaners} sites={sites} onAddRecord={(e) => setDocumentNonBlocking(doc(goodNewsRef!), { ...e, id: doc(goodNewsRef!).id }, { merge: true })} onUpdateRecord={(id, data) => updateDocumentNonBlocking(doc(goodNewsRef!, id), data)} onRemoveRecord={(id) => deleteDocumentNonBlocking(doc(goodNewsRef!, id))} />;
         case 'supplies':
