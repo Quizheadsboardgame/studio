@@ -6,7 +6,7 @@ service cloud.firestore {
      * CleanOps Hub Multi-Tenant Master Control Rules
      * 
      * Hierarchy: /userProfiles/{userProfileId}
-     * Master User: clean@flow.com (UID check required)
+     * Master Users: clean@flow.com or clean@flow.co.uk
      */
 
     // --- Global Helper Functions ---
@@ -15,47 +15,68 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Replace this UID with the actual UID of clean@flow.com after registration
-    // For now, we allow owners and admins within hubs.
     function isMaster() {
-      return isSignedIn() && request.auth.token.email == 'clean@flow.com';
+      return isSignedIn() && (
+        request.auth.token.email == 'clean@flow.com' || 
+        request.auth.token.email == 'clean@flow.co.uk'
+      );
     }
 
     function isMember(userProfileId) {
+      // Primary check: Is this the user's default personal hub?
+      if (userProfileId == 'hub-' + request.auth.uid) {
+        return true;
+      }
+      // Secondary check: Are they explicitly in the members map?
+      // Note: get() calls in rules are fine for path-bound subcollection queries
       let profile = get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data;
       return isSignedIn() && (request.auth.uid in profile.members || isMaster());
-    }
-
-    function isAtLeastAdmin(userProfileId) {
-      let profile = get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data;
-      return isSignedIn() && (profile.members[request.auth.uid] in ['owner', 'admin'] || isMaster());
     }
 
     // --- Collection Rules ---
 
     match /userProfiles/{userProfileId} {
-      allow read: if isSignedIn() && (request.auth.uid in resource.data.members || isMaster());
-      allow list: if isSignedIn() && (request.auth.uid in resource.data.members || isMaster());
+      allow read, list: if isSignedIn() && (
+        request.auth.uid in resource.data.members || 
+        isMaster() || 
+        userProfileId == 'hub-' + request.auth.uid
+      );
       
-      allow create: if isSignedIn(); // User can create their own profile or master can create
-      allow update: if isSignedIn() && (resource.data.members[request.auth.uid] == 'owner' || isMaster());
+      allow create: if isSignedIn(); 
+      allow update: if isSignedIn() && (
+        resource.data.members[request.auth.uid] == 'owner' || 
+        isMaster() || 
+        userProfileId == 'hub-' + request.auth.uid
+      );
       allow delete: if isMaster();
     }
 
-    // Subcollections follow the hub membership or master control
+    // Subcollections follow the hub membership, identity check, or master control
     match /userProfiles/{userProfileId}/sites/{siteId} {
-      allow read, write: if isMember(userProfileId);
+      allow read, write: if isSignedIn() && (
+        userProfileId == 'hub-' + request.auth.uid || 
+        isMaster() || 
+        isMember(userProfileId)
+      );
     }
 
     match /userProfiles/{userProfileId}/cleaners/{cleanerId} {
-      allow read, write: if isMember(userProfileId);
+      allow read, write: if isSignedIn() && (
+        userProfileId == 'hub-' + request.auth.uid || 
+        isMaster() || 
+        isMember(userProfileId)
+      );
     }
 
     match /userProfiles/{userProfileId}/cleaningScheduleEntries/{scheduleEntryId} {
-      allow read, write: if isMember(userProfileId);
+      allow read, write: if isSignedIn() && (
+        userProfileId == 'hub-' + request.auth.uid || 
+        isMaster() || 
+        isMember(userProfileId)
+      );
     }
     
-    // Fallback for unexpected paths during development
+    // Fallback for master control across all paths
     match /{path=**} {
       allow read, write: if isMaster();
     }

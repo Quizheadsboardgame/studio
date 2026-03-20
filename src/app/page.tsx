@@ -54,10 +54,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const MASTER_EMAIL = 'clean@flow.com';
+const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 
 function LoginPage() {
-  const [email, setEmail] = useState(MASTER_EMAIL);
+  const [email, setEmail] = useState(MASTER_EMAILS[0]);
   const [password, setPassword] = useState('cleanflow');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -135,7 +135,7 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Master Control']);
 
-  const isMasterUser = user?.email === MASTER_EMAIL;
+  const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email), [user]);
 
   // --- Hub Orchestration ---
   const profilesQuery = useMemoFirebase(() => {
