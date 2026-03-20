@@ -61,9 +61,16 @@ export default function DashboardPage() {
         { value: 'sites', label: 'Site Performance', icon: Briefcase },
         { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
         { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
+      ],
+    },
+    {
+      group: 'Communications',
+      icon: MessageSquare,
+      color: 'text-excellerate-purple',
+      items: [
         { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
         { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp },
-      ],
+      ]
     },
     {
       group: 'Scheduling',
@@ -100,7 +107,17 @@ export default function DashboardPage() {
   ], []);
 
   const allTabs = useMemo(() => menuGroups.flatMap(g => g.items), [menuGroups]);
-  const activeTabDetails = useMemo(() => allTabs.find(t => t.value === activeTab), [activeTab, allTabs]);
+  
+  const activeTabInfo = useMemo(() => {
+      for (const group of menuGroups) {
+          const item = group.items.find(i => i.value === activeTab);
+          if (item) {
+              return { ...item, groupColor: group.color };
+          }
+      }
+      const fallbackItem = allTabs.find(t => t.value === activeTab);
+      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
+  }, [activeTab, menuGroups, allTabs]);
 
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
@@ -772,6 +789,25 @@ export default function DashboardPage() {
             return <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />;
     }
   };
+  
+  const primaryColorStyle = useMemo(() => {
+      if (!activeTabInfo) return {};
+      const HSL_DARK_FG = '0 0% 10%';
+      const HSL_LIGHT_FG = '0 0% 98%';
+
+      const colorMap = {
+          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
+          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
+          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+      };
+      
+      const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
+
+      return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
+  }, [activeTabInfo]);
 
   return (
     <SidebarProvider>
@@ -865,8 +901,8 @@ export default function DashboardPage() {
             <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
                 <div className="flex items-center gap-2">
                     <SidebarTrigger />
-                    {activeTabDetails?.icon && <activeTabDetails.icon className="h-5 w-5 text-muted-foreground" />}
-                    <h2 className="font-semibold text-lg">{activeTabDetails?.label}</h2>
+                    {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
+                    <h2 className="font-semibold text-lg">{activeTabInfo?.label}</h2>
                 </div>
                 <div className="text-right hidden sm:block">
                     <p className="font-semibold text-sm">Assistant Manager: Nick Miller</p>
@@ -879,7 +915,7 @@ export default function DashboardPage() {
                         <Skeleton className="h-96 w-full" />
                     </div>
                 ) : (
-                    <div className="w-full">
+                    <div className="w-full" style={primaryColorStyle}>
                         {renderActiveTab()}
                     </div>
                 )}
@@ -893,3 +929,4 @@ export default function DashboardPage() {
     
 
     
+

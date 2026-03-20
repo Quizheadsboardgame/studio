@@ -20,6 +20,7 @@ export default {
         'excellerate-blue': '#0054a6',
         'excellerate-teal': '#00a99d',
         'excellerate-lime': '#99ca3c',
+        'excellerate-purple': '#8A2BE2',
         'gold-star': 'hsl(var(--gold-star))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

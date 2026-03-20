@@ -46,6 +46,10 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    --excellerate-red-hsl: 2.7 78.4% 50.2%;
+    --excellerate-blue-hsl: 209 100% 32.5%;
+    --excellerate-lime-hsl: 79.5 56.4% 51.4%;
+    --excellerate-purple-hsl: 271.4 76.1% 52.9%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 24.6 95% 53.1%;
