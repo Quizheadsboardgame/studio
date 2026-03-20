@@ -94,10 +94,14 @@ class BatchManager {
   }
 }
 
+/**
+ * Restores the Owen Newton account to the strictly professional state
+ * as it was before the demo and history seeding was added.
+ */
 export async function restoreProfessionalData(db: Firestore, hubId: string) {
   const bm = new BatchManager(db);
 
-  // 1. Wipe existing collections
+  // 1. Wipe ALL existing operational collections to ensure a clean slate
   const subCollections = [
     'sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 
     'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
@@ -112,7 +116,7 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
   }
   await bm.commit();
 
-  // 2. Re-import Sites
+  // 2. Re-import Sites (Lot 4 Specific)
   for (const siteName of PROFESSIONAL_SITES) {
     const siteRef = doc(collection(db, 'userProfiles', hubId, 'sites'));
     await bm.add(siteRef, {
@@ -125,7 +129,7 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     });
   }
 
-  // 3. Re-import Cleaners
+  // 3. Re-import Cleaners (Lot 4 Specific)
   for (const cleanerName of PROFESSIONAL_CLEANERS) {
     const cleanerRef = doc(collection(db, 'userProfiles', hubId, 'cleaners'));
     await bm.add(cleanerRef, {

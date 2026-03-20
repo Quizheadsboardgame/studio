@@ -62,7 +62,7 @@ import { restoreProfessionalData } from '@/lib/restore-seeder';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
-const CURRENT_RESTORATION_VERSION = 3;
+const CURRENT_RESTORATION_VERSION = 4;
 
 const ALL_AVAILABLE_TABS = [
   { id: 'summary', label: 'Daily Summary', group: 'Overview' },
