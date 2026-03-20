@@ -33,6 +33,7 @@ import React from 'react';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarMenuSub } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 
 export default function DashboardPage() {
@@ -44,6 +45,7 @@ export default function DashboardPage() {
     {
       group: 'Overview',
       icon: LayoutDashboard,
+      color: 'text-excellerate-orange',
       items: [
         { value: 'summary', label: 'Daily Summary', icon: FileText },
         { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
@@ -53,6 +55,7 @@ export default function DashboardPage() {
     {
       group: 'Management',
       icon: Users,
+      color: 'text-excellerate-blue',
       items: [
         { value: 'sites', label: 'Site Performance', icon: Briefcase },
         { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
@@ -63,6 +66,7 @@ export default function DashboardPage() {
     {
       group: 'Scheduling',
       icon: Calendar,
+      color: 'text-excellerate-teal',
       items: [
         { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
         { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
@@ -75,6 +79,7 @@ export default function DashboardPage() {
     {
       group: 'Logistics',
       icon: Package,
+      color: 'text-excellerate-red',
       items: [
         { value: 'audits', label: 'Audits', icon: FileCheck },
         { value: 'audit-history', label: 'Audit History', icon: FileClock },
@@ -84,6 +89,7 @@ export default function DashboardPage() {
     {
       group: 'Site Hub',
       icon: Briefcase,
+      color: 'text-excellerate-lime',
       items: [
         { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
         { value: 'site-map', label: 'Site Map', icon: Map },
@@ -787,7 +793,7 @@ export default function DashboardPage() {
                           <SidebarMenuItem>
                               <CollapsibleTrigger asChild>
                                   <SidebarMenuButton className="justify-between w-full">
-                                      <div className="flex items-center gap-2">
+                                      <div className={cn("flex items-center gap-2", group.color)}>
                                           <group.icon />
                                           <span>{group.group}</span>
                                       </div>
@@ -805,7 +811,7 @@ export default function DashboardPage() {
                                               className="justify-start w-full"
                                               tooltip={item.label}
                                           >
-                                              <item.icon />
+                                              <item.icon className={cn(activeTab === item.value && group.color)} />
                                               <span>{item.label}</span>
                                           </SidebarMenuButton>
                                       </SidebarMenuItem>
