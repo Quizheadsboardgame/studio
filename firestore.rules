@@ -4,12 +4,7 @@ service cloud.firestore {
 
     /**
      * CleanOps Hub Multi-Tenant Master Control Rules
-     * 
-     * Hierarchy: /userProfiles/{userProfileId}
-     * Master Users: clean@flow.com or clean@flow.co.uk
      */
-
-    // --- Global Helper Functions ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -22,61 +17,62 @@ service cloud.firestore {
       );
     }
 
-    function isMember(userProfileId) {
-      // Primary check: Is this the user's default personal hub?
-      if (userProfileId == 'hub-' + request.auth.uid) {
-        return true;
-      }
-      // Secondary check: Are they explicitly in the members map?
-      // Note: get() calls in rules are fine for path-bound subcollection queries
-      let profile = get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data;
-      return isSignedIn() && (request.auth.uid in profile.members || isMaster());
-    }
-
-    // --- Collection Rules ---
-
+    // --- User Profiles (Hubs) ---
     match /userProfiles/{userProfileId} {
-      allow read, list: if isSignedIn() && (
-        request.auth.uid in resource.data.members || 
+      // Split list rules to ensure Master users can list all docs unconditionally
+      allow list: if isMaster();
+      allow list: if isSignedIn() && (
+        userProfileId == 'hub-' + request.auth.uid || 
+        request.auth.uid in resource.data.members
+      );
+
+      // Single document access
+      allow get: if isSignedIn() && (
         isMaster() || 
-        userProfileId == 'hub-' + request.auth.uid
+        userProfileId == 'hub-' + request.auth.uid || 
+        request.auth.uid in resource.data.members
       );
       
       allow create: if isSignedIn(); 
+      
       allow update: if isSignedIn() && (
-        resource.data.members[request.auth.uid] == 'owner' || 
         isMaster() || 
-        userProfileId == 'hub-' + request.auth.uid
+        userProfileId == 'hub-' + request.auth.uid || 
+        resource.data.members[request.auth.uid] == 'owner'
       );
+      
       allow delete: if isMaster();
-    }
 
-    // Subcollections follow the hub membership, identity check, or master control
-    match /userProfiles/{userProfileId}/sites/{siteId} {
-      allow read, write: if isSignedIn() && (
-        userProfileId == 'hub-' + request.auth.uid || 
-        isMaster() || 
-        isMember(userProfileId)
-      );
-    }
+      // --- Hub-Scoped Data (Subcollections) ---
+      // We use denormalized members map in documents for efficient listing
+      match /{collectionName}/{docId} {
+        allow list: if isMaster();
+        allow list: if isSignedIn() && (
+          userProfileId == 'hub-' + request.auth.uid || 
+          request.auth.uid in resource.data.members
+        );
 
-    match /userProfiles/{userProfileId}/cleaners/{cleanerId} {
-      allow read, write: if isSignedIn() && (
-        userProfileId == 'hub-' + request.auth.uid || 
-        isMaster() || 
-        isMember(userProfileId)
-      );
-    }
+        allow get: if isSignedIn() && (
+          isMaster() || 
+          userProfileId == 'hub-' + request.auth.uid || 
+          request.auth.uid in resource.data.members
+        );
 
-    match /userProfiles/{userProfileId}/cleaningScheduleEntries/{scheduleEntryId} {
-      allow read, write: if isSignedIn() && (
-        userProfileId == 'hub-' + request.auth.uid || 
-        isMaster() || 
-        isMember(userProfileId)
-      );
+        allow create: if isSignedIn() && (
+          isMaster() || 
+          userProfileId == 'hub-' + request.auth.uid ||
+          get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data.members[request.auth.uid] != null
+        );
+
+        allow update, delete: if isSignedIn() && (
+          isMaster() || 
+          userProfileId == 'hub-' + request.auth.uid || 
+          request.auth.uid in resource.data.members
+        );
+      }
     }
     
-    // Fallback for master control across all paths
+    // Universal Master Fallback
     match /{path=**} {
       allow read, write: if isMaster();
     }

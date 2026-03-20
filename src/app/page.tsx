@@ -4,19 +4,11 @@ import { useMemo, useState, useEffect } from 'react';
 import { 
   type Site, 
   type Cleaner, 
-  type ActionPlan, 
-  type Leave, 
   type ScheduleEntry, 
-  type MonthlySupplyOrder, 
-  type MonthlyAudit, 
-  type Appointment, 
-  type Task, 
-  type ConversationRecord, 
-  type GoodNewsRecord,
   type UserProfile
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp, LogIn, LogOut, Loader2, Settings, Plus, Globe, Building2, Trash2, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -24,35 +16,25 @@ import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import ActionPlanTab from '@/components/action-plan-tab';
 import LeaveCalendarTab from '@/components/leave-calendar-tab';
-import AuditsTab from '@/components/audits-tab';
-import AuditHistoryTab from '@/components/audit-history-tab';
-import SuppliesTab from '@/components/supplies-tab';
-import DiaryTab from '@/components/diary-tab';
-import TasksTab from '@/components/tasks-tab';
-import ConversationLogTab from '@/components/conversation-log-tab';
-import GoodNewsCentreTab from '@/components/good-news-centre-tab';
 import AvailabilityTab from '@/components/availability-tab';
-import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
-import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
-import { format, parseISO, isToday } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import React from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarMenuSub, SidebarMenuBadge, SidebarFooter, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarMenuSub, SidebarFooter } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, query, where, doc, setDoc, serverTimestamp, getDocs, limit, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 
@@ -135,13 +117,14 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Master Control']);
 
-  const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email), [user]);
+  const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()), [user]);
 
   // --- Hub Orchestration ---
   const profilesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Super admin sees ALL profiles, standard user sees only theirs
+    // Super admin sees ALL profiles to allow switching
     if (isMasterUser) return collection(firestore, 'userProfiles');
+    // Standard users only see profiles where they are members
     return query(collection(firestore, 'userProfiles'), where(`members.${user.uid}`, '!=', null));
   }, [firestore, user, isMasterUser]);
 
@@ -149,21 +132,21 @@ export default function DashboardPage() {
   
   // Resolve active hub
   const activeProfile = useMemo(() => {
-    if (!allHubs) return null;
+    if (!allHubs || allHubs.length === 0) return null;
     if (selectedHubId) return allHubs.find(h => h.id === selectedHubId) || allHubs[0];
     return allHubs[0] || null;
   }, [allHubs, selectedHubId]);
 
   const activeProfileId = activeProfile?.id;
 
-  // Set default selection
+  // Set default selection when data loads
   useEffect(() => {
     if (activeProfileId && !selectedHubId) {
       setSelectedHubId(activeProfileId);
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Initial setup for new users (Auto-create first hub)
+  // Initial setup for new users (Auto-create first hub if none exist)
   useEffect(() => {
     if (!isProfileLoading && user && (!allHubs || allHubs.length === 0)) {
       const newProfileId = `hub-${user.uid}`;
@@ -197,7 +180,7 @@ export default function DashboardPage() {
       id: hubId,
       name,
       email: ownerEmail,
-      members: {}, // Master can add member UID later or user can claim
+      members: {}, // Master can add member UID later
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -211,7 +194,7 @@ export default function DashboardPage() {
   };
 
   // --- Navigation Mapping ---
-  const menuGroupsWithCounts = useMemo(() => {
+  const menuGroups = useMemo(() => {
     const groups = [
       {
         group: 'Overview',
@@ -260,14 +243,14 @@ export default function DashboardPage() {
   }, [isMasterUser]);
 
   const activeTabInfo = useMemo(() => {
-      for (const group of menuGroupsWithCounts) {
+      for (const group of menuGroups) {
           const item = group.items.find(i => i.value === activeTab);
           if (item) return { ...item, groupColor: group.color };
       }
       return undefined;
-  }, [activeTab, menuGroupsWithCounts]);
+  }, [activeTab, menuGroups]);
 
-  // --- Firestore Handlers ---
+  // --- Firestore Handlers (Scoped to Hub) ---
   const handleAddSite = (siteName: string) => {
     if (!sitesRef) return;
     const newDocRef = doc(sitesRef);
@@ -343,76 +326,74 @@ export default function DashboardPage() {
 
   if (!user) return <LoginPage />;
 
-  const renderAdminTab = () => {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Client Hub</CardTitle>
-            <CardDescription>Add a new organization or user account to the system.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              handleCreateHub(formData.get('name') as string, formData.get('email') as string);
-              (e.target as HTMLFormElement).reset();
-            }} className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="space-y-2 flex-1">
-                <Label>Hub/Client Name</Label>
-                <Input name="name" placeholder="e.g. Acme Cleaning Services" required />
-              </div>
-              <div className="space-y-2 flex-1">
-                <Label>Owner Email</Label>
-                <Input name="email" type="email" placeholder="owner@client.com" required />
-              </div>
-              <Button type="submit"><Plus className="mr-2 h-4 w-4" /> Create Hub</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Client Hubs</CardTitle>
-            <CardDescription>Manage existing accounts and access permissions.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr className="border-b">
-                    <th className="p-3 text-left">Hub Name</th>
-                    <th className="p-3 text-left">Owner Email</th>
-                    <th className="p-3 text-left">Created</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allHubs?.map(hub => (
-                    <tr key={hub.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="p-3 font-medium">{hub.name}</td>
-                      <td className="p-3 text-muted-foreground">{hub.email}</td>
-                      <td className="p-3 text-muted-foreground">{format(parseISO(hub.createdAt), 'PP')}</td>
-                      <td className="p-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
-                          {hub.id !== activeProfileId && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteHub(hub.id)} className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+  const renderAdminTab = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Client Hub</CardTitle>
+          <CardDescription>Add a new organization or user account to the system.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleCreateHub(formData.get('name') as string, formData.get('email') as string);
+            (e.target as HTMLFormElement).reset();
+          }} className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="space-y-2 flex-1">
+              <Label>Hub/Client Name</Label>
+              <Input name="name" placeholder="e.g. Acme Cleaning Services" required />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+            <div className="space-y-2 flex-1">
+              <Label>Owner Email</Label>
+              <Input name="email" type="email" placeholder="owner@client.com" required />
+            </div>
+            <Button type="submit"><Plus className="mr-2 h-4 w-4" /> Create Hub</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Client Hubs</CardTitle>
+          <CardDescription>Manage existing accounts and access permissions.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr className="border-b">
+                  <th className="p-3 text-left">Hub Name</th>
+                  <th className="p-3 text-left">Owner Email</th>
+                  <th className="p-3 text-left">Created</th>
+                  <th className="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allHubs?.map(hub => (
+                  <tr key={hub.id} className="border-b last:border-0 hover:bg-muted/50">
+                    <td className="p-3 font-medium">{hub.name}</td>
+                    <td className="p-3 text-muted-foreground">{hub.email}</td>
+                    <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
+                    <td className="p-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
+                        {hub.id !== activeProfileId && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHub(hub.id)} className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   const renderActiveTab = () => {
     if (activeTab === 'admin' && isMasterUser) return renderAdminTab();
@@ -471,7 +452,7 @@ export default function DashboardPage() {
                         <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest">Enterprise v1.0</span>
                     </div>
                 </div>
-                {isMasterUser && (
+                {isMasterUser && allHubs && allHubs.length > 0 && (
                   <div className="px-2 mt-2">
                     <Select value={selectedHubId || ''} onValueChange={setSelectedHubId}>
                       <SelectTrigger className="h-8 text-xs bg-muted/50 border-none">
@@ -479,7 +460,7 @@ export default function DashboardPage() {
                         <SelectValue placeholder="Select Hub" />
                       </SelectTrigger>
                       <SelectContent>
-                        {allHubs?.map(hub => (
+                        {allHubs.map(hub => (
                           <SelectItem key={hub.id} value={hub.id} className="text-xs">{hub.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -489,7 +470,7 @@ export default function DashboardPage() {
             </SidebarHeader>
             <SidebarContent>
               <SidebarMenu className="px-2 mt-4">
-                  {menuGroupsWithCounts.map((group) => (
+                  {menuGroups.map((group) => (
                       <Collapsible
                           key={group.group}
                           open={openCollapsibles.includes(group.group)}
@@ -549,7 +530,7 @@ export default function DashboardPage() {
                     <SidebarTrigger className="sm:hidden" />
                     <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
                       <Building2 className="h-4 w-4" />
-                      <span className="text-sm font-medium">{activeProfile?.name}</span>
+                      <span className="text-sm font-medium">{activeProfile?.name || 'Loading Hub...'}</span>
                       <ChevronRight className="h-3 w-3" />
                     </div>
                     {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
@@ -561,7 +542,11 @@ export default function DashboardPage() {
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 bg-muted/5">
                 <div className="w-full max-w-7xl mx-auto">
-                    {renderActiveTab()}
+                    {activeProfile ? renderActiveTab() : (
+                      <div className="flex items-center justify-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                 </div>
             </main>
         </SidebarInset>
