@@ -62,7 +62,7 @@ import { restoreProfessionalData } from '@/lib/restore-seeder';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
-const CURRENT_RESTORATION_VERSION = 4;
+const CURRENT_RESTORATION_VERSION = 5;
 
 const ALL_AVAILABLE_TABS = [
   { id: 'summary', label: 'Daily Summary', group: 'Overview' },
@@ -705,7 +705,7 @@ export default function DashboardPage() {
         case 'audits':
             return <AuditsTab sites={sites} monthlyAudits={audits} onSetAudit={(siteId, date, data) => {
                 const id = `${siteId}-${date.getFullYear()}-${date.getMonth() + 1}`;
-                setDocumentNonBlocking(doc(auditsRef!, id), { ...data, id, siteId, year: date.getFullYear(), month: date.getMonth() + 1 }, { merge: true });
+                setDocumentNonBlocking(doc(auditsRef!), { ...data, id, siteId, year: date.getFullYear(), month: date.getMonth() + 1 }, { merge: true });
             }} />;
         case 'audit-history':
             return <AuditHistoryTab sites={sites} monthlyAudits={audits} />;

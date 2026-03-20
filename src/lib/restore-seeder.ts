@@ -95,8 +95,8 @@ class BatchManager {
 }
 
 /**
- * Restores the Owen Newton account to the strictly professional state
- * as it was before the demo and history seeding was added.
+ * Restores the account to the strictly professional state
+ * by removing all demo data and re-importing the Lot 4 roster.
  */
 export async function restoreProfessionalData(db: Firestore, hubId: string) {
   const bm = new BatchManager(db);
