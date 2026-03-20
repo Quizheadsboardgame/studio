@@ -561,6 +561,51 @@
         "issue",
         "followUpRequired"
       ]
+    },
+    "GoodNewsRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GoodNewsRecord",
+      "type": "object",
+      "description": "Represents a record of positive feedback or exceptional performance.",
+      "properties": {
+        "personName": {
+          "type": "string",
+          "description": "The name of the person (cleaner or client contact) receiving praise."
+        },
+        "personType": {
+          "type": "string",
+          "description": "The type of person.",
+          "enum": ["Cleaner", "Client"]
+        },
+        "siteName": {
+          "type": "string",
+          "description": "The name of the site related to the event."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the event occurred (YYYY-MM-DD)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the positive event or feedback."
+        },
+        "acknowledged": {
+          "type": "boolean",
+          "description": "Whether the person has been formally acknowledged."
+        },
+        "acknowledgementNotes": {
+          "type": "string",
+          "description": "Notes on how the person was acknowledged (e.g., 'Voucher given')."
+        }
+      },
+      "required": [
+        "personName",
+        "personType",
+        "date",
+        "description",
+        "acknowledged"
+      ]
     }
   },
   "auth": {
@@ -679,6 +724,16 @@
             "$ref": "#/backend/entities/ConversationRecord"
           },
           "description": "Collection storing records of conversations with cleaners."
+        }
+      },
+      {
+        "path": "/goodNewsRecords/{recordId}",
+        "definition": {
+          "entityName": "GoodNewsRecord",
+          "schema": {
+            "$ref": "#/backend/entities/GoodNewsRecord"
+          },
+          "description": "Collection storing records of positive feedback and exceptional performance."
         }
       }
     ]

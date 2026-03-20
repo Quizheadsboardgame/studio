@@ -2,9 +2,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -19,6 +19,7 @@ import SuppliesTab from '@/components/supplies-tab';
 import DiaryTab from '@/components/diary-tab';
 import TasksTab from '@/components/tasks-tab';
 import ConversationLogTab from '@/components/conversation-log-tab';
+import GoodNewsCentreTab from '@/components/good-news-centre-tab';
 import AvailabilityTab from '@/components/availability-tab';
 import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
@@ -61,6 +62,7 @@ export default function DashboardPage() {
         { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
         { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
         { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
+        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp },
       ],
     },
     {
@@ -301,6 +303,9 @@ export default function DashboardPage() {
   
   const conversationRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'conversationRecords') : null, [firestore, user]);
   const { data: conversationRecords, isLoading: conversationRecordsLoading } = useCollection<ConversationRecord>(conversationRecordsCollection);
+
+  const goodNewsRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'goodNewsRecords') : null, [firestore, user]);
+  const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
 
   const calculatedSites = useMemo(() => {
     if (!sites || !actionPlans || !monthlyAudits) {
@@ -682,8 +687,23 @@ export default function DashboardPage() {
       deleteDocumentNonBlocking(doc(firestore, 'conversationRecords', recordId));
   };
 
+  const handleAddGoodNewsRecord = (newRecordData: Omit<GoodNewsRecord, 'id'>) => {
+    if (!goodNewsRecordsCollection) return;
+    addDocumentNonBlocking(goodNewsRecordsCollection, newRecordData);
+  };
 
-  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading;
+  const handleUpdateGoodNewsRecord = (recordId: string, updatedData: Partial<Omit<GoodNewsRecord, 'id'>>) => {
+      if (!firestore) return;
+      updateDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId), updatedData);
+  };
+
+  const handleRemoveGoodNewsRecord = (recordId: string) => {
+      if (!firestore) return;
+      deleteDocumentNonBlocking(doc(firestore, 'goodNewsRecords', recordId));
+  };
+
+
+  const isLoading = isUserLoading || sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading || goodNewsRecordsLoading;
   const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
   const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
@@ -740,6 +760,8 @@ export default function DashboardPage() {
             return <TasksTab tasks={tasks || []} sites={sortedSites} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
         case 'conversation-log':
             return <ConversationLogTab cleaners={sortedCleaners} sites={sortedSites} conversationRecords={conversationRecords || []} onAddRecord={handleAddConversationRecord} onUpdateRecord={handleUpdateConversationRecord} onRemoveRecord={handleRemoveConversationRecord} />;
+        case 'good-news-centre':
+            return <GoodNewsCentreTab records={goodNewsRecords || []} cleaners={sortedCleaners} sites={sortedSites} onAddRecord={handleAddGoodNewsRecord} onUpdateRecord={handleUpdateGoodNewsRecord} onRemoveRecord={handleRemoveGoodNewsRecord} />;
         case 'site-portfolio':
             return <SitePortfolioTab sites={sortedSites} cleaners={sortedCleaners} schedule={sortedSchedule} actionPlans={actionPlans || []} monthlyAudits={monthlyAudits || []} tasks={tasks || []} appointments={appointments || []} onUpdateSite={handleUpdateSite} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} onAddAppointment={handleAddAppointment} onUpdateAppointment={handleUpdateAppointment} onRemoveAppointment={handleRemoveAppointment} onAddScheduleEntry={handleAddScheduleEntry} onUpdateScheduleEntry={handleUpdateScheduleEntry} onRemoveScheduleEntry={handleRemoveScheduleEntry} />;
         case 'site-map':

@@ -589,3 +589,13 @@ export type ConversationRecord = {
   followUpRequired: boolean;
 };
 
+export type GoodNewsRecord = {
+  id: string;
+  personName: string;
+  personType: 'Cleaner' | 'Client';
+  siteName?: string;
+  date: string; // YYYY-MM-DD
+  description: string;
+  acknowledged: boolean;
+  acknowledgementNotes?: string;
+};
