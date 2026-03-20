@@ -867,7 +867,7 @@ export default function DashboardPage() {
                     </div>
                     <div className='flex flex-col'>
                         <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                            Excellerate
+                            CleanFlow
                         </h1>
                         <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
                     </div>
@@ -921,17 +921,6 @@ export default function DashboardPage() {
                   ))}
               </SidebarMenu>
             </SidebarContent>
-            <SidebarFooter>
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                        <AvatarFallback>ON</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <p className="font-semibold text-sm">Owen Newton</p>
-                        <p className="text-xs text-muted-foreground">Manager</p>
-                    </div>
-                </div>
-            </SidebarFooter>
         </Sidebar>
         <SidebarInset>
             <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
@@ -939,9 +928,6 @@ export default function DashboardPage() {
                     <SidebarTrigger />
                     {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
                     <h2 className="font-semibold text-lg">{activeTabInfo?.label}</h2>
-                </div>
-                <div className="text-right hidden sm:block">
-                    <p className="font-semibold text-sm">Assistant Manager: Nick Miller</p>
                 </div>
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
