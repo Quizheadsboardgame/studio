@@ -1,7 +1,7 @@
 'use client';
 
-import { Firestore, doc, collection, writeBatch, getDoc } from 'firebase/firestore';
-import { format, addDays, parseISO } from 'date-fns';
+import { Firestore, doc, collection, writeBatch, getDoc, type WriteBatch } from 'firebase/firestore';
+import { format, addDays, parseISO, startOfYear, endOfYear, eachDayOfInterval } from 'date-fns';
 
 const SITES = [
   "North Wing Clinic", "South Research Lab", "Main Reception", "Emergency Dept", 
@@ -40,14 +40,44 @@ const GOOD_NEWS = [
   "Bob identified a safety hazard and reported it immediately."
 ];
 
-const APPOINTMENTS = [
-  { title: "Monthly Site Audit", assignee: "Manager", notes: "Reviewing standards with client." },
-  { title: "Staff Induction", assignee: "Supervisor", notes: "Training new starter on H&S." },
-  { title: "Emergency Deep Clean", assignee: "Mobile Cleaner", notes: "A&E overflow area." },
-  { title: "Equipment Maintenance", assignee: "Mobile Cleaner", notes: "Service floor buffers." },
-  { title: "KPI Review Meeting", assignee: "Manager", notes: "Discussing quarterly performance." },
-  { title: "Safety Inspection", assignee: "Supervisor", notes: "Checking COSHH cupboards." }
+const VARIETY_APPOINTMENTS = [
+  { title: "Monthly Site Audit", notes: "Reviewing standards with client." },
+  { title: "Staff Induction", notes: "Training new starter on H&S." },
+  { title: "Emergency Deep Clean", notes: "A&E overflow area." },
+  { title: "Equipment Maintenance", notes: "Service floor buffers." },
+  { title: "KPI Review Meeting", notes: "Discussing quarterly performance." },
+  { title: "Safety Inspection", notes: "Checking COSHH cupboards." },
+  { title: "Consumables Inventory", notes: "Checking stock levels in stores." },
+  { title: "Client Coffee Morning", notes: "Building relationship with site leads." },
+  { title: "On-site Training Session", notes: "Bio-hazard spill response training." }
 ];
+
+/**
+ * Helper to manage multiple batches to avoid the 500 operation limit
+ */
+class BatchManager {
+  private count = 0;
+  private batch: WriteBatch;
+  constructor(private firestore: Firestore) {
+    this.batch = writeBatch(this.firestore);
+  }
+
+  async set(ref: any, data: any, options?: any) {
+    this.batch.set(ref, data, options);
+    this.count++;
+    if (this.count >= 450) {
+      await this.commit();
+    }
+  }
+
+  async commit() {
+    if (this.count > 0) {
+      await this.batch.commit();
+      this.batch = writeBatch(this.firestore);
+      this.count = 0;
+    }
+  }
+}
 
 export async function seedDemoData(firestore: Firestore, hubId: string, email: string) {
   const hubRef = doc(firestore, 'userProfiles', hubId);
@@ -57,10 +87,10 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     return;
   }
 
-  const batch = writeBatch(firestore);
+  const bm = new BatchManager(firestore);
 
   // 1. Initialize Hub
-  batch.set(hubRef, {
+  await bm.set(hubRef, {
     id: hubId,
     name: "Demo Operational Hub",
     email: email,
@@ -82,7 +112,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   SITES.forEach((name, index) => {
     const siteRef = doc(collection(firestore, 'userProfiles', hubId, 'sites'));
     siteIds.push(siteRef.id);
-    batch.set(siteRef, {
+    bm.set(siteRef, {
       id: siteRef.id,
       name,
       siteCode: `SITE-00${index + 1}`,
@@ -100,7 +130,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     const cleanerRef = doc(collection(firestore, 'userProfiles', hubId, 'cleaners'));
     cleanerIds.push(cleanerRef.id);
     cleanerMap[c.name] = cleanerRef.id;
-    batch.set(cleanerRef, {
+    bm.set(cleanerRef, {
       id: cleanerRef.id,
       name: c.name,
       rating: index === 0 ? 'Gold Star Cleaner' : (index % 5 === 0 ? 'Needs retraining' : 'No Concerns'),
@@ -117,7 +147,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     for (let month = 1; month <= 12; month++) {
       const auditId = `${siteId}-2026-${month}`;
       const score = 90 + Math.floor(Math.random() * 11); // 90-100%
-      batch.set(doc(firestore, 'userProfiles', hubId, 'audits', auditId), {
+      bm.set(doc(firestore, 'userProfiles', hubId, 'audits', auditId), {
         id: auditId,
         siteId,
         month,
@@ -136,7 +166,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     const siteName = SITES[index];
     const cleanerName = CLEANERS[index % CLEANERS.length].name;
     const scheduleRef = doc(collection(firestore, 'userProfiles', hubId, 'cleaningScheduleEntries'));
-    batch.set(scheduleRef, {
+    bm.set(scheduleRef, {
       id: scheduleRef.id,
       site: siteName,
       cleaner: cleanerName,
@@ -149,7 +179,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   // 6. Seed Good News
   GOOD_NEWS.forEach((desc, index) => {
     const newsRef = doc(collection(firestore, 'userProfiles', hubId, 'goodNews'));
-    batch.set(newsRef, {
+    bm.set(newsRef, {
       id: newsRef.id,
       personName: CLEANERS[index % CLEANERS.length].name,
       personType: 'Cleaner',
@@ -167,11 +197,10 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     const leaveDate = `2026-${month.toString().padStart(2, '0')}-10`;
     const leaveRef = doc(collection(firestore, 'userProfiles', hubId, 'leave'));
     
-    // Assign some cover for these shifts
     const siteToCover = SITES[month % SITES.length];
     const coverCleaner = CLEANERS[(month + 5) % CLEANERS.length].name;
 
-    batch.set(leaveRef, {
+    bm.set(leaveRef, {
       id: leaveRef.id,
       cleanerId: cleanerMap[cleanerName],
       cleanerName,
@@ -183,24 +212,87 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     });
   }
 
-  // 8. Seed Diary Appointments for Roles
-  for (let i = 1; i <= 12; i++) {
-    APPOINTMENTS.forEach((app, idx) => {
-      const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-      const dateStr = `2026-${i.toString().padStart(2, '0')}-${(idx + 5).toString().padStart(2, '0')}`;
-      batch.set(appRef, {
-        id: appRef.id,
-        title: app.title,
-        date: dateStr,
-        assignee: app.assignee,
-        site: SITES[idx % SITES.length],
-        startTime: "09:00",
-        endTime: "11:00",
-        notes: app.notes,
-        recurrence: 'none'
-      });
+  // 8. Seed Diary Appointments - EVERY DAY FOR ALL DIARIES
+  const start2026 = startOfYear(new Date('2026-01-01'));
+  const end2026 = endOfYear(new Date('2026-01-01'));
+  const allDaysOf2026 = eachDayOfInterval({ start: start2026, end: end2026 });
+
+  // A. Anchor Daily Tasks (Guarantees every day has at least one entry per role)
+  const anchorTasks = [
+    { title: "Daily Operational Briefing", assignee: "Manager", start: "08:30", end: "09:00" },
+    { title: "Daily Team Stand-up", assignee: "Supervisor", start: "09:00", end: "09:30" },
+    { title: "Vehicle & Kit Inspection", assignee: "Mobile Cleaner", start: "08:00", end: "08:30" }
+  ];
+
+  for (const task of anchorTasks) {
+    const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
+    bm.set(appRef, {
+      id: appRef.id,
+      title: task.title,
+      date: "2026-01-01",
+      assignee: task.assignee,
+      startTime: task.start,
+      endTime: task.end,
+      notes: "Daily standard operating procedure.",
+      recurrence: 'daily',
+      recurrenceEndDate: "2026-12-31"
     });
   }
 
-  await batch.commit();
+  // B. Varied Unique Tasks throughout the year (Adding ~365 * 1.5 unique appointments)
+  const roles = ["Manager", "Supervisor", "Mobile Cleaner"];
+  
+  allDaysOf2026.forEach((day, dayIndex) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    
+    // Add 1 unique varied task per day, rotating roles
+    const role = roles[dayIndex % roles.length];
+    const variety = VARIETY_APPOINTMENTS[dayIndex % VARIETY_APPOINTMENTS.length];
+    
+    const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
+    bm.set(appRef, {
+      id: appRef.id,
+      title: variety.title,
+      date: dateStr,
+      assignee: role,
+      site: SITES[dayIndex % SITES.length],
+      startTime: "10:30",
+      endTime: "12:00",
+      notes: variety.notes,
+      recurrence: 'none'
+    });
+
+    // Every Saturday, add an extra specific deep clean for the Mobile Cleaner
+    if (day.getDay() === 6) {
+      const satRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
+      bm.set(satRef, {
+        id: satRef.id,
+        title: "Weekend Intensive Deep Clean",
+        date: dateStr,
+        assignee: "Mobile Cleaner",
+        site: SITES[dayIndex % SITES.length],
+        startTime: "09:00",
+        endTime: "15:00",
+        notes: "Full scrub and seal of high-traffic corridors.",
+        recurrence: 'none'
+      });
+    }
+
+    // Every Sunday, add a Manager KPI Prep session
+    if (day.getDay() === 0) {
+      const sunRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
+      bm.set(sunRef, {
+        id: sunRef.id,
+        title: "Weekly KPI & Reporting",
+        date: dateStr,
+        assignee: "Manager",
+        startTime: "14:00",
+        endTime: "16:00",
+        notes: "Compiling weekly statistics for regional management.",
+        recurrence: 'none'
+      });
+    }
+  });
+
+  await bm.commit();
 }
