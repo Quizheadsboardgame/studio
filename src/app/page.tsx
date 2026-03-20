@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
-
+  
   // --- DATA FETCHING ---
   const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
   const { data: sites, isLoading: sitesLoading } = useCollection<Site>(sitesCollection);
@@ -80,109 +80,13 @@ export default function DashboardPage() {
   const goodNewsRecordsCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'goodNewsRecords') : null, [firestore, user]);
   const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
 
-  // --- DERIVED DATA & NOTIFICATION COUNTS ---
-  const calculatedSites = useMemo(() => {
-    if (!sites || !actionPlans || !monthlyAudits) {
-        return sites || [];
-    }
-
-    return sites.map(site => {
-        let newStatus: SiteStatus;
-
-        // 1. Check for action plans
-        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
-        if (siteActionPlan) {
-            newStatus = 'Site under action plan';
-            return { ...site, status: newStatus };
-        }
-
-        // 2. Check latest audit score
-        const siteAudits = monthlyAudits
-            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
-            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
-
-        if (siteAudits.length > 0) {
-            const latestAudit = siteAudits[0];
-            if (latestAudit.score === 100) {
-                newStatus = 'Gold Star Site';
-            } else if (latestAudit.score >= 99) {
-                newStatus = 'Client happy';
-            } else if (latestAudit.score >= 96) {
-                newStatus = 'Client concerns';
-            } else {
-                newStatus = 'Site requires action plan';
-            }
-        } else {
-            newStatus = 'No Concerns'; // Default if no audits
-        }
-        
-        return { ...site, status: newStatus };
-    });
-  }, [sites, actionPlans, monthlyAudits]);
-
-  const calculatedCleaners = useMemo(() => {
-    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
-        return cleaners || [];
-    }
-
-    return cleaners.map(cleaner => {
-        let newRating: CleanerPerformance;
-
-        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
-        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
-        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
-        
-        const cleanerSites = cleanerSiteNames.flatMap(name =>
-            calculatedSites.filter(s => name.toLowerCase().includes(s.name.toLowerCase()))
-        ).filter((value, index, self) => self.findIndex(s => s.id === value.id) === index);
-        
-        if (cleanerActionPlan) {
-            newRating = 'Under action plan';
-        }
-        else if (records.some(r => r.followUpRequired)) {
-            newRating = 'Operational concerns';
-        }
-        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
-             newRating = 'Needs retraining';
-        }
-        else if (records.length > 0) {
-            newRating = 'Slight improvement needed';
-        }
-        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
-            newRating = 'Gold Star Cleaner';
-        }
-        else if (cleanerSites.length > 0) {
-            newRating = 'Site satisfied';
-        }
-        else {
-            newRating = 'No Concerns';
-        }
-
-        return { ...cleaner, rating: newRating };
-    });
-  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
-
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
-  const uniqueSchedule = useMemo(() => {
-    if (!schedule) return [];
-    const seen = new Set<string>();
-    return schedule.filter(entry => {
-        const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-  }, [schedule]);
-
-  const todaysAbsences = useMemo(() => {
-    if (!leave) return [];
-    return leave.filter(l => isToday(parseISO(l.date)));
-  }, [leave]);
-
-  const todaysShiftsToCover = useMemo(() => {
-    if (!todaysAbsences || !uniqueSchedule) return [];
-     return todaysAbsences.flatMap(absence => {
+  const uncoveredShiftsCount = useMemo(() => {
+    if (!leave || !schedule) return 0;
+    const todaysAbsences = leave.filter(l => isToday(parseISO(l.date)));
+    const uniqueSchedule = [...new Map(schedule.map(item => [`${item.site}|${item.cleaner}|${item.start}|${item.finish}`, item])).values()];
+    const todaysShiftsToCover = todaysAbsences.flatMap(absence => {
         const cleanerSchedule = uniqueSchedule.filter(s => s.cleaner === absence.cleanerName);
         if (cleanerSchedule.length > 0) {
             return cleanerSchedule.map(shift => {
@@ -192,17 +96,31 @@ export default function DashboardPage() {
         }
         return [];
     });
-  }, [todaysAbsences, uniqueSchedule]);
-  
-  const uncoveredShiftsCount = useMemo(() => todaysShiftsToCover.filter(shift => !shift.isCovered).length, [todaysShiftsToCover]);
-  const unacknowledgedGoodNewsCount = useMemo(() => goodNewsRecords ? goodNewsRecords.filter(r => !r.acknowledged).length : 0, [goodNewsRecords]);
-  const redRiskSitesCount = useMemo(() => calculatedSites.filter(s => s.status === 'Site under action plan' || s.status === 'Site requires action plan').length, [calculatedSites]);
+    return todaysShiftsToCover.filter(shift => !shift.isCovered).length;
+  }, [leave, schedule]);
+
+  const redRiskSitesCount = useMemo(() => {
+      if (!sites || !actionPlans || !monthlyAudits) return 0;
+      return sites.filter(s => {
+          const plan = actionPlans.find(p => p.targetType === 'site' && p.id === s.id);
+          if (plan) return true;
+          const siteAudits = monthlyAudits
+              .filter(a => a.siteId === s.id && a.status === 'Completed' && typeof a.score === 'number' && a.bookedDate)
+              .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
+          if (siteAudits.length > 0 && siteAudits[0].score! < 96) return true;
+          return false;
+      }).length;
+  }, [sites, actionPlans, monthlyAudits]);
+
   const overdueActionPlanTasksCount = useMemo(() => {
     if (!actionPlans) return 0;
     const today = startOfToday();
     return actionPlans.flatMap(p => p.tasks).filter(t => !t.completed && t.dueDate && parseISO(t.dueDate) < today).length;
   }, [actionPlans]);
+
   const followUpConversationsCount = useMemo(() => conversationRecords ? conversationRecords.filter(r => r.followUpRequired).length : 0, [conversationRecords]);
+  const unacknowledgedGoodNewsCount = useMemo(() => goodNewsRecords ? goodNewsRecords.filter(r => !r.acknowledged).length : 0, [goodNewsRecords]);
+
   const pendingAuditsCount = useMemo(() => {
       if (!sites || !monthlyAudits) return 0;
       const currentMonthDate = new Date();
@@ -213,7 +131,6 @@ export default function DashboardPage() {
       return sites.length - completedSiteIds.size;
   }, [monthlyAudits, sites]);
 
-  // --- MENU CONFIGURATION ---
   const menuGroups = useMemo(() => [
     {
       group: 'Overview',
@@ -318,6 +235,101 @@ export default function DashboardPage() {
       return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
   }, [activeTabInfo]);
 
+
+  // --- DERIVED DATA & NOTIFICATION COUNTS ---
+  const calculatedSites = useMemo(() => {
+    if (!sites || !actionPlans || !monthlyAudits) {
+        return sites || [];
+    }
+
+    return sites.map(site => {
+        let newStatus: SiteStatus;
+
+        // 1. Check for action plans
+        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
+        if (siteActionPlan) {
+            newStatus = 'Site under action plan';
+            return { ...site, status: newStatus };
+        }
+
+        // 2. Check latest audit score
+        const siteAudits = monthlyAudits
+            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
+            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
+
+        if (siteAudits.length > 0) {
+            const latestAudit = siteAudits[0];
+            if (latestAudit.score === 100) {
+                newStatus = 'Gold Star Site';
+            } else if (latestAudit.score >= 99) {
+                newStatus = 'Client happy';
+            } else if (latestAudit.score >= 96) {
+                newStatus = 'Client concerns';
+            } else {
+                newStatus = 'Site requires action plan';
+            }
+        } else {
+            newStatus = 'No Concerns'; // Default if no audits
+        }
+        
+        return { ...site, status: newStatus };
+    });
+  }, [sites, actionPlans, monthlyAudits]);
+
+  const calculatedCleaners = useMemo(() => {
+    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
+        return cleaners || [];
+    }
+
+    return cleaners.map(cleaner => {
+        let newRating: CleanerPerformance;
+
+        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
+        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
+        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
+        
+        const cleanerSites = cleanerSiteNames.flatMap(name =>
+            calculatedSites.filter(s => name.toLowerCase().includes(s.name.toLowerCase()))
+        ).filter((value, index, self) => self.findIndex(s => s.id === value.id) === index);
+        
+        if (cleanerActionPlan) {
+            newRating = 'Under action plan';
+        }
+        else if (records.some(r => r.followUpRequired)) {
+            newRating = 'Operational concerns';
+        }
+        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
+             newRating = 'Needs retraining';
+        }
+        else if (records.length > 0) {
+            newRating = 'Slight improvement needed';
+        }
+        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
+            newRating = 'Gold Star Cleaner';
+        }
+        else if (cleanerSites.length > 0) {
+            newRating = 'Site satisfied';
+        }
+        else {
+            newRating = 'No Concerns';
+        }
+
+        return { ...cleaner, rating: newRating };
+    });
+  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
+
+  const uniqueSchedule = useMemo(() => {
+    if (!schedule) return [];
+    const seen = new Set<string>();
+    return schedule.filter(entry => {
+        const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+  }, [schedule]);
+
+  // --- MENU CONFIGURATION ---
 
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
@@ -857,7 +869,7 @@ export default function DashboardPage() {
             <SidebarHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-1 relative">
-                        <Image src="https://i.ibb.co/6g4VpWd/Cleanflow-logo.png" alt="CleanFlow Logo" width={32} height={32} />
+                        <Image src="https://i.ibb.co/6g4VpWd/Cleanflow-logo.png" alt="CleanFlow Logo" width={32} height={32} unoptimized={true} />
                         {outstandingTasksCount > 0 && (
                         <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                             {outstandingTasksCount}
