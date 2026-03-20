@@ -163,7 +163,7 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemo
     if (!plan) return;
     setIsGeneratingExcel(true);
     try {
-        const { utils, writeFile } = await import('xlsx');
+        const XLSX = await import('xlsx');
 
         const header = ["Task Description", "Due Date", "Status"];
         const tasksData = plan.tasks.map(task => ([
@@ -182,14 +182,14 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemo
             [plan.notes || ''],
         ];
 
-        const worksheet = utils.aoa_to_sheet(finalData);
+        const worksheet = XLSX.utils.aoa_to_sheet(finalData);
 
         worksheet['!cols'] = [ { wch: 50 }, { wch: 20 }, { wch: 15 } ];
 
-        const workbook = utils.book_new();
-        utils.book_append_sheet(workbook, worksheet, 'Action Plan');
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Action Plan');
 
-        writeFile(workbook, `Action_Plan_${plan.targetName.replace(/\s+/g, '_')}.xlsx`);
+        XLSX.writeFile(workbook, `Action_Plan_${plan.targetName.replace(/\s+/g, '_')}.xlsx`);
     } catch (error) {
         console.error("Error generating Excel:", error);
     } finally {
@@ -494,7 +494,7 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
     if (existingActionPlans.length === 0) return;
     setIsGeneratingAllExcel(true);
     try {
-        const { utils, writeFile } = await import('xlsx');
+        const XLSX = await import('xlsx');
         
         const allData: (string | number | Date | null)[][] = [];
         allData.push(['Target', 'Type', 'Task', 'Due Date', 'Status', 'Notes']);
@@ -517,12 +517,12 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
             allData.push([]); // Spacer row
         });
 
-        const ws = utils.aoa_to_sheet(allData);
+        const ws = XLSX.utils.aoa_to_sheet(allData);
         ws['!cols'] = [ { wch: 30 }, { wch: 10 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 50 } ];
         
-        const wb = utils.book_new();
-        utils.book_append_sheet(wb, ws, 'All Action Plans');
-        writeFile(wb, 'All_Action_Plans.xlsx');
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'All Action Plans');
+        XLSX.writeFile(wb, 'All_Action_Plans.xlsx');
     } catch (error) {
         console.error("Error generating all Excel files:", error);
     } finally {
