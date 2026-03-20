@@ -97,6 +97,7 @@ class BatchManager {
 /**
  * Restores the account to the strictly professional state
  * by removing all demo data and re-importing the Lot 4 roster.
+ * Updated to recursively delete site sub-collections (consumables).
  */
 export async function restoreProfessionalData(db: Firestore, hubId: string) {
   const bm = new BatchManager(db);
@@ -111,6 +112,14 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     const colRef = collection(db, 'userProfiles', hubId, sub);
     const snapshot = await getDocs(colRef);
     for (const d of snapshot.docs) {
+      // Special recursive check for sites to remove consumables
+      if (sub === 'sites') {
+        const consumablesRef = collection(db, 'userProfiles', hubId, 'sites', d.id, 'consumables');
+        const consumablesSnapshot = await getDocs(consumablesRef);
+        for (const cd of consumablesSnapshot.docs) {
+          await bm.delete(cd.ref);
+        }
+      }
       await bm.delete(d.ref);
     }
   }
