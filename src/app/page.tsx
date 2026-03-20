@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp, Brain } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -302,15 +302,10 @@ export default function DashboardPage() {
   
   useEffect(() => {
     const activeGroup = menuGroups.find(g => g.items.some(i => i.value === activeTab));
-    if (activeGroup) {
-      setOpenCollapsibles(prevOpen => {
-        if (!prevOpen.includes(activeGroup.group)) {
-          return [...prevOpen, activeGroup.group];
-        }
-        return prevOpen;
-      });
+    if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
+      setOpenCollapsibles(prevOpen => [...prevOpen, activeGroup.group]);
     }
-  }, [activeTab, menuGroups]);
+  }, [activeTab, menuGroups, openCollapsibles]);
 
 
   useEffect(() => {
@@ -850,13 +845,7 @@ export default function DashboardPage() {
             <SidebarHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-2 relative bg-primary rounded-lg">
-                        <svg
-                            className="h-6 w-6 text-primary-foreground"
-                            fill="currentColor"
-                            viewBox="0 0 16 16"
-                        >
-                            <path d="M4.5 2a2.5 2.5 0 0 1 2.5 2.5v1.066a.5.5 0 0 0 .5.5h1.866a.5.5 0 0 0 .5-.5V4.5a2.5 2.5 0 0 1 2.5-2.5h.5A2.5 2.5 0 0 1 15 4.5v1.534a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V4.5a3.5 3.5 0 0 0-3.5-3.5h-.5a3.5 3.5 0 0 0-3.5 3.5v1.066a1.5 1.5 0 0 1-1.5 1.5h-1.866a1.5 1.5 0 0 1-1.5-1.5V4.5A3.5 3.5 0 0 0 3.5 1h-.5A3.5 3.5 0 0 0 0 4.5v1.534a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V4.5A2.5 2.5 0 0 1 3.5 2zM1 8.35v.226a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V8.35a1.5 1.5 0 0 1 1.5-1.5h1.866a1.5 1.5 0 0 1 1.5 1.5v3.184a.5.5 0 0 0 .5.5h1.866a.5.5 0 0 0 .5-.5V8.35a1.5 1.5 0 0 1 1.5-1.5h1.866a1.5 1.5 0 0 1 1.5 1.5v.226a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5v-.226a2.5 2.5 0 0 0-2.5-2.5h-1.866a2.5 2.5 0 0 0-2.5 2.5v3.184a1.5 1.5 0 0 1-1.5 1.5h-1.866a1.5 1.5 0 0 1-1.5-1.5V8.35a2.5 2.5 0 0 0-2.5-2.5h-1.866A2.5 2.5 0 0 0 1 8.35"/>
-                        </svg>
+                        <Brain className="h-6 w-6 text-white" />
                         {outstandingTasksCount > 0 && (
                         <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                             {outstandingTasksCount}
