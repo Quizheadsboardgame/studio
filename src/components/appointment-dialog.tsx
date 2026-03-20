@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -28,7 +29,7 @@ export function AppointmentDialog({ sites, onSave, appointment, defaultAssignee,
     const [title, setTitle] = useState(appointment?.title || '');
     const [site, setSite] = useState(appointment?.site || '');
     const [date, setDate] = useState<string>('');
-    const [assignee, setAssignee] = useState(appointment?.assignee || defaultAssignee || 'Owen Newton');
+    const [assignee, setAssignee] = useState(appointment?.assignee || defaultAssignee || 'Manager');
     const [startTime, setStartTime] = useState(appointment?.startTime || '');
     const [endTime, setEndTime] = useState(appointment?.endTime || '');
     const [notes, setNotes] = useState(appointment?.notes || '');
@@ -72,7 +73,7 @@ export function AppointmentDialog({ sites, onSave, appointment, defaultAssignee,
             setTitle(appointment?.title || '');
             setSite(appointment?.site || '');
             setDate(appointment ? appointment.date : format(new Date(), 'yyyy-MM-dd'));
-            setAssignee(appointment?.assignee || defaultAssignee || 'Owen Newton');
+            setAssignee(appointment?.assignee || defaultAssignee || 'Manager');
             setStartTime(appointment?.startTime || '');
             setEndTime(appointment?.endTime || '');
             setNotes(appointment?.notes || '');
@@ -116,9 +117,9 @@ export function AppointmentDialog({ sites, onSave, appointment, defaultAssignee,
                                     <SelectValue placeholder="Select person" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Owen Newton">Owen Newton</SelectItem>
-                                    <SelectItem value="Nick Miller">Nick Miller</SelectItem>
-                                    <SelectItem value="Mircalla Bond (Carla)">Mircalla Bond (Carla)</SelectItem>
+                                    <SelectItem value="Manager">Manager</SelectItem>
+                                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                    <SelectItem value="Mobile Cleaner">Mobile Cleaner</SelectItem>
                                 </SelectContent>
                              </Select>
                         </div>

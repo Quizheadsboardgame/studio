@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Site": {
@@ -370,9 +371,9 @@
             "type": "string",
             "description": "The person assigned to conduct the audit.",
             "enum": [
-                "Owen Newton",
-                "Nick Miller",
-                "Mircalla Bond (Carla)",
+                "Manager",
+                "Supervisor",
+                "Mobile Cleaner",
                 "Unassigned"
             ]
         }
@@ -402,9 +403,9 @@
             "type": "string",
             "description": "The person this appointment is assigned to.",
             "enum": [
-                "Owen Newton",
-                "Nick Miller",
-                "Mircalla Bond (Carla)"
+                "Manager",
+                "Supervisor",
+                "Mobile Cleaner"
             ]
         },
         "site": {
@@ -468,9 +469,9 @@
           "type": "string",
           "description": "The person this task is assigned to.",
           "enum": [
-            "Owen Newton",
-            "Nick Miller",
-            "Mircalla Bond (Carla)",
+            "Manager",
+            "Supervisor",
+            "Mobile Cleaner",
             "Unassigned"
           ]
         },

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, ReactNode, useRef } from 'react';
@@ -77,7 +78,7 @@ interface DiaryTabProps {
 export default function DiaryTab({ sites, appointments, monthlyAudits, leave, schedule, onAddAppointment, onUpdateAppointment, onRemoveAppointment }: DiaryTabProps) {
     const [filterStartDate, setFilterStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [filterEndDate, setFilterEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-    const [activeDiary, setActiveDiary] = useState('Owen Newton');
+    const [activeDiary, setActiveDiary] = useState('Manager');
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const printableRef = useRef<HTMLDivElement>(null);
 
@@ -178,10 +179,10 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
 
     }, [monthlyAudits, appointments, sites, leave, schedule, filterStartDate, filterEndDate]);
 
-    const owenEvents = useMemo(() => events.filter(e => e.assignee === 'Owen Newton'), [events]);
-    const nickEvents = useMemo(() => events.filter(e => e.assignee === 'Nick Miller'), [events]);
-    const carlaEvents = useMemo(() => events.filter(e => e.assignee === 'Mircalla Bond (Carla)'), [events]);
-    const staffCoverEvents = useMemo(() => events.filter(e => e.type === 'cover' && e.assignee !== 'Mircalla Bond (Carla)'), [events]);
+    const managerEvents = useMemo(() => events.filter(e => e.assignee === 'Manager'), [events]);
+    const supervisorEvents = useMemo(() => events.filter(e => e.assignee === 'Supervisor'), [events]);
+    const mobileCleanerEvents = useMemo(() => events.filter(e => e.assignee === 'Mobile Cleaner'), [events]);
+    const staffCoverEvents = useMemo(() => events.filter(e => e.type === 'cover' && e.assignee !== 'Mobile Cleaner'), [events]);
 
     const handleSaveAppointment = (data: Omit<Appointment, 'id'> | (Partial<Omit<Appointment, 'id'>> & { id: string })) => {
         if ('id' in data) {
@@ -193,9 +194,9 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
     };
     
     const eventsForPdf = 
-        activeDiary === 'Owen Newton' ? owenEvents :
-        activeDiary === 'Nick Miller' ? nickEvents :
-        activeDiary === 'Mircalla Bond (Carla)' ? carlaEvents :
+        activeDiary === 'Manager' ? managerEvents :
+        activeDiary === 'Supervisor' ? supervisorEvents :
+        activeDiary === 'Mobile Cleaner' ? mobileCleanerEvents :
         activeDiary === 'Staff Cover' ? staffCoverEvents :
         [];
 
@@ -369,11 +370,11 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                                 WhatsApp
                             </Button>
                              <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} variant="outline">
-                                {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                                {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                                 {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
                             </Button>
                             {activeDiary !== 'Staff Cover' && (
-                                <AppointmentDialog sites={sites} onSave={handleSaveAppointment} defaultAssignee={activeDiary === 'Staff Cover' ? 'Owen Newton' : activeDiary}>
+                                <AppointmentDialog sites={sites} onSave={handleSaveAppointment} defaultAssignee={activeDiary === 'Staff Cover' ? 'Manager' : activeDiary}>
                                     <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Appointment</Button>
                                 </AppointmentDialog>
                             )}
@@ -402,21 +403,21 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                      <Tabs value={activeDiary} onValueChange={setActiveDiary} className="w-full">
                         <div className="border-b">
                             <TabsList className="bg-transparent p-0 m-0 rounded-none gap-4 px-6">
-                                <TabsTrigger value="Owen Newton" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Owen's Diary</TabsTrigger>
-                                <TabsTrigger value="Nick Miller" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Nick's Diary</TabsTrigger>
-                                <TabsTrigger value="Mircalla Bond (Carla)" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Carla's Diary</TabsTrigger>
+                                <TabsTrigger value="Manager" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Manager's Diary</TabsTrigger>
+                                <TabsTrigger value="Supervisor" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Supervisor's Diary</TabsTrigger>
+                                <TabsTrigger value="Mobile Cleaner" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Mobile Cleaner's Diary</TabsTrigger>
                                 <TabsTrigger value="Staff Cover" className="data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Staff Cover</TabsTrigger>
                             </TabsList>
                         </div>
                         <div className="p-6">
-                            <TabsContent value="Owen Newton" className="mt-0">
-                                {renderEvents(owenEvents)}
+                            <TabsContent value="Manager" className="mt-0">
+                                {renderEvents(managerEvents)}
                             </TabsContent>
-                            <TabsContent value="Nick Miller" className="mt-0">
-                                {renderEvents(nickEvents)}
+                            <TabsContent value="Supervisor" className="mt-0">
+                                {renderEvents(supervisorEvents)}
                             </TabsContent>
-                            <TabsContent value="Mircalla Bond (Carla)" className="mt-0">
-                                {renderEvents(carlaEvents)}
+                            <TabsContent value="Mobile Cleaner" className="mt-0">
+                                {renderEvents(mobileCleanerEvents)}
                             </TabsContent>
                              <TabsContent value="Staff Cover" className="mt-0">
                                 {renderEvents(staffCoverEvents, true)}

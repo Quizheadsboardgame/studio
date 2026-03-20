@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -159,9 +160,9 @@ export default function AuditsTab({ sites, monthlyAudits, onSetAudit }: AuditsTa
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Unassigned">Unassigned</SelectItem>
-                          <SelectItem value="Owen Newton">Owen Newton</SelectItem>
-                          <SelectItem value="Nick Miller">Nick Miller</SelectItem>
-                          <SelectItem value="Mircalla Bond (Carla)">Mircalla Bond (Carla)</SelectItem>
+                          <SelectItem value="Manager">Manager</SelectItem>
+                          <SelectItem value="Supervisor">Supervisor</SelectItem>
+                          <SelectItem value="Mobile Cleaner">Mobile Cleaner</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>

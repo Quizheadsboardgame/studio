@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -104,9 +105,9 @@ export default function TasksTab({ tasks, sites, onAddTask, onUpdateTask, onRemo
               </SelectTrigger>
               <SelectContent>
                   <SelectItem value="Unassigned">Unassigned</SelectItem>
-                  <SelectItem value="Owen Newton">Owen Newton</SelectItem>
-                  <SelectItem value="Nick Miller">Nick Miller</SelectItem>
-                  <SelectItem value="Mircalla Bond (Carla)">Mircalla Bond (Carla)</SelectItem>
+                  <SelectItem value="Manager">Manager</SelectItem>
+                  <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  <SelectItem value="Mobile Cleaner">Mobile Cleaner</SelectItem>
               </SelectContent>
             </Select>
           </div>
