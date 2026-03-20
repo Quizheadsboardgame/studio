@@ -36,6 +36,7 @@ import TasksTab from '@/components/tasks-tab';
 import DiaryTab from '@/components/diary-tab';
 import SiteMapTab from '@/components/site-map-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
+import MonthlyLeaveCalendar from '@/components/monthly-leave-calendar';
 
 import { Toaster } from "@/components/ui/toaster";
 import { format, parseISO } from 'date-fns';
@@ -75,6 +76,7 @@ const ALL_AVAILABLE_TABS = [
   { id: 'supplies', label: 'Supplies', group: 'Operations' },
   { id: 'company-schedule', label: 'Schedule', group: 'Scheduling' },
   { id: 'leave-calendar', label: 'Leave & Cover', group: 'Scheduling' },
+  { id: 'monthly-leave', label: 'Monthly Calendar', group: 'Scheduling' },
   { id: 'availability', label: 'Availability', group: 'Scheduling' },
   { id: 'diary', label: 'Diary', group: 'Scheduling' },
   { id: 'directions', label: 'Site Directions', group: 'Utilities' },
@@ -410,6 +412,7 @@ export default function DashboardPage() {
         items: [
           { value: 'company-schedule', label: 'Schedule', icon: Calendar },
           { value: 'leave-calendar', label: 'Leave & Cover', icon: CalendarDays },
+          { value: 'monthly-leave', label: 'Monthly Calendar', icon: Calendar },
           { value: 'availability', label: 'Availability', icon: Clock },
           { value: 'diary', label: 'Diary', icon: BookOpen },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
@@ -619,6 +622,8 @@ export default function DashboardPage() {
             return <CompanyScheduleTab schedule={schedule} sites={sites} cleaners={cleaners} onAdd={(e) => setDocumentNonBlocking(doc(scheduleRef!), { ...e, id: doc(scheduleRef!).id }, { merge: true })} onUpdate={(id, data) => updateDocumentNonBlocking(doc(scheduleRef!, id), data)} onRemove={(id) => deleteDocumentNonBlocking(doc(scheduleRef!, id))} />;
         case 'leave-calendar':
             return <LeaveCalendarTab cleaners={cleaners} leave={leave} schedule={schedule} onAddLeave={(e) => setDocumentNonBlocking(doc(leaveRef!), { ...e, id: doc(leaveRef!).id, coverAssignments: [] }, { merge: true })} onDeleteLeave={(e) => deleteDocumentNonBlocking(doc(leaveRef!, e.id))} onUpdateLeave={(id, data) => updateDocumentNonBlocking(doc(leaveRef!, id), data)} />;
+        case 'monthly-leave':
+            return <MonthlyLeaveCalendar leave={leave} />;
         case 'risk':
             return <RiskDashboardTab sites={sites} cleaners={cleaners} />;
         case 'action-plan':
