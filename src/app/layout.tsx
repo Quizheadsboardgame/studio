@@ -4,7 +4,7 @@ import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'CleanFlow',
-  description: 'Lot 4. Addenbrooke’s',
+  description: 'Cleaning Operations Management',
 };
 
 export default function RootLayout({

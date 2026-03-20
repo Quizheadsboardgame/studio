@@ -421,7 +421,7 @@ export default function DashboardPage() {
         case 'tasks':
             return <TasksTab tasks={tasks} sites={sortedSites} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
         case 'conversation-log':
-            return <ConversationLogTab cleaners={sortedCleaners} sites={sortedSites} conversationRecords={conversationRecords} onAddRecord={handleAddConversationRecord} onUpdateRecord={handleUpdateConversationRecord} onRemoveRecord={handleRemoveConversationRecord} />;
+            return <ConversationLogTab cleaners={sortedCleaners} sites={sortedSites} conversationRecords={conversationRecords} onAddRecord={handleAddConversationRecord} onUpdateRecord={handleUpdateRecord} onRemoveRecord={handleRemoveConversationRecord} />;
         case 'good-news-centre':
             return <GoodNewsCentreTab records={goodNewsRecords} cleaners={sortedCleaners} sites={sortedSites} onAddRecord={handleAddGoodNewsRecord} onUpdateRecord={handleUpdateGoodNewsRecord} onRemoveRecord={handleRemoveGoodNewsRecord} />;
         case 'site-portfolio':
@@ -451,7 +451,6 @@ export default function DashboardPage() {
                     </div>
                     <div className='flex flex-col'>
                         <h1 className="text-lg font-semibold tracking-tight text-foreground">CleanFlow</h1>
-                        <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
                     </div>
                 </div>
             </SidebarHeader>
