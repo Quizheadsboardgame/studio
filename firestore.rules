@@ -1,57 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Explicit rules for all application collections to ensure reliable access
-    
-    match /sites/{siteId} {
-      allow read, write: if true;
-      match /consumables/{consumableId} {
-        allow read, write: if true;
-      }
-    }
-    
-    match /cleaners/{cleanerId} {
-      allow read, write: if true;
-    }
-    
-    match /actionPlans/{actionPlanId} {
-      allow read, write: if true;
-    }
-    
-    match /leave/{leaveId} {
-      allow read, write: if true;
-    }
-    
-    match /schedule/{scheduleEntryId} {
-      allow read, write: if true;
-    }
-    
-    match /supplyOrders/{orderId} {
-      allow read, write: if true;
-    }
-    
-    match /monthlyAudits/{auditId} {
-      allow read, write: if true;
-    }
-    
-    match /appointments/{appointmentId} {
-      allow read, write: if true;
-    }
-    
-    match /tasks/{taskId} {
-      allow read, write: if true;
-    }
-    
-    match /conversationRecords/{recordId} {
-      allow read, write: if true;
-    }
-    
-    match /goodNewsRecords/{recordId} {
-      allow read, write: if true;
-    }
-    
-    // Global fallback to allow access to any other collections
-    // as the app no longer requires authentication.
     match /{document=**} {
       allow read, write: if true;
     }

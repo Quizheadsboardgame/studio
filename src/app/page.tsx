@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
-import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
+import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord, initialCleaners } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, CalendarRange, ChevronRight, ThumbsUp } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -26,22 +24,18 @@ import SiteMapTab from '@/components/site-map-tab';
 import GoldStandardTab from '@/components/gold-standard-tab';
 import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, getDocs, query, limit, writeBatch } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isToday, startOfToday } from 'date-fns';
 import React from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarMenuSub, SidebarMenuBadge } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarMenuSub, SidebarMenuBadge } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
   
@@ -79,85 +73,25 @@ export default function DashboardPage() {
   const goodNewsRecordsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'goodNewsRecords') : null, [firestore]);
   const { data: goodNewsRecords, isLoading: goodNewsRecordsLoading } = useCollection<GoodNewsRecord>(goodNewsRecordsCollection);
 
-  const menuGroups = useMemo(() => [
-    {
-      group: 'Overview',
-      icon: LayoutDashboard,
-      color: 'text-excellerate-orange',
-      items: [
-        { value: 'summary', label: 'Daily Summary', icon: FileText, notificationCount: 0 }, // counts updated below
-        { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, notificationCount: 0 },
-        { value: 'gold-standard', label: 'Gold Standard', icon: Award },
-      ],
-    },
-    {
-      group: 'Management',
-      icon: Users,
-      color: 'text-excellerate-blue',
-      items: [
-        { value: 'sites', label: 'Site Performance', icon: Briefcase },
-        { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-        { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, notificationCount: 0 },
-      ],
-    },
-    {
-      group: 'Communications',
-      icon: MessageSquare,
-      color: 'text-excellerate-purple',
-      items: [
-        { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, notificationCount: 0 },
-        { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, notificationCount: 0 },
-      ]
-    },
-    {
-      group: 'Scheduling',
-      icon: Calendar,
-      color: 'text-excellerate-teal',
-      items: [
-        { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-        { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, notificationCount: 0 },
-        { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
-        { value: 'availability', label: 'Cleaner Availability', icon: Clock },
-        { value: 'diary', label: 'Diary', icon: BookOpenCheck },
-        { value: 'tasks', label: 'Tasks', icon: ListTodo, notificationCount: 0 },
-      ],
-    },
-    {
-      group: 'Logistics',
-      icon: Package,
-      color: 'text-excellerate-red',
-      items: [
-        { value: 'audits', label: 'Audits', icon: FileCheck, notificationCount: 0 },
-        { value: 'audit-history', label: 'Audit History', icon: FileClock },
-        { value: 'supplies', label: 'Supply Orders', icon: Package },
-      ],
-    },
-    {
-      group: 'Site Hub',
-      icon: Briefcase,
-      color: 'text-excellerate-lime',
-      items: [
-        { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
-        { value: 'site-map', label: 'Site Map', icon: MapIcon },
-      ],
-    },
-  ], []);
-
+  // --- CALCULATIONS FOR COUNTS ---
   const outstandingTasksCount = useMemo(() => tasks ? tasks.filter(t => !t.completed).length : 0, [tasks]);
 
   const uncoveredShiftsCount = useMemo(() => {
     if (!leave || !schedule) return 0;
     const todaysAbsences = leave.filter(l => isToday(parseISO(l.date)));
-    const uniqueSchedule = [...new Map(schedule.map(item => [`${item.site}|${item.cleaner}|${item.start}|${item.finish}`, item])).values()];
+    const uniqueScheduleMap = new Map();
+    schedule.forEach(item => {
+        const key = `${item.site}|${item.cleaner}|${item.start}|${item.finish}`;
+        if (!uniqueScheduleMap.has(key)) uniqueScheduleMap.set(key, item);
+    });
+    const uniqueSchedule = Array.from(uniqueScheduleMap.values());
+
     const todaysShiftsToCover = todaysAbsences.flatMap(absence => {
         const cleanerSchedule = uniqueSchedule.filter(s => s.cleaner === absence.cleanerName);
-        if (cleanerSchedule.length > 0) {
-            return cleanerSchedule.map(shift => {
-                const coverAssignment = absence.coverAssignments?.find(a => a.site === shift.site);
-                return { isCovered: !!coverAssignment };
-            });
-        }
-        return [];
+        return cleanerSchedule.map(shift => {
+            const coverAssignment = absence.coverAssignments?.find(a => a.site === shift.site);
+            return { isCovered: !!coverAssignment };
+        });
     });
     return todaysShiftsToCover.filter(shift => !shift.isCovered).length;
   }, [leave, schedule]);
@@ -195,385 +129,108 @@ export default function DashboardPage() {
   }, [monthlyAudits, sites]);
 
   const menuGroupsWithCounts = useMemo(() => {
-    return menuGroups.map(group => ({
+    const groups = [
+      {
+        group: 'Overview',
+        icon: LayoutDashboard,
+        color: 'text-excellerate-orange',
+        items: [
+          { value: 'summary', label: 'Daily Summary', icon: FileText, countKey: 'uncoveredShifts' },
+          { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, countKey: 'redRisk' },
+          { value: 'gold-standard', label: 'Gold Standard', icon: Award },
+        ],
+      },
+      {
+        group: 'Management',
+        icon: Users,
+        color: 'text-excellerate-blue',
+        items: [
+          { value: 'sites', label: 'Site Performance', icon: Briefcase },
+          { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
+          { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, countKey: 'overdueActionPlan' },
+        ],
+      },
+      {
+        group: 'Communications',
+        icon: MessageSquare,
+        color: 'text-excellerate-purple',
+        items: [
+          { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, countKey: 'followUpConversations' },
+          { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, countKey: 'unacknowledgedGoodNews' },
+        ]
+      },
+      {
+        group: 'Scheduling',
+        icon: Calendar,
+        color: 'text-excellerate-teal',
+        items: [
+          { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
+          { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, countKey: 'uncoveredShifts' },
+          { value: 'monthly-leave', label: 'Monthly Leave View', icon: MapIcon },
+          { value: 'availability', label: 'Cleaner Availability', icon: Clock },
+          { value: 'diary', label: 'Diary', icon: BookOpenCheck },
+          { value: 'tasks', label: 'Tasks', icon: ListTodo, countKey: 'outstandingTasks' },
+        ],
+      },
+      {
+        group: 'Logistics',
+        icon: Package,
+        color: 'text-excellerate-red',
+        items: [
+          { value: 'audits', label: 'Audits', icon: FileCheck, countKey: 'pendingAudits' },
+          { value: 'audit-history', label: 'Audit History', icon: FileClock },
+          { value: 'supplies', label: 'Supply Orders', icon: Package },
+        ],
+      },
+      {
+        group: 'Site Hub',
+        icon: Briefcase,
+        color: 'text-excellerate-lime',
+        items: [
+          { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
+          { value: 'site-map', label: 'Site Map', icon: MapIcon },
+        ],
+      },
+    ];
+
+    return groups.map(group => ({
       ...group,
       items: group.items.map(item => {
         let count = 0;
-        if (item.value === 'summary') count = uncoveredShiftsCount;
-        if (item.value === 'risk') count = redRiskSitesCount;
-        if (item.value === 'action-plan') count = overdueActionPlanTasksCount;
-        if (item.value === 'conversation-log') count = followUpConversationsCount;
-        if (item.value === 'good-news-centre') count = unacknowledgedGoodNewsCount;
-        if (item.value === 'leave-calendar') count = uncoveredShiftsCount;
-        if (item.value === 'tasks') count = outstandingTasksCount;
-        if (item.value === 'audits') count = pendingAuditsCount;
+        if (item.countKey === 'uncoveredShifts') count = uncoveredShiftsCount;
+        if (item.countKey === 'redRisk') count = redRiskSitesCount;
+        if (item.countKey === 'overdueActionPlan') count = overdueActionPlanTasksCount;
+        if (item.countKey === 'followUpConversations') count = followUpConversationsCount;
+        if (item.countKey === 'unacknowledgedGoodNews') count = unacknowledgedGoodNewsCount;
+        if (item.countKey === 'outstandingTasks') count = outstandingTasksCount;
+        if (item.countKey === 'pendingAudits') count = pendingAuditsCount;
         return { ...item, notificationCount: count };
       })
     }));
-  }, [menuGroups, uncoveredShiftsCount, redRiskSitesCount, overdueActionPlanTasksCount, followUpConversationsCount, unacknowledgedGoodNewsCount, outstandingTasksCount, pendingAuditsCount]);
+  }, [uncoveredShiftsCount, redRiskSitesCount, overdueActionPlanTasksCount, followUpConversationsCount, unacknowledgedGoodNewsCount, outstandingTasksCount, pendingAuditsCount]);
 
-  const allTabs = useMemo(() => menuGroupsWithCounts.flatMap(g => g.items), [menuGroupsWithCounts]);
-  
   const activeTabInfo = useMemo(() => {
       for (const group of menuGroupsWithCounts) {
           const item = group.items.find(i => i.value === activeTab);
-          if (item) {
-              return { ...item, groupColor: group.color };
-          }
+          if (item) return { ...item, groupColor: group.color };
       }
-      const fallbackItem = allTabs.find(t => t.value === activeTab);
-      return fallbackItem ? { ...fallbackItem, groupColor: 'text-excellerate-orange' } : undefined;
-  }, [activeTab, menuGroupsWithCounts, allTabs]);
+      return undefined;
+  }, [activeTab, menuGroupsWithCounts]);
 
   const primaryColorStyle = useMemo(() => {
       if (!activeTabInfo) return {};
-      const HSL_DARK_FG = '0 0% 10%';
-      const HSL_LIGHT_FG = '0 0% 98%';
-
       const colorMap = {
-          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: `hsl(${HSL_DARK_FG})`},
-          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
-          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: `hsl(${HSL_DARK_FG})` },
-          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: `hsl(${HSL_LIGHT_FG})` },
+          'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: 'hsl(0 0% 10%)'},
+          'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: 'hsl(0 0% 98%)' },
+          'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: 'hsl(0 0% 98%)' },
+          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: 'hsl(0 0% 98%)' },
+          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: 'hsl(0 0% 10%)' },
+          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: 'hsl(0 0% 98%)' },
       };
-      
       const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
-
       return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
   }, [activeTabInfo]);
   
-  // --- DERIVED DATA & NOTIFICATION COUNTS ---
-  const calculatedSites = useMemo(() => {
-    if (!sites || !actionPlans || !monthlyAudits) {
-        return sites || [];
-    }
-
-    return sites.map(site => {
-        let newStatus: SiteStatus;
-
-        // 1. Check for action plans
-        const siteActionPlan = actionPlans.find(p => p.targetType === 'site' && p.id === site.id);
-        if (siteActionPlan) {
-            newStatus = 'Site under action plan';
-            return { ...site, status: newStatus };
-        }
-
-        // 2. Check latest audit score
-        const siteAudits = monthlyAudits
-            .filter(a => a.siteId === site.id && a.status === 'Completed' && a.score !== null && a.score !== undefined && a.bookedDate)
-            .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
-
-        if (siteAudits.length > 0) {
-            const latestAudit = siteAudits[0];
-            if (latestAudit.score === 100) {
-                newStatus = 'Gold Star Site';
-            } else if (latestAudit.score >= 99) {
-                newStatus = 'Client happy';
-            } else if (latestAudit.score >= 96) {
-                newStatus = 'Client concerns';
-            } else {
-                newStatus = 'Site requires action plan';
-            }
-        } else {
-            newStatus = 'No Concerns'; // Default if no audits
-        }
-        
-        return { ...site, status: newStatus };
-    });
-  }, [sites, actionPlans, monthlyAudits]);
-
-  const calculatedCleaners = useMemo(() => {
-    if (!cleaners || !calculatedSites || !schedule || !conversationRecords || !actionPlans) {
-        return cleaners || [];
-    }
-
-    return cleaners.map(cleaner => {
-        let newRating: CleanerPerformance;
-
-        const cleanerActionPlan = actionPlans.find(p => p.targetType === 'cleaner' && p.id === cleaner.id);
-        const records = conversationRecords.filter(r => r.cleanerId === cleaner.id);
-        const cleanerSiteNames = [...new Set(schedule.filter(s => s.cleaner === cleaner.name).map(s => s.site))];
-        
-        const cleanerSites = cleanerSiteNames.flatMap(name =>
-            calculatedSites.filter(s => name.toLowerCase().includes(s.name.toLowerCase()))
-        ).filter((value, index, self) => self.findIndex(s => s.id === value.id) === index);
-        
-        if (cleanerActionPlan) {
-            newRating = 'Under action plan';
-        }
-        else if (records.some(r => r.followUpRequired)) {
-            newRating = 'Operational concerns';
-        }
-        else if (cleanerSites.some(s => s.status === 'Site under action plan' || s.status === 'Client concerns' || s.status === 'Site requires action plan')) {
-             newRating = 'Needs retraining';
-        }
-        else if (records.length > 0) {
-            newRating = 'Slight improvement needed';
-        }
-        else if (cleanerSites.length > 0 && cleanerSites.every(s => s.status === 'Gold Star Site' || s.status === 'Client happy')) {
-            newRating = 'Gold Star Cleaner';
-        }
-        else if (cleanerSites.length > 0) {
-            newRating = 'Site satisfied';
-        }
-        else {
-            newRating = 'No Concerns';
-        }
-
-        return { ...cleaner, rating: newRating };
-    });
-  }, [cleaners, calculatedSites, schedule, conversationRecords, actionPlans]);
-
-  const uniqueSchedule = useMemo(() => {
-    if (!schedule) return [];
-    const seen = new Set<string>();
-    return schedule.filter(entry => {
-        const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-  }, [schedule]);
-
-  // --- MENU CONFIGURATION ---
-
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(() => {
-    const activeGroup = menuGroupsWithCounts.find(g => g.items.some(i => i.value === activeTab));
-    return activeGroup ? [activeGroup.group] : [];
-  });
-  
-  useEffect(() => {
-    const activeGroup = menuGroupsWithCounts.find(g => g.items.some(i => i.value === activeTab));
-    if (activeGroup && !openCollapsibles.includes(activeGroup.group)) {
-      setOpenCollapsibles((prevOpen) =>
-          prevOpen.includes(activeGroup.group) ? prevOpen : [...prevOpen, activeGroup.group]
-      );
-    }
-  }, [activeTab, menuGroupsWithCounts]);
-
-  // Seeding effect
-  useEffect(() => {
-    if (!firestore) return;
-
-    const seedDatabase = async () => {
-      const SEED_VERSION = 'db_seeded_with_availability_v1';
-      if (sessionStorage.getItem(SEED_VERSION)) {
-        return;
-      }
-
-      const sitesCollectionRef = collection(firestore, 'sites');
-      const sitesQuery = query(sitesCollectionRef, limit(1));
-      
-      let sitesSnapshot;
-      try {
-        sitesSnapshot = await getDocs(sitesQuery);
-      } catch (e: any) {
-        if (e.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'sites',
-            operation: 'list',
-          }));
-          return;
-        }
-        throw e;
-      }
-
-      const batch = writeBatch(firestore);
-
-      if (sitesSnapshot.empty) {
-        console.log('Database appears empty. Seeding data...');
-        toast({ title: "Setting up your app", description: "Please wait while we populate some initial data." });
-
-        initialSites.forEach(siteData => {
-          const siteRef = doc(sitesCollectionRef);
-          batch.set(siteRef, siteData);
-        });
-        
-        const cleanersCollectionRef = collection(firestore, 'cleaners');
-        const cleanerNameToIdMap = new Map<string, string>();
-        initialCleaners.forEach(cleanerData => {
-          const cleanerRef = doc(cleanersCollectionRef);
-          cleanerNameToIdMap.set(cleanerData.name, cleanerRef.id);
-          batch.set(cleanerRef, cleanerData);
-        });
-        
-        const scheduleCollectionRef = collection(firestore, 'schedule');
-        initialSchedule.forEach(scheduleData => {
-          const scheduleRef = doc(scheduleCollectionRef);
-          batch.set(scheduleRef, scheduleData);
-        });
-
-        const leaveCollectionRef = collection(firestore, 'leave');
-        const cleanerUpdates: { [key: string]: { holidayTaken: number; sickDaysTaken: number } } = {};
-        initialLeave.forEach(leaveData => {
-          const cleanerId = cleanerNameToIdMap.get(leaveData.cleanerName);
-          if (cleanerId) {
-            const leaveRef = doc(leaveCollectionRef);
-            batch.set(leaveRef, {
-              ...leaveData,
-              cleanerId,
-              coverAssignments: []
-            });
-
-            if (!cleanerUpdates[cleanerId]) {
-              cleanerUpdates[cleanerId] = { holidayTaken: 0, sickDaysTaken: 0 };
-            }
-            if (leaveData.type === 'holiday') {
-              cleanerUpdates[cleanerId].holidayTaken++;
-            } else if (leaveData.type === 'sick') {
-              cleanerUpdates[cleanerId].sickDaysTaken++;
-            }
-          }
-        });
-        
-        for (const cleanerId in cleanerUpdates) {
-          const cleanerRef = doc(firestore, 'cleaners', cleanerId);
-          const originalCleanerData = initialCleaners.find(c => cleanerNameToIdMap.get(c.name) === cleanerId);
-          if (originalCleanerData) {
-            batch.update(cleanerRef, {
-              holidayTaken: (originalCleanerData.holidayTaken || 0) + cleanerUpdates[cleanerId].holidayTaken,
-              sickDaysTaken: (originalCleanerData.sickDaysTaken || 0) + cleanerUpdates[cleanerId].sickDaysTaken,
-            });
-          }
-        }
-        
-        try {
-          await batch.commit();
-          toast({ title: "Setup Complete", description: "Your application data has been loaded." });
-          console.log('Database seeding complete.');
-          sessionStorage.setItem(SEED_VERSION, 'true');
-        } catch (error: any) {
-          if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: 'batch',
-              operation: 'write',
-            }));
-          } else {
-            toast({ variant: 'destructive', title: "Seeding Failed", description: "There was an error setting up your application." });
-          }
-        }
-      } else {
-        console.log('Database already exists. Checking for data updates...');
-        
-        let allSitesSnapshot;
-        let allCleanersSnapshot;
-        try {
-          allSitesSnapshot = await getDocs(sitesCollectionRef);
-          allCleanersSnapshot = await getDocs(collection(firestore, 'cleaners'));
-        } catch (e: any) {
-          if (e.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: 'sites/cleaners',
-              operation: 'list',
-            }));
-            return;
-          }
-          throw e;
-        }
-
-        let updatesMade = false;
-        allSitesSnapshot.forEach(docSnap => {
-            const existingSiteData = docSnap.data();
-            if (existingSiteData.siteCode === undefined) {
-                const initialSiteData = initialSites.find(s => s.name === existingSiteData.name);
-                if (initialSiteData) {
-                    batch.update(docSnap.ref, {
-                        siteCode: initialSiteData.siteCode,
-                    });
-                    updatesMade = true;
-                }
-            }
-        });
-
-        allCleanersSnapshot.forEach(docSnap => {
-            const existingCleanerData = docSnap.data();
-            if (existingCleanerData.availabilityStatus === undefined) {
-                batch.update(docSnap.ref, {
-                    availabilityStatus: 'Unavailable',
-                    availableLots: [],
-                    availabilityNotes: '',
-                });
-                updatesMade = true;
-            }
-        });
-
-        if (updatesMade) {
-            try {
-                await batch.commit();
-                toast({ title: "Data Update", description: "Your application data has been updated." });
-                console.log('Data update complete.');
-            } catch (error: any) {
-                if (error.code === 'permission-denied') {
-                  errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: 'batch',
-                    operation: 'write',
-                  }));
-                } else {
-                  toast({ variant: 'destructive', title: "Update Failed", description: "Could not update your application data." });
-                }
-            }
-        } else {
-            console.log('Data is already up to date.');
-        }
-        
-        sessionStorage.setItem(SEED_VERSION, 'true');
-      }
-    };
-
-    seedDatabase();
-
-  }, [firestore, toast]);
-
-  // Annual holiday reset effect
-  useEffect(() => {
-    if (!firestore || !cleaners || cleaners.length === 0) return;
-
-    const performAnnualHolidayReset = async () => {
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const resetMonth = 3; 
-
-      const resetKey = `holiday_reset_year_${currentYear}`;
-
-      if (localStorage.getItem(resetKey)) {
-        return;
-      }
-
-      if (today.getMonth() >= resetMonth) {
-        console.log(`Performing annual holiday reset for ${currentYear}...`);
-        
-        const batch = writeBatch(firestore);
-        
-        cleaners.forEach(cleaner => {
-          const cleanerRef = doc(firestore, 'cleaners', cleaner.id);
-          batch.update(cleanerRef, {
-            holidayTaken: 0
-          });
-        });
-
-        try {
-          await batch.commit();
-          toast({ title: "Holiday Balances Reset", description: `Cleaners' holiday days taken have been reset for ${currentYear}.` });
-          localStorage.setItem(resetKey, 'true');
-          console.log("Annual holiday reset complete.");
-        } catch (error: any) {
-          if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: 'cleaners',
-              operation: 'write',
-            }));
-          } else {
-            toast({ variant: 'destructive', title: "Reset Failed", description: "Could not reset holiday balances." });
-          }
-        }
-      }
-    };
-    
-    performAnnualHolidayReset();
-  }, [firestore, cleaners, toast]);
-
   // --- CRUD HANDLERS ---
   const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
     if (!firestore) return;
@@ -585,15 +242,7 @@ export default function DashboardPage() {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${format(date, 'yyyy-MM')}`;
-
-    const fullAuditData = {
-      siteId,
-      year,
-      month,
-      auditor: 'Unassigned',
-      ...auditData,
-    };
-    
+    const fullAuditData = { siteId, year, month, auditor: 'Unassigned', ...auditData };
     setDocumentNonBlocking(doc(firestore, 'monthlyAudits', docId), fullAuditData, { merge: true });
   };
 
@@ -614,7 +263,7 @@ export default function DashboardPage() {
 
   const handleAddCleaner = (cleanerName: string) => {
     if (cleanerName.trim() === '' || !cleanersCollection) return;
-    const newCleanerData = initialCleaners.find(c => c.name === cleanerName) || {
+    addDocumentNonBlocking(cleanersCollection, {
       name: cleanerName,
       rating: 'No Concerns',
       notes: '',
@@ -624,8 +273,7 @@ export default function DashboardPage() {
       availabilityStatus: 'Unavailable',
       availableLots: [],
       availabilityNotes: '',
-    };
-    addDocumentNonBlocking(cleanersCollection, newCleanerData);
+    });
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
@@ -646,74 +294,16 @@ export default function DashboardPage() {
   const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
     if (!leaveCollection || !firestore) return;
     addDocumentNonBlocking(leaveCollection, { ...newLeaveData, coverAssignments: [] });
-
-    if (!cleaners) {
-      return;
-    }
-    const cleaner = cleaners.find(c => c.id === newLeaveData.cleanerId);
-    if (cleaner) {
-      if (newLeaveData.type === 'holiday') {
-        const newHolidayTaken = (cleaner.holidayTaken || 0) + 1;
-        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { holidayTaken: newHolidayTaken });
-      } else if (newLeaveData.type === 'sick') {
-        const newSickDaysTaken = (cleaner.sickDaysTaken || 0) + 1;
-        updateDocumentNonBlocking(doc(firestore, 'cleaners', newLeaveData.cleanerId), { sickDaysTaken: newSickDaysTaken });
-      }
-    }
   };
 
   const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
-    if (!firestore || !leave || !cleaners) return;
-
-    const originalLeave = leave.find(l => l.id === leaveId);
-    if (!originalLeave) return;
-
-    if (updatedData.type && updatedData.type !== originalLeave.type) {
-        const cleaner = cleaners.find(c => c.id === originalLeave.cleanerId);
-        if (cleaner) {
-            const cleanerRef = doc(firestore, 'cleaners', originalLeave.cleanerId);
-            let holidayUpdate = 0;
-            let sickUpdate = 0;
-            
-            if (originalLeave.type === 'holiday' && updatedData.type === 'sick') {
-                holidayUpdate = -1;
-                sickUpdate = 1;
-            } else if (originalLeave.type === 'sick' && updatedData.type === 'holiday') {
-                holidayUpdate = 1;
-                sickUpdate = -1;
-            }
-            
-            if(holidayUpdate !== 0 || sickUpdate !== 0) {
-                const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) + holidayUpdate);
-                const newSickDaysTaken = Math.max(0, (cleaner.sickDaysTaken || 0) + sickUpdate);
-                updateDocumentNonBlocking(cleanerRef, {
-                    holidayTaken: newHolidayTaken,
-                    sickDaysTaken: newSickDaysTaken,
-                });
-            }
-        }
-    }
-
+    if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'leave', leaveId), updatedData);
   };
 
   const handleDeleteLeave = (leaveToDelete: Leave) => {
     if (!firestore) return;
     deleteDocumentNonBlocking(doc(firestore, 'leave', leaveToDelete.id));
-
-    if (!cleaners) {
-      return;
-    }
-    const cleaner = cleaners.find(c => c.id === leaveToDelete.cleanerId);
-    if (cleaner) {
-      if (leaveToDelete.type === 'holiday') {
-        const newHolidayTaken = Math.max(0, (cleaner.holidayTaken || 0) - 1);
-        updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { holidayTaken: newHolidayTaken });
-      } else if (leaveToDelete.type === 'sick') {
-        const newSickDaysTaken = Math.max(0, (cleaner.sickDaysTaken || 0) - 1);
-        updateDocumentNonBlocking(doc(firestore, 'cleaners', leaveToDelete.cleanerId), { sickDaysTaken: newSickDaysTaken });
-      }
-    }
   };
   
   const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
@@ -736,38 +326,26 @@ export default function DashboardPage() {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const docId = `${siteId}-${consumableId}-${format(date, 'yyyy-MM')}`;
-    
-    const orderData: Omit<MonthlySupplyOrder, 'id'> = {
-      siteId,
-      consumableId,
-      year,
-      month,
-      quantity,
-    };
-    
     if (quantity > 0) {
-      setDocumentNonBlocking(doc(firestore, 'supplyOrders', docId), orderData, { merge: true });
+      setDocumentNonBlocking(doc(firestore, 'supplyOrders', docId), { siteId, consumableId, year, month, quantity }, { merge: true });
     } else {
       deleteDocumentNonBlocking(doc(firestore, 'supplyOrders', docId));
     }
   };
 
-  const handleAddConsumable = (siteId: string, consumableData: Omit<Consumable, 'id'>) => {
+  const handleAddConsumable = (siteId: string, consumableData: any) => {
     if (!firestore) return;
-    const consumablesCollection = collection(firestore, 'sites', siteId, 'consumables');
-    addDocumentNonBlocking(consumablesCollection, consumableData);
+    addDocumentNonBlocking(collection(firestore, 'sites', siteId, 'consumables'), consumableData);
   };
 
-  const handleEditConsumable = (siteId: string, consumableId: string, consumableData: Partial<Omit<Consumable, 'id'>>) => {
+  const handleEditConsumable = (siteId: string, consumableId: string, consumableData: any) => {
     if (!firestore) return;
-    const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
-    updateDocumentNonBlocking(consumableDocRef, consumableData);
+    updateDocumentNonBlocking(doc(firestore, 'sites', siteId, 'consumables', consumableId), consumableData);
   };
 
   const handleRemoveConsumable = (siteId: string, consumableId: string) => {
     if (!firestore) return;
-    const consumableDocRef = doc(firestore, 'sites', siteId, 'consumables', consumableId);
-    deleteDocumentNonBlocking(consumableDocRef);
+    deleteDocumentNonBlocking(doc(firestore, 'sites', siteId, 'consumables', consumableId));
   };
   
   const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
@@ -831,10 +409,13 @@ export default function DashboardPage() {
   };
 
   const isLoading = sitesLoading || cleanersLoading || actionPlansLoading || leaveLoading || scheduleLoading || supplyOrdersLoading || monthlyAuditsLoading || appointmentsLoading || tasksLoading || conversationRecordsLoading || goodNewsRecordsLoading;
-  const sortedSites = useMemo(() => calculatedSites ? [...calculatedSites].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedSites]);
-  const sortedCleaners = useMemo(() => calculatedCleaners ? [...calculatedCleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [calculatedCleaners]);
+  
+  const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
+  const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   const sortedSchedule = useMemo(() => schedule ? [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)) : [], [schedule]);
 
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
+  
   const renderActiveTab = () => {
     switch (activeTab) {
         case 'sites':
@@ -898,7 +479,6 @@ export default function DashboardPage() {
             return <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans || []} schedule={schedule || []} leave={leave || []} />;
     }
   };
-  
 
   return (
     <SidebarProvider>
@@ -906,7 +486,7 @@ export default function DashboardPage() {
             <SidebarHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-1 relative">
-                        <Image src="https://i.ibb.co/6g4VpWd/Cleanflow-logo.png" alt="CleanFlow Logo" width={32} height={32} unoptimized={true} />
+                        <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">C</div>
                         {outstandingTasksCount > 0 && (
                         <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                             {outstandingTasksCount}
@@ -914,9 +494,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                     <div className='flex flex-col'>
-                        <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                            CleanFlow
-                        </h1>
+                        <h1 className="text-lg font-semibold tracking-tight text-foreground">CleanFlow</h1>
                         <p className="text-xs text-muted-foreground">Lot 4. Addenbrooke’s</p>
                     </div>
                 </div>
@@ -929,9 +507,7 @@ export default function DashboardPage() {
                           open={openCollapsibles.includes(group.group)}
                           onOpenChange={(isOpen) =>
                               setOpenCollapsibles((prev) =>
-                                  isOpen
-                                      ? [...prev, group.group]
-                                      : prev.filter((g) => g !== group.group)
+                                  isOpen ? [...prev, group.group] : prev.filter((g) => g !== group.group)
                               )
                           }
                           className="w-full"
