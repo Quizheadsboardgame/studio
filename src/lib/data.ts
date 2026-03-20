@@ -30,6 +30,8 @@ export type Site = {
   status: SiteStatus;
   notes?: string;
   additionalCleaners?: AdditionalCleaner[];
+  userProfileId?: string; // Multi-tenant link
+  members?: Record<string, string>; // Denormalized for security rules
 };
 
 export const initialSites: Omit<Site, 'id'>[] = [];
@@ -62,11 +64,13 @@ export type Cleaner = {
   rating: CleanerPerformance;
   notes?: string;
   holidayAllowance: number;
-  holidayTaken: number;
-  sickDaysTaken: number;
+  holidayTaken?: number;
+  sickDaysTaken?: number;
   availabilityStatus?: AvailabilityStatus;
   availableLots?: number[];
   availabilityNotes?: string;
+  userProfileId?: string; // Multi-tenant link
+  members?: Record<string, string>; // Denormalized for security rules
 };
 
 export const initialCleaners: Omit<Cleaner, 'id'>[] = [];
@@ -77,6 +81,8 @@ export type ScheduleEntry = {
   cleaner: string;
   start: string;
   finish: string;
+  userProfileId?: string; // Multi-tenant link
+  members?: Record<string, string>; // Denormalized for security rules
 };
 
 export const initialSchedule: Omit<ScheduleEntry, 'id'>[] = [];
@@ -182,4 +188,13 @@ export type GoodNewsRecord = {
   description: string;
   acknowledged: boolean;
   acknowledgementNotes?: string;
+};
+
+export type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+  members: Record<string, string>; // uid -> role
 };

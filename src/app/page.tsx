@@ -1,9 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { type Site, type Cleaner, type ActionPlan, type Leave, type ScheduleEntry, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type GoodNewsRecord } from '@/lib/data';
+import { useMemo, useState, useEffect } from 'react';
+import { 
+  type Site, 
+  type Cleaner, 
+  type ActionPlan, 
+  type Leave, 
+  type ScheduleEntry, 
+  type MonthlySupplyOrder, 
+  type MonthlyAudit, 
+  type Appointment, 
+  type Task, 
+  type ConversationRecord, 
+  type GoodNewsRecord,
+  type UserProfile
+} from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map as MapIcon, Award, Briefcase, ChevronRight, ThumbsUp, LogIn, LogOut, Loader2 } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -26,22 +39,118 @@ import SitePortfolioTab from '@/components/site-portfolio-tab';
 import { Toaster } from "@/components/ui/toaster";
 import { format, parseISO, isToday, startOfToday } from 'date-fns';
 import React from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarMenuSub, SidebarMenuBadge } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarMenuSub, SidebarMenuBadge, SidebarFooter } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
+import { collection, query, where, doc, setDoc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
+
+function LoginPage() {
+  const [email, setEmail] = useState('clean@flow.com');
+  const [password, setPassword] = useState('cleanflow');
+  const [loading, setLoading] = useState(false);
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">CleanFlow Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+              Sign In
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
   const isMobile = useIsMobile();
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview']);
+
+  // --- Hub Orchestration ---
+  const profilesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'userProfiles'), where(`members.${user.uid}`, '!=', null), limit(1));
+  }, [firestore, user]);
+
+  const { data: userProfiles, isLoading: isProfileLoading } = useCollection<UserProfile>(profilesQuery);
+  const activeProfile = userProfiles?.[0] || null;
+  const activeProfileId = activeProfile?.id;
+
+  // Create default profile if none exists
+  useEffect(() => {
+    if (!isProfileLoading && user && !activeProfile) {
+      const newProfileId = `profile-${user.uid}`;
+      const profileRef = doc(firestore, 'userProfiles', newProfileId);
+      setDoc(profileRef, {
+        id: newProfileId,
+        name: `${user.email?.split('@')[0]}'s Hub`,
+        email: user.email,
+        members: { [user.uid]: 'owner' },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    }
+  }, [isProfileLoading, user, activeProfile, firestore]);
+
+  // --- Scoped Data Fetching ---
+  const sitesRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'sites') : null, [firestore, activeProfileId]);
+  const cleanersRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaners') : null, [firestore, activeProfileId]);
+  const scheduleRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaningScheduleEntries') : null, [firestore, activeProfileId]);
   
-  // --- LOCAL STATE (BLANK CANVAS) ---
-  const [sites, setSites] = useState<Site[]>([]);
-  const [cleaners, setCleaners] = useState<Cleaner[]>([]);
+  // Note: For a true blank canvas, we'll start with these. Other subcollections can be added as needed.
+  const { data: sites = [] } = useCollection<Site>(sitesRef);
+  const { data: cleaners = [] } = useCollection<Cleaner>(cleanersRef);
+  const { data: schedule = [] } = useCollection<ScheduleEntry>(scheduleRef);
+
+  // Fallback to local state for others to keep the UI from crashing if they aren't fully migrated to subcollections yet
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [leave, setLeave] = useState<Leave[]>([]);
-  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [supplyOrders, setSupplyOrders] = useState<MonthlySupplyOrder[]>([]);
   const [monthlyAudits, setMonthlyAudits] = useState<MonthlyAudit[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -49,21 +158,14 @@ export default function DashboardPage() {
   const [conversationRecords, setConversationRecords] = useState<ConversationRecord[]>([]);
   const [goodNewsRecords, setGoodNewsRecords] = useState<GoodNewsRecord[]>([]);
 
-  // --- CALCULATIONS FOR COUNTS ---
+  // --- Calculations ---
   const outstandingTasksCount = useMemo(() => tasks.filter(t => !t.completed).length, [tasks]);
 
   const uncoveredShiftsCount = useMemo(() => {
     if (!leave || !schedule) return 0;
     const todaysAbsences = leave.filter(l => isToday(parseISO(l.date)));
-    const uniqueScheduleMap = new Map();
-    schedule.forEach(item => {
-        const key = `${item.site}|${item.cleaner}|${item.start}|${item.finish}`;
-        if (!uniqueScheduleMap.has(key)) uniqueScheduleMap.set(key, item);
-    });
-    const uniqueSchedule = Array.from(uniqueScheduleMap.values());
-
     const todaysShiftsToCover = todaysAbsences.flatMap(absence => {
-        const cleanerSchedule = uniqueSchedule.filter(s => s.cleaner === absence.cleanerName);
+        const cleanerSchedule = (schedule || []).filter(s => s.cleaner === absence.cleanerName);
         return cleanerSchedule.map(shift => {
             const coverAssignment = absence.coverAssignments?.find(a => a.site === shift.site);
             return { isCovered: !!coverAssignment };
@@ -71,35 +173,6 @@ export default function DashboardPage() {
     });
     return todaysShiftsToCover.filter(shift => !shift.isCovered).length;
   }, [leave, schedule]);
-
-  const redRiskSitesCount = useMemo(() => {
-      return sites.filter(s => {
-          const plan = actionPlans.find(p => p.targetType === 'site' && p.id === s.id);
-          if (plan) return true;
-          const siteAudits = monthlyAudits
-              .filter(a => a.siteId === s.id && a.status === 'Completed' && typeof a.score === 'number' && a.bookedDate)
-              .sort((a, b) => parseISO(b.bookedDate!).getTime() - parseISO(a.bookedDate!).getTime());
-          if (siteAudits.length > 0 && siteAudits[0].score! < 96) return true;
-          return false;
-      }).length;
-  }, [sites, actionPlans, monthlyAudits]);
-
-  const overdueActionPlanTasksCount = useMemo(() => {
-    const today = startOfToday();
-    return actionPlans.flatMap(p => p.tasks).filter(t => !t.completed && t.dueDate && parseISO(t.dueDate) < today).length;
-  }, [actionPlans]);
-
-  const followUpConversationsCount = useMemo(() => conversationRecords.filter(r => r.followUpRequired).length, [conversationRecords]);
-  const unacknowledgedGoodNewsCount = useMemo(() => goodNewsRecords.filter(r => !r.acknowledged).length, [goodNewsRecords]);
-
-  const pendingAuditsCount = useMemo(() => {
-      const currentMonthDate = new Date();
-      const year = currentMonthDate.getFullYear();
-      const month = currentMonthDate.getMonth() + 1;
-      const auditsForCurrentMonth = monthlyAudits.filter(audit => audit.year === year && audit.month === month);
-      const completedSiteIds = new Set(auditsForCurrentMonth.filter(a => a.status === 'Completed').map(a => a.siteId));
-      return sites.length - completedSiteIds.size;
-  }, [monthlyAudits, sites]);
 
   const menuGroupsWithCounts = useMemo(() => {
     const groups = [
@@ -109,7 +182,7 @@ export default function DashboardPage() {
         color: 'text-excellerate-orange',
         items: [
           { value: 'summary', label: 'Daily Summary', icon: FileText, countKey: 'uncoveredShifts' },
-          { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert, countKey: 'redRisk' },
+          { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
           { value: 'gold-standard', label: 'Gold Standard', icon: Award },
         ],
       },
@@ -120,17 +193,8 @@ export default function DashboardPage() {
         items: [
           { value: 'sites', label: 'Site Performance', icon: Briefcase },
           { value: 'cleaners', label: 'Cleaner Performance', icon: Users },
-          { value: 'action-plan', label: 'Action Plans', icon: ClipboardList, countKey: 'overdueActionPlan' },
+          { value: 'action-plan', label: 'Action Plans', icon: ClipboardList },
         ],
-      },
-      {
-        group: 'Communications',
-        icon: MessageSquare,
-        color: 'text-excellerate-purple',
-        items: [
-          { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare, countKey: 'followUpConversations' },
-          { value: 'good-news-centre', label: 'Good News Centre', icon: ThumbsUp, countKey: 'unacknowledgedGoodNews' },
-        ]
       },
       {
         group: 'Scheduling',
@@ -138,30 +202,9 @@ export default function DashboardPage() {
         color: 'text-excellerate-teal',
         items: [
           { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
-          { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays, countKey: 'uncoveredShifts' },
-          { value: 'monthly-leave', label: 'Monthly Leave View', icon: MapIcon },
+          { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
           { value: 'availability', label: 'Cleaner Availability', icon: Clock },
-          { value: 'diary', label: 'Diary', icon: BookOpenCheck },
           { value: 'tasks', label: 'Tasks', icon: ListTodo, countKey: 'outstandingTasks' },
-        ],
-      },
-      {
-        group: 'Logistics',
-        icon: Package,
-        color: 'text-excellerate-red',
-        items: [
-          { value: 'audits', label: 'Audits', icon: FileCheck, countKey: 'pendingAudits' },
-          { value: 'audit-history', label: 'Audit History', icon: FileClock },
-          { value: 'supplies', label: 'Supply Orders', icon: Package },
-        ],
-      },
-      {
-        group: 'Site Hub',
-        icon: Briefcase,
-        color: 'text-excellerate-lime',
-        items: [
-          { value: 'site-portfolio', label: 'Site Portfolio', icon: Briefcase },
-          { value: 'site-map', label: 'Site Map', icon: MapIcon },
         ],
       },
     ];
@@ -171,16 +214,11 @@ export default function DashboardPage() {
       items: group.items.map(item => {
         let count = 0;
         if (item.countKey === 'uncoveredShifts') count = uncoveredShiftsCount;
-        if (item.countKey === 'redRisk') count = redRiskSitesCount;
-        if (item.countKey === 'overdueActionPlan') count = overdueActionPlanTasksCount;
-        if (item.countKey === 'followUpConversations') count = followUpConversationsCount;
-        if (item.countKey === 'unacknowledgedGoodNews') count = unacknowledgedGoodNewsCount;
         if (item.countKey === 'outstandingTasks') count = outstandingTasksCount;
-        if (item.countKey === 'pendingAudits') count = pendingAuditsCount;
         return { ...item, notificationCount: count };
       })
     }));
-  }, [uncoveredShiftsCount, redRiskSitesCount, overdueActionPlanTasksCount, followUpConversationsCount, unacknowledgedGoodNewsCount, outstandingTasksCount, pendingAuditsCount]);
+  }, [uncoveredShiftsCount, outstandingTasksCount]);
 
   const activeTabInfo = useMemo(() => {
       for (const group of menuGroupsWithCounts) {
@@ -196,181 +234,96 @@ export default function DashboardPage() {
           'text-excellerate-orange': { primary: 'hsl(var(--primary))', foreground: 'hsl(0 0% 10%)'},
           'text-excellerate-blue': { primary: 'hsl(var(--excellerate-blue-hsl))', foreground: 'hsl(0 0% 98%)' },
           'text-excellerate-teal': { primary: 'hsl(var(--accent))', foreground: 'hsl(0 0% 98%)' },
-          'text-excellerate-red': { primary: 'hsl(var(--excellerate-red-hsl))', foreground: 'hsl(0 0% 98%)' },
-          'text-excellerate-lime': { primary: 'hsl(var(--excellerate-lime-hsl))', foreground: 'hsl(0 0% 10%)' },
-          'text-excellerate-purple': { primary: 'hsl(var(--excellerate-purple-hsl))', foreground: 'hsl(0 0% 98%)' },
       };
       const colors = colorMap[activeTabInfo.groupColor as keyof typeof colorMap] || colorMap['text-excellerate-orange'];
       return { '--primary': colors.primary, '--primary-foreground': colors.foreground } as React.CSSProperties;
   }, [activeTabInfo]);
   
-  // --- CRUD HANDLERS (LOCAL STATE) ---
-  const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
-    setSites(prev => prev.map(s => s.id === siteId ? { ...s, ...updatedData } : s));
-  };
-
-  const handleSetMonthlyAudit = (siteId: string, date: Date, auditData: Partial<Omit<MonthlyAudit, 'id' | 'siteId' | 'month' | 'year'>>) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const docId = `${siteId}-${format(date, 'yyyy-MM')}`;
-    setMonthlyAudits(prev => {
-        const existing = prev.find(a => a.id === docId);
-        if (existing) {
-            return prev.map(a => a.id === docId ? { ...a, ...auditData } : a);
-        }
-        return [...prev, { id: docId, siteId, year, month, auditor: 'Unassigned', status: 'Not Booked', ...auditData } as MonthlyAudit];
+  // --- Firestore Handlers ---
+  const handleAddSite = (siteName: string) => {
+    if (!sitesRef) return;
+    const newDocRef = doc(sitesRef);
+    setDoc(newDocRef, {
+      id: newDocRef.id,
+      name: siteName,
+      status: 'No Concerns',
+      userProfileId: activeProfileId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      members: activeProfile?.members || {}
     });
   };
 
-  const handleAddSite = (siteName: string) => {
-    if (siteName.trim() === '') return;
-    const newSite: Site = { id: `site-${Date.now()}`, name: siteName, status: 'No Concerns', notes: '' };
-    setSites(prev => [...prev, newSite]);
+  const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
+    if (!sitesRef) return;
+    updateDocumentNonBlocking(doc(sitesRef, siteId), { ...updatedData, updatedAt: new Date().toISOString() });
   };
 
   const handleRemoveSite = (siteId: string) => {
-    setSites(prev => prev.filter(s => s.id !== siteId));
-  };
-  
-  const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
-    setCleaners(prev => prev.map(c => c.id === cleanerId ? { ...c, ...updatedData } : c));
+    if (!sitesRef) return;
+    deleteDocumentNonBlocking(doc(sitesRef, siteId));
   };
 
   const handleAddCleaner = (cleanerName: string) => {
-    if (cleanerName.trim() === '') return;
-    const newCleaner: Cleaner = {
-      id: `cleaner-${Date.now()}`,
+    if (!cleanersRef) return;
+    const newDocRef = doc(cleanersRef);
+    setDoc(newDocRef, {
+      id: newDocRef.id,
       name: cleanerName,
       rating: 'No Concerns',
-      notes: '',
       holidayAllowance: 20,
-      holidayTaken: 0,
-      sickDaysTaken: 0,
-      availabilityStatus: 'Unavailable',
-      availableLots: [],
-      availabilityNotes: '',
-    };
-    setCleaners(prev => [...prev, newCleaner]);
+      userProfileId: activeProfileId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      members: activeProfile?.members || {}
+    });
+  };
+
+  const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
+    if (!cleanersRef) return;
+    updateDocumentNonBlocking(doc(cleanersRef, cleanerId), { ...updatedData, updatedAt: new Date().toISOString() });
   };
 
   const handleRemoveCleaner = (cleanerId: string) => {
-    setCleaners(prev => prev.filter(c => c.id !== cleanerId));
+    if (!cleanersRef) return;
+    deleteDocumentNonBlocking(doc(cleanersRef, cleanerId));
   };
 
-  const handleUpdateActionPlan = (updatedPlan: ActionPlan) => {
-    setActionPlans(prev => {
-        const existing = prev.find(p => p.id === updatedPlan.id);
-        if (existing) return prev.map(p => p.id === updatedPlan.id ? updatedPlan : p);
-        return [...prev, updatedPlan];
-    });
-  };
-
-  const handleRemoveActionPlan = (planId: string) => {
-    setActionPlans(prev => prev.filter(p => p.id !== planId));
-  };
-  
-  const handleAddLeave = (newLeaveData: Omit<Leave, 'id' | 'coverAssignments'>) => {
-    const newEntry: Leave = { id: `leave-${Date.now()}`, ...newLeaveData, coverAssignments: [] };
-    setLeave(prev => [...prev, newEntry]);
-  };
-
-  const handleUpdateLeave = (leaveId: string, updatedData: Partial<Omit<Leave, 'id'>>) => {
-    setLeave(prev => prev.map(l => l.id === leaveId ? { ...l, ...updatedData } : l));
-  };
-
-  const handleDeleteLeave = (leaveToDelete: Leave) => {
-    setLeave(prev => prev.filter(l => l.id !== leaveToDelete.id));
-  };
-  
   const handleAddScheduleEntry = (newEntry: Omit<ScheduleEntry, 'id'>) => {
-    const entry: ScheduleEntry = { id: `schedule-${Date.now()}`, ...newEntry };
-    setSchedule(prev => [...prev, entry]);
+    if (!scheduleRef) return;
+    const newDocRef = doc(scheduleRef);
+    setDoc(newDocRef, {
+      id: newDocRef.id,
+      ...newEntry,
+      userProfileId: activeProfileId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      members: activeProfile?.members || {}
+    });
   };
 
   const handleUpdateScheduleEntry = (entryId: string, updatedEntry: Partial<Omit<ScheduleEntry, 'id'>>) => {
-    setSchedule(prev => prev.map(s => s.id === entryId ? { ...s, ...updatedEntry } : s));
+    if (!scheduleRef) return;
+    updateDocumentNonBlocking(doc(scheduleRef, entryId), { ...updatedEntry, updatedAt: new Date().toISOString() });
   };
 
   const handleRemoveScheduleEntry = (entryId: string) => {
-    setSchedule(prev => prev.filter(s => s.id !== entryId));
-  };
-  
-  const handleSetSupplyOrder = (siteId: string, consumableId: string, date: Date, quantity: number) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const docId = `${siteId}-${consumableId}-${format(date, 'yyyy-MM')}`;
-    setSupplyOrders(prev => {
-        if (quantity > 0) {
-            const existing = prev.find(o => o.id === docId);
-            if (existing) return prev.map(o => o.id === docId ? { ...o, quantity } : o);
-            return [...prev, { id: docId, siteId, consumableId, year, month, quantity }];
-        }
-        return prev.filter(o => o.id !== docId);
-    });
+    if (!scheduleRef) return;
+    deleteDocumentNonBlocking(doc(scheduleRef, entryId));
   };
 
-  const handleAddConsumable = (siteId: string, consumableData: any) => {
-    // Local blank canvas handles site-specific consumables via props in sub-components if needed
-  };
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const handleAddAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
-    const entry: Appointment = { id: `app-${Date.now()}`, ...newAppointment };
-    setAppointments(prev => [...prev, entry]);
-  };
+  if (!user) {
+    return <LoginPage />;
+  }
 
-  const handleUpdateAppointment = (appointmentId: string, updatedData: Partial<Omit<Appointment, 'id'>>) => {
-    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, ...updatedData } : a));
-  };
-
-  const handleRemoveAppointment = (appointmentId: string) => {
-    setAppointments(prev => prev.filter(a => a.id !== appointmentId));
-  };
-  
-  const handleAddTask = (newTaskData: Omit<Task, 'id' | 'completed'>) => {
-    const entry: Task = { id: `task-${Date.now()}`, ...newTaskData, completed: false };
-    setTasks(prev => [...prev, entry]);
-  };
-
-  const handleUpdateTask = (taskId: string, updatedData: Partial<Omit<Task, 'id'>>) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
-  };
-
-  const handleRemoveTask = (taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-  };
-
-  const handleAddConversationRecord = (newRecordData: Omit<ConversationRecord, 'id'>) => {
-    const entry: ConversationRecord = { id: `conv-${Date.now()}`, ...newRecordData };
-    setConversationRecords(prev => [...prev, entry]);
-  };
-
-  const handleUpdateConversationRecord = (recordId: string, updatedData: Partial<Omit<ConversationRecord, 'id'>>) => {
-    setConversationRecords(prev => prev.map(r => r.id === recordId ? { ...r, ...updatedData } : r));
-  };
-
-  const handleRemoveConversationRecord = (recordId: string) => {
-    setConversationRecords(prev => prev.filter(r => r.id !== recordId));
-  };
-
-  const handleAddGoodNewsRecord = (newRecordData: Omit<GoodNewsRecord, 'id'>) => {
-    const entry: GoodNewsRecord = { id: `gn-${Date.now()}`, ...newRecordData };
-    setGoodNewsRecords(prev => [...prev, entry]);
-  };
-
-  const handleUpdateGoodNewsRecord = (recordId: string, updatedData: Partial<Omit<GoodNewsRecord, 'id'>>) => {
-    setGoodNewsRecords(prev => prev.map(r => r.id === recordId ? { ...r, ...updatedData } : r));
-  };
-
-  const handleRemoveGoodNewsRecord = (recordId: string) => {
-    setGoodNewsRecords(prev => prev.filter(r => r.id !== recordId));
-  };
-
-  const sortedSites = useMemo(() => [...sites].sort((a, b) => a.name.localeCompare(b.name)), [sites]);
-  const sortedCleaners = useMemo(() => [...cleaners].sort((a, b) => a.name.localeCompare(b.name)), [cleaners]);
-  const sortedSchedule = useMemo(() => [...schedule].sort((a, b) => a.site.localeCompare(b.site) || a.cleaner.localeCompare(b.cleaner)), [schedule]);
-
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
-  
   const renderActiveTab = () => {
     switch (activeTab) {
         case 'sites':
@@ -378,7 +331,7 @@ export default function DashboardPage() {
                 <Card>
                     <CardHeader><CardTitle>Site Performance</CardTitle></CardHeader>
                     <CardContent>
-                        <SitesTab sites={sortedSites} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={(id, name) => handleUpdateSite(id, { name })} onRemoveSite={handleRemoveSite} />
+                        <SitesTab sites={sites || []} onNoteChange={handleUpdateSite} onAddSite={handleAddSite} onEditSite={(id, name) => handleUpdateSite(id, { name })} onRemoveSite={handleRemoveSite} />
                     </CardContent>
                 </Card>
             );
@@ -387,51 +340,33 @@ export default function DashboardPage() {
                 <Card>
                     <CardHeader><CardTitle>Cleaner Performance</CardTitle></CardHeader>
                     <CardContent>
-                        <CleanersTab cleaners={sortedCleaners} onUpdateCleaner={handleUpdateCleaner} onAddCleaner={handleAddCleaner} onRemoveCleaner={handleRemoveCleaner} />
+                        <CleanersTab cleaners={cleaners || []} onUpdateCleaner={handleUpdateCleaner} onAddCleaner={handleAddCleaner} onRemoveCleaner={handleRemoveCleaner} />
                     </CardContent>
                 </Card>
             );
         case 'availability':
-            return <AvailabilityTab cleaners={sortedCleaners} onUpdateCleaner={handleUpdateCleaner} />;
+            return <AvailabilityTab cleaners={cleaners || []} onUpdateCleaner={handleUpdateCleaner} />;
         case 'company-schedule':
             return (
                 <Card>
                     <CardHeader><CardTitle>Company Schedule</CardTitle></CardHeader>
                     <CardContent>
-                        <CompanyScheduleTab schedule={sortedSchedule} sites={sortedSites} cleaners={sortedCleaners} onAdd={handleAddScheduleEntry} onUpdate={handleUpdateScheduleEntry} onRemove={handleRemoveScheduleEntry} />
+                        <CompanyScheduleTab schedule={schedule || []} sites={sites || []} cleaners={cleaners || []} onAdd={handleAddScheduleEntry} onUpdate={handleUpdateScheduleEntry} onRemove={handleRemoveScheduleEntry} />
                     </CardContent>
                 </Card>
             );
         case 'leave-calendar':
-            return <LeaveCalendarTab cleaners={sortedCleaners} leave={leave} schedule={sortedSchedule} onAddLeave={handleAddLeave} onDeleteLeave={handleDeleteLeave} onUpdateLeave={handleUpdateLeave} />;
-        case 'monthly-leave':
-            return <MonthlyLeaveCalendar leave={leave} />;
-        case 'supplies':
-            return <SuppliesTab sites={sortedSites} firestore={null} supplyOrders={supplyOrders} onSetOrder={handleSetSupplyOrder} onAddConsumable={handleAddConsumable} onEditConsumable={() => {}} onRemoveConsumable={() => {}} />;
-        case 'audits':
-            return <AuditsTab sites={sortedSites} monthlyAudits={monthlyAudits} onSetAudit={handleSetMonthlyAudit} />;
-        case 'audit-history':
-            return <AuditHistoryTab sites={sortedSites} monthlyAudits={monthlyAudits} />;
+            return <LeaveCalendarTab cleaners={cleaners || []} leave={leave} schedule={schedule || []} onAddLeave={() => {}} onDeleteLeave={() => {}} onUpdateLeave={() => {}} />;
         case 'risk':
-            return <RiskDashboardTab sites={sortedSites} cleaners={sortedCleaners} />;
-        case 'diary':
-            return <DiaryTab sites={sortedSites} appointments={appointments} monthlyAudits={monthlyAudits} leave={leave} schedule={sortedSchedule} onAddAppointment={handleAddAppointment} onUpdateAppointment={handleUpdateAppointment} onRemoveAppointment={handleRemoveAppointment} />;
+            return <RiskDashboardTab sites={sites || []} cleaners={cleaners || []} />;
         case 'action-plan':
-            return <ActionPlanTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans} onUpdateActionPlan={handleUpdateActionPlan} onRemoveActionPlan={handleRemoveActionPlan} />;
+            return <ActionPlanTab sites={sites || []} cleaners={cleaners || []} actionPlans={actionPlans} onUpdateActionPlan={() => {}} onRemoveActionPlan={() => {}} />;
         case 'tasks':
-            return <TasksTab tasks={tasks} sites={sortedSites} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
-        case 'conversation-log':
-            return <ConversationLogTab cleaners={sortedCleaners} sites={sortedSites} conversationRecords={conversationRecords} onAddRecord={handleAddConversationRecord} onUpdateRecord={handleUpdateRecord} onRemoveRecord={handleRemoveConversationRecord} />;
-        case 'good-news-centre':
-            return <GoodNewsCentreTab records={goodNewsRecords} cleaners={sortedCleaners} sites={sortedSites} onAddRecord={handleAddGoodNewsRecord} onUpdateRecord={handleUpdateGoodNewsRecord} onRemoveRecord={handleRemoveGoodNewsRecord} />;
-        case 'site-portfolio':
-            return <SitePortfolioTab sites={sortedSites} cleaners={sortedCleaners} schedule={sortedSchedule} actionPlans={actionPlans} monthlyAudits={monthlyAudits} tasks={tasks} appointments={appointments} onUpdateSite={handleUpdateSite} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} onAddAppointment={handleAddAppointment} onUpdateAppointment={handleUpdateAppointment} onRemoveAppointment={handleRemoveAppointment} onAddScheduleEntry={handleAddScheduleEntry} onUpdateScheduleEntry={handleUpdateScheduleEntry} onRemoveScheduleEntry={handleRemoveScheduleEntry} />;
-        case 'site-map':
-            return <SiteMapTab sites={sortedSites} />;
+            return <TasksTab tasks={tasks} sites={sites || []} onAddTask={() => {}} onUpdateTask={() => {}} onRemoveTask={() => {}} />;
         case 'gold-standard':
-            return <GoldStandardTab sites={sortedSites} cleaners={sortedCleaners} />;
+            return <GoldStandardTab sites={sites || []} cleaners={cleaners || []} />;
         default:
-            return <DailySummaryTab sites={sortedSites} cleaners={sortedCleaners} actionPlans={actionPlans} schedule={schedule} leave={leave} />;
+            return <DailySummaryTab sites={sites || []} cleaners={cleaners || []} actionPlans={actionPlans} schedule={schedule || []} leave={leave} />;
     }
   };
 
@@ -443,14 +378,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                     <div className="p-1 relative">
                         <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">C</div>
-                        {outstandingTasksCount > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
-                            {outstandingTasksCount}
-                        </div>
-                        )}
                     </div>
                     <div className='flex flex-col'>
                         <h1 className="text-lg font-semibold tracking-tight text-foreground">CleanFlow</h1>
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">{activeProfile?.name}</span>
                     </div>
                 </div>
             </SidebarHeader>
@@ -471,7 +402,7 @@ export default function DashboardPage() {
                               <CollapsibleTrigger asChild>
                                   <SidebarMenuButton className="justify-between w-full">
                                       <div className={cn("flex items-center gap-2", group.color)}>
-                                          <group.icon />
+                                          <group.icon className="h-4 w-4" />
                                           <span>{group.group}</span>
                                       </div>
                                       <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" style={{ transform: openCollapsibles.includes(group.group) ? 'rotate(90deg)' : 'none' }}/>
@@ -488,7 +419,7 @@ export default function DashboardPage() {
                                               className="justify-start w-full"
                                               tooltip={item.label}
                                           >
-                                              <item.icon className={cn(activeTab === item.value && group.color)} />
+                                              <item.icon className={cn("h-4 w-4", activeTab === item.value && group.color)} />
                                               <span>{item.label}</span>
                                               {(item.notificationCount ?? 0) > 0 && <SidebarMenuBadge>{item.notificationCount}</SidebarMenuBadge>}
                                           </SidebarMenuButton>
@@ -500,6 +431,12 @@ export default function DashboardPage() {
                   ))}
               </SidebarMenu>
             </SidebarContent>
+            <SidebarFooter className="p-4 border-t">
+                <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => signOut(auth)}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                </Button>
+            </SidebarFooter>
         </Sidebar>
         <SidebarInset>
             <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
