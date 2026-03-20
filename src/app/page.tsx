@@ -852,12 +852,10 @@ export default function DashboardPage() {
                     <div className="p-2 relative bg-primary rounded-lg">
                         <svg
                             className="h-6 w-6 text-primary-foreground"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="4"
+                            fill="currentColor"
+                            viewBox="0 0 16 16"
                         >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            <path d="M4.5 2a2.5 2.5 0 0 1 2.5 2.5v1.066a.5.5 0 0 0 .5.5h1.866a.5.5 0 0 0 .5-.5V4.5a2.5 2.5 0 0 1 2.5-2.5h.5A2.5 2.5 0 0 1 15 4.5v1.534a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V4.5a3.5 3.5 0 0 0-3.5-3.5h-.5a3.5 3.5 0 0 0-3.5 3.5v1.066a1.5 1.5 0 0 1-1.5 1.5h-1.866a1.5 1.5 0 0 1-1.5-1.5V4.5A3.5 3.5 0 0 0 3.5 1h-.5A3.5 3.5 0 0 0 0 4.5v1.534a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V4.5A2.5 2.5 0 0 1 3.5 2zM1 8.35v.226a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5V8.35a1.5 1.5 0 0 1 1.5-1.5h1.866a1.5 1.5 0 0 1 1.5 1.5v3.184a.5.5 0 0 0 .5.5h1.866a.5.5 0 0 0 .5-.5V8.35a1.5 1.5 0 0 1 1.5-1.5h1.866a1.5 1.5 0 0 1 1.5 1.5v.226a.5.5 0 0 0 .5.5h.034a.5.5 0 0 0 .5-.5v-.226a2.5 2.5 0 0 0-2.5-2.5h-1.866a2.5 2.5 0 0 0-2.5 2.5v3.184a1.5 1.5 0 0 1-1.5 1.5h-1.866a1.5 1.5 0 0 1-1.5-1.5V8.35a2.5 2.5 0 0 0-2.5-2.5h-1.866A2.5 2.5 0 0 0 1 8.35"/>
                         </svg>
                         {outstandingTasksCount > 0 && (
                         <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
@@ -952,6 +950,9 @@ export default function DashboardPage() {
 
     
 
+
+
+    
 
 
     
