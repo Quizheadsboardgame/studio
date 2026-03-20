@@ -212,11 +212,12 @@ export default function DashboardPage() {
     return query(collection(firestore, 'userProfiles'), where(`members.${user.uid}`, '!=', null));
   }, [firestore, user, isMasterUser]);
 
-  const { data: allHubs, isLoading: isProfileLoading } = useCollection<UserProfile>(profilesQuery);
+  const { data: allHubsResult, isLoading: isProfileLoading } = useCollection<UserProfile>(profilesQuery);
+  const allHubs = allHubsResult || [];
   
   // Resolve active hub
   const activeProfile = useMemo(() => {
-    if (!allHubs || allHubs.length === 0) return null;
+    if (allHubs.length === 0) return null;
     if (selectedHubId) return allHubs.find(h => h.id === selectedHubId) || allHubs[0];
     return allHubs[0] || null;
   }, [allHubs, selectedHubId]);
@@ -232,7 +233,7 @@ export default function DashboardPage() {
 
   // Initial setup for new users
   useEffect(() => {
-    if (!isProfileLoading && user && (!allHubs || allHubs.length === 0)) {
+    if (!isProfileLoading && user && allHubs.length === 0) {
       const newProfileId = `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', newProfileId);
       setDoc(profileRef, {
@@ -243,9 +244,9 @@ export default function DashboardPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-    } else if (!isProfileLoading && user && allHubs && allHubs.length > 0) {
+    } else if (!isProfileLoading && user && allHubs.length > 0) {
       allHubs.forEach(hub => {
-        if (hub.email === user.email && !hub.members[user.uid]) {
+        if (hub.email === user.email && (!hub.members || !hub.members[user.uid])) {
           updateDoc(doc(firestore, 'userProfiles', hub.id), {
             [`members.${user.uid}`]: 'owner',
             updatedAt: new Date().toISOString()
@@ -270,17 +271,18 @@ export default function DashboardPage() {
   const actionPlansRef = useMemoFirebase(() => createHubRef('actionPlans'), [firestore, activeProfileId]);
   const leaveRef = useMemoFirebase(() => createHubRef('leave'), [firestore, activeProfileId]);
 
-  const { data: sites = [] } = useCollection<Site>(sitesRef);
-  const { data: cleaners = [] } = useCollection<Cleaner>(cleanersRef);
-  const { data: schedule = [] } = useCollection<ScheduleEntry>(scheduleRef);
-  const { data: audits = [] } = useCollection<MonthlyAudit>(auditsRef);
-  const { data: appointments = [] } = useCollection<Appointment>(appointmentsRef);
-  const { data: tasks = [] } = useCollection<Task>(tasksRef);
-  const { data: conversations = [] } = useCollection<ConversationRecord>(conversationsRef);
-  const { data: goodNews = [] } = useCollection<GoodNewsRecord>(goodNewsRef);
-  const { data: supplyOrders = [] } = useCollection<MonthlySupplyOrder>(supplyOrdersRef);
-  const { data: actionPlans = [] } = useCollection<ActionPlan>(actionPlansRef);
-  const { data: leave = [] } = useCollection<Leave>(leaveRef);
+  // UseCollection with fallback to empty array to prevent filtering on null
+  const sites = useCollection<Site>(sitesRef).data || [];
+  const cleaners = useCollection<Cleaner>(cleanersRef).data || [];
+  const schedule = useCollection<ScheduleEntry>(scheduleRef).data || [];
+  const audits = useCollection<MonthlyAudit>(auditsRef).data || [];
+  const appointments = useCollection<Appointment>(appointmentsRef).data || [];
+  const tasks = useCollection<Task>(tasksRef).data || [];
+  const conversations = useCollection<ConversationRecord>(conversationsRef).data || [];
+  const goodNews = useCollection<GoodNewsRecord>(goodNewsRef).data || [];
+  const supplyOrders = useCollection<MonthlySupplyOrder>(supplyOrdersRef).data || [];
+  const actionPlans = useCollection<ActionPlan>(actionPlansRef).data || [];
+  const leave = useCollection<Leave>(leaveRef).data || [];
 
   // --- Navigation Mapping ---
   const menuGroups = useMemo(() => {
@@ -494,7 +496,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {allHubs?.map(hub => (
+                {allHubs.map(hub => (
                   <tr key={hub.id} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="p-3 font-medium">{hub.name}</td>
                     <td className="p-3 text-muted-foreground">{hub.email}</td>
@@ -580,7 +582,7 @@ export default function DashboardPage() {
                         <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest">Enterprise v1.0</span>
                     </div>
                 </div>
-                {isMasterUser && allHubs && allHubs.length > 0 && (
+                {isMasterUser && allHubs.length > 0 && (
                   <div className="px-2 mt-2">
                     <Select value={selectedHubId || ''} onValueChange={setSelectedHubId}>
                       <SelectTrigger className="h-8 text-xs bg-muted/50 border-none">

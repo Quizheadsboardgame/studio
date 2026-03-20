@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useReducer, useMemo, useRef, useState, useEffect } from 'react';
@@ -186,7 +187,7 @@ function PrintableSummary({
                          </tr>
                      </thead>
                      <tbody>
-                         {schedule.map((entry, index) => (
+                         {(schedule || []).map((entry, index) => (
                              <tr key={entry.id || index} className="border-b border-gray-300">
                                  <td className="py-2">{entry.site}</td>
                                  <td className="py-2">{entry.cleaner}</td>
@@ -217,8 +218,9 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
   }, []);
 
   const uniqueSchedule = useMemo(() => {
+    const s = schedule || [];
     const seen = new Set<string>();
-    return schedule.filter(entry => {
+    return s.filter(entry => {
         const key = `${entry.site}|${entry.cleaner}|${entry.start}|${entry.finish}`.toLowerCase();
         if (seen.has(key)) {
             return false;
@@ -229,26 +231,26 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
     });
   }, [schedule]);
 
-  const groupedSites = useMemo(() => sites.reduce((acc, site) => {
+  const groupedSites = useMemo(() => (sites || []).reduce((acc, site) => {
     if (site.status === 'No Concerns' && (!site.notes || site.notes.trim() === '')) return acc;
     const color = getSiteColor(site.status);
     acc[color].push(site);
     return acc;
   }, { gold: [], red: [], amber: [], green: [], other: [] } as GroupedItems<Site>), [sites]);
 
-  const groupedCleaners = useMemo(() => cleaners.reduce((acc, cleaner) => {
+  const groupedCleaners = useMemo(() => (cleaners || []).reduce((acc, cleaner) => {
     if (cleaner.rating === 'No Concerns' && (!cleaner.notes || cleaner.notes.trim() === '')) return acc;
     const color = getCleanerColor(cleaner.rating);
     acc[color].push(cleaner);
     return acc;
   }, { gold: [], red: [], amber: [], green: [], other: [] } as GroupedItems<Cleaner>), [cleaners]);
   
-  const todaysTasks = useMemo(() => actionPlans
+  const todaysTasks = useMemo(() => (actionPlans || [])
     .flatMap(plan => plan.tasks.map(task => ({ ...task, targetName: plan.targetName, targetType: plan.targetType })))
     .filter(task => task.dueDate && isToday(parseISO(task.dueDate)) && !task.completed), [actionPlans]);
 
   const todaysAbsences = useMemo(() => {
-    return leave.filter(l => isToday(parseISO(l.date)));
+    return (leave || []).filter(l => isToday(parseISO(l.date)));
   }, [leave]);
   
   const todaysShiftsToCover = useMemo(() => {
@@ -630,7 +632,7 @@ export default function DailySummaryTab({ sites, cleaners, actionPlans, schedule
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {uniqueSchedule.map((entry, index) => (
+                                                {(uniqueSchedule || []).map((entry, index) => (
                                                     <tr key={entry.id || index} className="border-b last:border-0">
                                                         <td className="py-2 px-4 font-medium">{entry.site}</td>
                                                         <td className="py-2 px-4">{entry.cleaner}</td>
