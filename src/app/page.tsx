@@ -59,6 +59,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { restoreProfessionalData } from '@/lib/restore-seeder';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
@@ -323,14 +325,25 @@ export default function DashboardPage() {
 
       const performRestoration = async () => {
         toast({ title: 'Performing Clean Restoration...', description: 'Deleting all current data and re-importing Lot 4 roster.' });
-        await restoreProfessionalData(firestore, targetHubId);
-        await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-        toast({ title: 'Restoration Complete', description: 'Your strictly professional Lot 4 data has been reset.' });
+        try {
+          await restoreProfessionalData(firestore, targetHubId);
+          await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
+          toast({ title: 'Restoration Complete', description: 'Your strictly professional Lot 4 data has been reset.' });
+        } catch (error: any) {
+          if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: profileRef.path,
+              operation: 'update',
+              requestResourceData: { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() }
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          }
+        }
       };
 
       if (allHubs.length === 0) {
         // Brand new user
-        setDoc(profileRef, {
+        const newProfileData = {
           id: targetHubId,
           name: isTargetEmail ? "Excellerate Services - Lot 4" : (isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`),
           email: user.email,
@@ -340,21 +353,51 @@ export default function DashboardPage() {
           updatedAt: new Date().toISOString(),
           isDeactivated: false,
           restorationVersion: isTargetEmail ? CURRENT_RESTORATION_VERSION : 0
-        }, { merge: true }).then(() => {
+        };
+        setDoc(profileRef, newProfileData, { merge: true }).then(() => {
           if (isTargetEmail) performRestoration();
+        }).catch((error: any) => {
+          if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: profileRef.path,
+              operation: 'create',
+              requestResourceData: newProfileData
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          }
         });
       } else {
         // Existing user check for restoration or reactivation
         allHubs.forEach(hub => {
           if (hub.email?.toLowerCase() === user.email?.toLowerCase()) {
+            const hubRef = doc(firestore, 'userProfiles', hub.id);
             // Auto-Reactivate
             if (hub.isDeactivated) {
-              updateDoc(doc(firestore, 'userProfiles', hub.id), { isDeactivated: false, updatedAt: new Date().toISOString() });
-              toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
+              const reactivateData = { isDeactivated: false, updatedAt: new Date().toISOString() };
+              updateDoc(hubRef, reactivateData).then(() => {
+                toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
+              }).catch((error: any) => {
+                if (error.code === 'permission-denied') {
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: hubRef.path,
+                    operation: 'update',
+                    requestResourceData: reactivateData
+                  } satisfies SecurityRuleContext));
+                }
+              });
             }
             // Ensure owner membership
             if (!hub.members || !hub.members[user.uid]) {
-              updateDoc(doc(firestore, 'userProfiles', hub.id), { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
+              const membershipUpdate = { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() };
+              updateDoc(hubRef, membershipUpdate).catch((error: any) => {
+                if (error.code === 'permission-denied') {
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: hubRef.path,
+                    operation: 'update',
+                    requestResourceData: membershipUpdate
+                  } satisfies SecurityRuleContext));
+                }
+              });
             }
             // Professional Data Restoration check
             if (isTargetEmail && (hub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
@@ -551,11 +594,23 @@ export default function DashboardPage() {
   // --- Account Management Logic ---
   const handleDeactivate = async () => {
     if (!activeProfileId) return;
-    await updateDoc(doc(firestore, 'userProfiles', activeProfileId), { 
+    const updateData = { 
       isDeactivated: true,
       updatedAt: new Date().toISOString()
-    });
-    signOut(auth);
+    };
+    const profileRef = doc(firestore!, 'userProfiles', activeProfileId);
+    try {
+      await updateDoc(profileRef, updateData);
+      signOut(auth);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: profileRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        } satisfies SecurityRuleContext));
+      }
+    }
   };
 
   const handleDeleteAllData = async () => {
@@ -568,17 +623,38 @@ export default function DashboardPage() {
       'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
     ];
 
-    for (const col of collectionsToWipe) {
-      const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
-      const snapshot = await getDocs(colRef);
-      snapshot.forEach(d => batch.delete(d.ref));
-    }
+    try {
+      for (const col of collectionsToWipe) {
+        const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
+        let snapshot;
+        try {
+          snapshot = await getDocs(colRef);
+        } catch (error: any) {
+          if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: colRef.path,
+              operation: 'list'
+            } satisfies SecurityRuleContext));
+          }
+          throw error;
+        }
+        snapshot.forEach(d => batch.delete(d.ref));
+      }
 
-    // Finally delete the profile
-    batch.delete(doc(firestore, 'userProfiles', activeProfileId));
-    
-    await batch.commit();
-    signOut(auth);
+      // Finally delete the profile
+      const profileRef = doc(firestore, 'userProfiles', activeProfileId);
+      batch.delete(profileRef);
+      
+      await batch.commit();
+      signOut(auth);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `/userProfiles/${activeProfileId}`,
+          operation: 'write'
+        } satisfies SecurityRuleContext));
+      }
+    }
   };
 
   if (isUserLoading) {
@@ -609,7 +685,7 @@ export default function DashboardPage() {
             const email = formData.get('email') as string;
             if (!firestore) return;
             const hubId = `hub-${Date.now()}`;
-            setDoc(doc(firestore, 'userProfiles', hubId), {
+            const newHubData = {
               id: hubId,
               name,
               email,
@@ -618,6 +694,16 @@ export default function DashboardPage() {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               isDeactivated: false,
+            };
+            const hubRef = doc(firestore, 'userProfiles', hubId);
+            setDoc(hubRef, newHubData).catch((error: any) => {
+              if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: hubRef.path,
+                  operation: 'create',
+                  requestResourceData: newHubData
+                } satisfies SecurityRuleContext));
+              }
             });
             toast({ title: 'Hub Provisioned', description: `${name} created.` });
             (e.target as HTMLFormElement).reset();

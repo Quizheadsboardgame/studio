@@ -1,6 +1,8 @@
 'use client';
 
 import { Firestore, collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const PROFESSIONAL_SITES = [
   { name: 'CLINICAL SCHOOLS', code: '1' },
@@ -64,12 +66,14 @@ const PROFESSIONAL_CLEANERS = [
 class BatchManager {
   private batch: any;
   private count = 0;
+  private currentPath: string = '';
 
-  constructor(private db: Firestore) {
+  constructor(private db: Firestore, private hubId: string) {
     this.batch = writeBatch(this.db);
   }
 
   async add(ref: any, data: any) {
+    this.currentPath = ref.path;
     this.batch.set(ref, data, { merge: true });
     this.count++;
     if (this.count >= 400) {
@@ -78,6 +82,7 @@ class BatchManager {
   }
 
   async delete(ref: any) {
+    this.currentPath = ref.path;
     this.batch.delete(ref);
     this.count++;
     if (this.count >= 400) {
@@ -87,22 +92,27 @@ class BatchManager {
 
   async commit() {
     if (this.count > 0) {
-      await this.batch.commit();
+      try {
+        await this.batch.commit();
+      } catch (error: any) {
+        if (error.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: this.currentPath || `/userProfiles/${this.hubId}`,
+            operation: 'write',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
+        throw error;
+      }
       this.batch = writeBatch(this.db);
       this.count = 0;
     }
   }
 }
 
-/**
- * Restores the account to the strictly professional state
- * by removing all demo data and re-importing the Lot 4 roster.
- * Updated to recursively delete site sub-collections (consumables).
- */
 export async function restoreProfessionalData(db: Firestore, hubId: string) {
-  const bm = new BatchManager(db);
+  const bm = new BatchManager(db, hubId);
 
-  // 1. Wipe ALL existing operational collections to ensure a clean slate
   const subCollections = [
     'sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 
     'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
@@ -110,12 +120,36 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
 
   for (const sub of subCollections) {
     const colRef = collection(db, 'userProfiles', hubId, sub);
-    const snapshot = await getDocs(colRef);
+    let snapshot;
+    try {
+      snapshot = await getDocs(colRef);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+          path: colRef.path,
+          operation: 'list',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      }
+      throw error;
+    }
+
     for (const d of snapshot.docs) {
-      // Special recursive check for sites to remove consumables
       if (sub === 'sites') {
         const consumablesRef = collection(db, 'userProfiles', hubId, 'sites', d.id, 'consumables');
-        const consumablesSnapshot = await getDocs(consumablesRef);
+        let consumablesSnapshot;
+        try {
+          consumablesSnapshot = await getDocs(consumablesRef);
+        } catch (error: any) {
+          if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: consumablesRef.path,
+              operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          }
+          throw error;
+        }
         for (const cd of consumablesSnapshot.docs) {
           await bm.delete(cd.ref);
         }
@@ -125,7 +159,6 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
   }
   await bm.commit();
 
-  // 2. Re-import Sites (Lot 4 Specific with codes)
   for (const siteInfo of PROFESSIONAL_SITES) {
     const siteRef = doc(collection(db, 'userProfiles', hubId, 'sites'));
     await bm.add(siteRef, {
@@ -139,7 +172,6 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     });
   }
 
-  // 3. Re-import Cleaners (Lot 4 Specific)
   for (const cleanerName of PROFESSIONAL_CLEANERS) {
     const cleanerRef = doc(collection(db, 'userProfiles', hubId, 'cleaners'));
     await bm.add(cleanerRef, {
