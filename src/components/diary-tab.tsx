@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useMemo, ReactNode, useRef } from 'react';
 import type { Site, MonthlyAudit, Appointment, Leave, ScheduleEntry } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { format, parseISO, addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { format, parseISO, addDays, addWeeks, addMonths, addYears, startOfDay } from 'date-fns';
 import { PlusCircle, Pencil, Trash2, Calendar, Briefcase, FileDown, RefreshCw, Users } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
@@ -90,7 +89,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                 return {
                     id: audit.id,
                     type: 'audit',
-                    date: parseISO(audit.bookedDate!),
+                    date: startOfDay(parseISO(audit.bookedDate!)),
                     title: `Audit`,
                     details: `Status: ${audit.status}${audit.bookedTime ? ` at ${audit.bookedTime}`: ''}`,
                     site: site?.name || 'Unknown Site',
@@ -102,7 +101,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
 
         const expandedAppointments: DiaryEvent[] = [];
         appointments.forEach(app => {
-            const startDate = parseISO(app.date);
+            const startDate = startOfDay(parseISO(app.date));
 
             if (!app.recurrence || app.recurrence === 'none') {
                 expandedAppointments.push({
@@ -119,14 +118,16 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                 return;
             }
 
-            const recurrenceEndDate = app.recurrenceEndDate ? parseISO(app.recurrenceEndDate) : addYears(startDate, 1);
-            let currentDate = startDate;
+            const recurrenceEndDate = app.recurrenceEndDate ? startOfDay(parseISO(app.recurrenceEndDate)) : addYears(startDate, 1);
+            let currentDate = new Date(startDate.getTime());
 
-            while (currentDate <= recurrenceEndDate) {
+            // Limit expansion to prevent infinite loops or massive memory usage
+            let safetyCounter = 0;
+            while (currentDate <= recurrenceEndDate && safetyCounter < 1000) {
                 expandedAppointments.push({
                     id: `${app.id}-${format(currentDate, 'yyyy-MM-dd')}`,
                     type: 'appointment',
-                    date: currentDate,
+                    date: new Date(currentDate.getTime()),
                     title: `${app.title} (Recurring)`,
                     details: `${app.startTime || ''}${app.endTime ? ` - ${app.endTime}` : ''}`,
                     site: app.site,
@@ -144,6 +145,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                 } else {
                     break;
                 }
+                safetyCounter++;
             }
         });
         
@@ -153,7 +155,7 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
                 return {
                     id: `${leaveItem.id}-${assignment.site}`,
                     type: 'cover' as const,
-                    date: parseISO(leaveItem.date),
+                    date: startOfDay(parseISO(leaveItem.date)),
                     title: `Cover shift`,
                     details: `Covering for ${leaveItem.cleanerName}${shift ? ` from ${shift.start} to ${shift.finish}` : ''}`,
                     site: assignment.site,
@@ -170,9 +172,8 @@ export default function DiaryTab({ sites, appointments, monthlyAudits, leave, sc
             return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
         }
         
-        const fromDate = parseISO(filterStartDate);
-        fromDate.setHours(0,0,0,0);
-        const toDate = parseISO(filterEndDate);
+        const fromDate = startOfDay(parseISO(filterStartDate));
+        const toDate = new Date(parseISO(filterEndDate).getTime());
         toDate.setHours(23, 59, 59, 999);
 
         return allEvents.filter(event => event.date >= fromDate && event.date <= toDate).sort((a, b) => a.date.getTime() - b.date.getTime());

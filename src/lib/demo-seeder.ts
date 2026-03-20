@@ -83,7 +83,8 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   const hubRef = doc(firestore, 'userProfiles', hubId);
   const hubSnap = await getDoc(hubRef);
 
-  if (hubSnap.exists() && hubSnap.data().isDemoSeeded) {
+  // Using isDemoSeededV4 to force re-seed after batching fixes
+  if (hubSnap.exists() && hubSnap.data().isDemoSeededV4) {
     return;
   }
 
@@ -102,7 +103,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       'company-schedule', 'leave-calendar', 'monthly-leave', 
       'availability', 'diary', 'directions'
     ],
-    isDemoSeeded: true,
+    isDemoSeededV4: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }, { merge: true });
@@ -143,11 +144,11 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   });
 
   // 4. Seed Audit History 2026
-  siteIds.forEach(siteId => {
+  for (const siteId of siteIds) {
     for (let month = 1; month <= 12; month++) {
       const auditId = `${siteId}-2026-${month}`;
       const score = 90 + Math.floor(Math.random() * 11); // 90-100%
-      bm.set(doc(firestore, 'userProfiles', hubId, 'audits', auditId), {
+      await bm.set(doc(firestore, 'userProfiles', hubId, 'audits', auditId), {
         id: auditId,
         siteId,
         month,
@@ -159,14 +160,14 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
         bookedTime: '10:00'
       });
     }
-  });
+  }
 
   // 5. Seed Schedule
-  siteIds.forEach((siteId, index) => {
+  for (let index = 0; index < siteIds.length; index++) {
     const siteName = SITES[index];
     const cleanerName = CLEANERS[index % CLEANERS.length].name;
     const scheduleRef = doc(collection(firestore, 'userProfiles', hubId, 'cleaningScheduleEntries'));
-    bm.set(scheduleRef, {
+    await bm.set(scheduleRef, {
       id: scheduleRef.id,
       site: siteName,
       cleaner: cleanerName,
@@ -174,12 +175,13 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       finish: "06:00",
       userProfileId: hubId
     });
-  });
+  }
 
   // 6. Seed Good News
-  GOOD_NEWS.forEach((desc, index) => {
+  for (let index = 0; index < GOOD_NEWS.length; index++) {
+    const desc = GOOD_NEWS[index];
     const newsRef = doc(collection(firestore, 'userProfiles', hubId, 'goodNews'));
-    bm.set(newsRef, {
+    await bm.set(newsRef, {
       id: newsRef.id,
       personName: CLEANERS[index % CLEANERS.length].name,
       personType: 'Cleaner',
@@ -189,7 +191,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       acknowledged: index % 2 === 0,
       acknowledgementNotes: index % 2 === 0 ? "Thank you card sent." : ""
     });
-  });
+  }
 
   // 7. Seed Leave & Cover (Holidays)
   for (let month = 1; month <= 12; month++) {
@@ -200,7 +202,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     const siteToCover = SITES[month % SITES.length];
     const coverCleaner = CLEANERS[(month + 5) % CLEANERS.length].name;
 
-    bm.set(leaveRef, {
+    await bm.set(leaveRef, {
       id: leaveRef.id,
       cleanerId: cleanerMap[cleanerName],
       cleanerName,
@@ -214,10 +216,10 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
 
   // 8. Seed Diary Appointments - EVERY DAY FOR ALL DIARIES
   const start2026 = startOfYear(new Date('2026-01-01'));
-  const end2026 = endOfYear(new Date('2026-01-01'));
+  const end2026 = endOfYear(new Date('2026-12-31'));
   const allDaysOf2026 = eachDayOfInterval({ start: start2026, end: end2026 });
 
-  // A. Anchor Daily Tasks (Guarantees every day has at least one entry per role)
+  // A. Anchor Daily Tasks
   const anchorTasks = [
     { title: "Daily Operational Briefing", assignee: "Manager", start: "08:30", end: "09:00" },
     { title: "Daily Team Stand-up", assignee: "Supervisor", start: "09:00", end: "09:30" },
@@ -226,7 +228,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
 
   for (const task of anchorTasks) {
     const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-    bm.set(appRef, {
+    await bm.set(appRef, {
       id: appRef.id,
       title: task.title,
       date: "2026-01-01",
@@ -239,18 +241,18 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
     });
   }
 
-  // B. Varied Unique Tasks throughout the year (Adding ~365 * 1.5 unique appointments)
+  // B. Varied Unique Tasks throughout the year
   const roles = ["Manager", "Supervisor", "Mobile Cleaner"];
   
-  allDaysOf2026.forEach((day, dayIndex) => {
+  for (let dayIndex = 0; dayIndex < allDaysOf2026.length; dayIndex++) {
+    const day = allDaysOf2026[dayIndex];
     const dateStr = format(day, 'yyyy-MM-dd');
     
-    // Add 1 unique varied task per day, rotating roles
     const role = roles[dayIndex % roles.length];
     const variety = VARIETY_APPOINTMENTS[dayIndex % VARIETY_APPOINTMENTS.length];
     
     const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-    bm.set(appRef, {
+    await bm.set(appRef, {
       id: appRef.id,
       title: variety.title,
       date: dateStr,
@@ -262,10 +264,9 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       recurrence: 'none'
     });
 
-    // Every Saturday, add an extra specific deep clean for the Mobile Cleaner
     if (day.getDay() === 6) {
       const satRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-      bm.set(satRef, {
+      await bm.set(satRef, {
         id: satRef.id,
         title: "Weekend Intensive Deep Clean",
         date: dateStr,
@@ -278,10 +279,9 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       });
     }
 
-    // Every Sunday, add a Manager KPI Prep session
     if (day.getDay() === 0) {
       const sunRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-      bm.set(sunRef, {
+      await bm.set(sunRef, {
         id: sunRef.id,
         title: "Weekly KPI & Reporting",
         date: dateStr,
@@ -292,7 +292,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
         recurrence: 'none'
       });
     }
-  });
+  }
 
   await bm.commit();
 }
