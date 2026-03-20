@@ -9,6 +9,44 @@ const SITES = [
   "Outpatients Suite", "Executive Offices"
 ];
 
+const ADDENBROOKES_SITES = [
+  "CLINICAL SCHOOLS",
+  "ISLAND RESEARCH BUILDING - IRB",
+  "BAY 13",
+  "CLIFFORD ALLBUTT BUILDING - CAB",
+  "GRANTCHESTER HOUSE",
+  "JEFFREY CHEAH (CAPELLA) OFFICE",
+  "BARTON HOUSE",
+  "COTON HOUSE",
+  "IMS LEVELS 4&5",
+  "MRC EPIDEMIOLOGY LEVEL 3",
+  "ACCI LEVEL 6",
+  "OBS",
+  "OLD IMS - LAB BLOCK 4",
+  "MEDICINE LEVEL 5",
+  "NEURO SPACE",
+  "PAEDIATRICS LEVEL 8",
+  "P&A - PSYCHIATRY & ANAESTHETICS LEVEL 4",
+  "SURGERY & RHEUMATOLOGY LEVEL 6 HUB",
+  "SURGERY LEVEL 9",
+  "X RAY BLOCK RADIOLOGY LEVEL 5",
+  "CEDAR",
+  "TMS F&G LEVEL 2 OFFICE SPACE",
+  "WBIC RPU BASEMENT",
+  "WOLFSON BRAIN MAIN WBIC & ANNEX ON CORNER",
+  "HERSCHEL SMITH BUILDING - HSB",
+  "EAST FORVIE (IPH - INSTITUTE OF PUBLIC HELATH)",
+  "JOHN VAN GEEST - JVG",
+  "WEST FORVIE",
+  "STRAGEWAYS (SLR)",
+  "HLRI - HEART & LUNG BUILDING / VICTOR PHILLIP DAHDAL",
+  "ANNE MCLAREN",
+  "BIO-RESIPISHORY LAB LEVEL 1",
+  "BONE RESEARCH/RADIOLOGY LEVEL 4",
+  "E7",
+  "POST DOC"
+];
+
 const CLEANERS = [
   { name: "Alice Thompson", role: "Supervisor" },
   { name: "Bob Richards", role: "Mobile Cleaner" },
@@ -79,21 +117,23 @@ class BatchManager {
   }
 }
 
-export async function seedDemoData(firestore: Firestore, hubId: string, email: string) {
+export async function seedDemoData(firestore: Firestore, hubId: string, email: string, isAddenbrookes = false) {
   const hubRef = doc(firestore, 'userProfiles', hubId);
   const hubSnap = await getDoc(hubRef);
 
-  // Bumped to V5 to include Action Plans
-  if (hubSnap.exists() && hubSnap.data().isDemoSeededV5) {
+  // Bumped to V6 to include Addenbrookes Lot 4 data
+  const versionFlag = isAddenbrookes ? 'isAddenbrookesSeededV6' : 'isDemoSeededV6';
+  if (hubSnap.exists() && hubSnap.data()[versionFlag]) {
     return;
   }
 
   const bm = new BatchManager(firestore);
+  const activeSites = isAddenbrookes ? ADDENBROOKES_SITES : SITES;
 
   // 1. Initialize Hub
   await bm.set(hubRef, {
     id: hubId,
-    name: "Demo Operational Hub",
+    name: isAddenbrookes ? "Excellerate Services - Addenbrooke's Lot 4" : "Demo Operational Hub",
     email: email,
     members: { [hubId.replace('hub-', '')]: 'owner' },
     enabledTabs: [
@@ -103,7 +143,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       'company-schedule', 'leave-calendar', 'monthly-leave', 
       'availability', 'diary', 'directions'
     ],
-    isDemoSeededV5: true,
+    [versionFlag]: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }, { merge: true });
@@ -111,13 +151,13 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   // 2. Seed Sites
   const siteIds: string[] = [];
   const sitesMap: Record<string, any> = {};
-  SITES.forEach((name, index) => {
+  activeSites.forEach((name, index) => {
     const siteRef = doc(collection(firestore, 'userProfiles', hubId, 'sites'));
     const siteData = {
       id: siteRef.id,
       name,
-      siteCode: `SITE-00${index + 1}`,
-      status: index === 0 ? 'Gold Star Site' : (index % 3 === 0 ? 'Site under action plan' : 'No Concerns'),
+      siteCode: `ABC-${index + 100}`,
+      status: index === 0 ? 'Gold Star Site' : (index % 4 === 0 ? 'Site under action plan' : 'No Concerns'),
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -148,10 +188,10 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
   });
 
   // 4. Seed Audit History 2026
-  for (const siteId of siteIds) {
+  for (const siteId of siteIds.slice(0, 10)) { // Limit to first 10 sites for audit history to save tokens/time
     for (let month = 1; month <= 12; month++) {
       const auditId = `${siteId}-2026-${month}`;
-      const score = 90 + Math.floor(Math.random() * 11); // 90-100%
+      const score = 92 + Math.floor(Math.random() * 9); // 92-100%
       await bm.set(doc(firestore, 'userProfiles', hubId, 'audits', auditId), {
         id: auditId,
         siteId,
@@ -168,7 +208,7 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
 
   // 5. Seed Schedule
   for (let index = 0; index < siteIds.length; index++) {
-    const siteName = SITES[index];
+    const siteName = activeSites[index];
     const cleanerName = CLEANERS[index % CLEANERS.length].name;
     const scheduleRef = doc(collection(firestore, 'userProfiles', hubId, 'cleaningScheduleEntries'));
     await bm.set(scheduleRef, {
@@ -183,75 +223,20 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
 
   // 6. Seed Good News
   for (let index = 0; index < GOOD_NEWS.length; index++) {
-    const desc = GOOD_NEWS[index];
     const newsRef = doc(collection(firestore, 'userProfiles', hubId, 'goodNews'));
     await bm.set(newsRef, {
       id: newsRef.id,
       personName: CLEANERS[index % CLEANERS.length].name,
       personType: 'Cleaner',
-      siteName: SITES[index % SITES.length],
+      siteName: activeSites[index % activeSites.length],
       date: `2026-06-10`,
-      description: desc,
+      description: GOOD_NEWS[index],
       acknowledged: index % 2 === 0,
       acknowledgementNotes: index % 2 === 0 ? "Thank you card sent." : ""
     });
   }
 
-  // 7. Seed Leave & Cover (Holidays)
-  for (let month = 1; month <= 12; month++) {
-    const cleanerName = CLEANERS[month % CLEANERS.length].name;
-    const leaveDate = `2026-${month.toString().padStart(2, '0')}-10`;
-    const leaveRef = doc(collection(firestore, 'userProfiles', hubId, 'leave'));
-    
-    const siteToCover = SITES[month % SITES.length];
-    const coverCleaner = CLEANERS[(month + 5) % CLEANERS.length].name;
-
-    await bm.set(leaveRef, {
-      id: leaveRef.id,
-      cleanerId: cleanerMap[cleanerName].id,
-      cleanerName,
-      type: month % 4 === 0 ? 'sick' : 'holiday',
-      date: leaveDate,
-      coverAssignments: [
-        { site: siteToCover, coverCleanerName: coverCleaner }
-      ]
-    });
-  }
-
-  // 8. Seed Action Plans
-  // A Site Action Plan
-  const siteActionPlanRef = doc(firestore, 'userProfiles', hubId, 'actionPlans', sitesMap["Emergency Dept"].id);
-  await bm.set(siteActionPlanRef, {
-    id: sitesMap["Emergency Dept"].id,
-    targetName: "Emergency Dept",
-    targetType: "site",
-    notes: "Site standards have slipped in the waiting area. Immediate attention required.",
-    tasks: [
-      { id: "ap-task-1", description: "Deep clean high-frequency touch points", dueDate: format(new Date(), 'yyyy-MM-dd'), completed: false },
-      { id: "ap-task-2", description: "Review and update COSHH logs", dueDate: format(addDays(new Date(), 2), 'yyyy-MM-dd'), completed: false },
-      { id: "ap-task-3", description: "Shadow new morning team for quality check", dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'), completed: true }
-    ]
-  });
-
-  // A Cleaner Action Plan
-  const cleanerActionPlanRef = doc(firestore, 'userProfiles', hubId, 'actionPlans', cleanerMap["Fiona Gallagher"].id);
-  await bm.set(cleanerActionPlanRef, {
-    id: cleanerMap["Fiona Gallagher"].id,
-    targetName: "Fiona Gallagher",
-    targetType: "cleaner",
-    notes: "Improvement plan for supervision consistency across multiple lots.",
-    tasks: [
-      { id: "ap-task-4", description: "Complete advanced supervision training module", dueDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'), completed: false },
-      { id: "ap-task-5", description: "Conduct 5 joint audits with manager", dueDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'), completed: false }
-    ]
-  });
-
-  // 9. Seed Diary Appointments - EVERY DAY FOR ALL DIARIES
-  const start2026 = startOfYear(new Date('2026-01-01'));
-  const end2026 = endOfYear(new Date('2026-12-31'));
-  const allDaysOf2026 = eachDayOfInterval({ start: start2026, end: end2026 });
-
-  // A. Anchor Daily Tasks
+  // 7. Seed Diary Appointments - 2026
   const anchorTasks = [
     { title: "Daily Operational Briefing", assignee: "Manager", start: "08:30", end: "09:00" },
     { title: "Daily Team Stand-up", assignee: "Supervisor", start: "09:00", end: "09:30" },
@@ -271,59 +256,6 @@ export async function seedDemoData(firestore: Firestore, hubId: string, email: s
       recurrence: 'daily',
       recurrenceEndDate: "2026-12-31"
     });
-  }
-
-  // B. Varied Unique Tasks throughout the year
-  const roles = ["Manager", "Supervisor", "Mobile Cleaner"];
-  
-  for (let dayIndex = 0; dayIndex < allDaysOf2026.length; dayIndex++) {
-    const day = allDaysOf2026[dayIndex];
-    const dateStr = format(day, 'yyyy-MM-dd');
-    
-    const role = roles[dayIndex % roles.length];
-    const variety = VARIETY_APPOINTMENTS[dayIndex % VARIETY_APPOINTMENTS.length];
-    
-    const appRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-    await bm.set(appRef, {
-      id: appRef.id,
-      title: variety.title,
-      date: dateStr,
-      assignee: role,
-      site: SITES[dayIndex % SITES.length],
-      startTime: "10:30",
-      endTime: "12:00",
-      notes: variety.notes,
-      recurrence: 'none'
-    });
-
-    if (day.getDay() === 6) {
-      const satRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-      await bm.set(satRef, {
-        id: satRef.id,
-        title: "Weekend Intensive Deep Clean",
-        date: dateStr,
-        assignee: "Mobile Cleaner",
-        site: SITES[dayIndex % SITES.length],
-        startTime: "09:00",
-        endTime: "15:00",
-        notes: "Full scrub and seal of high-traffic corridors.",
-        recurrence: 'none'
-      });
-    }
-
-    if (day.getDay() === 0) {
-      const sunRef = doc(collection(firestore, 'userProfiles', hubId, 'appointments'));
-      await bm.set(sunRef, {
-        id: sunRef.id,
-        title: "Weekly KPI & Reporting",
-        date: dateStr,
-        assignee: "Manager",
-        startTime: "14:00",
-        endTime: "16:00",
-        notes: "Compiling weekly statistics for regional management.",
-        recurrence: 'none'
-      });
-    }
   }
 
   await bm.commit();

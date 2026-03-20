@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -359,6 +358,13 @@ export default function DashboardPage() {
     if (!isProfileLoading && user && allHubs.length === 0) {
       const newProfileId = `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', newProfileId);
+      
+      // Auto-import for specific account
+      if (user.email?.toLowerCase() === 'owen.newton@excellerateservices.com') {
+        seedDemoData(firestore, newProfileId, user.email, true);
+        return;
+      }
+
       setDoc(profileRef, {
         id: newProfileId,
         name: isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`,
