@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, FileDown, RefreshCw, Trash2 } from 'lucide-react';
+import { PlusCircle, FileDown, RefreshCw, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,6 +66,7 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemo
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
   const printableRef = useRef<HTMLDivElement>(null);
 
   const handleUpdate = (updatedPlan: Partial<Omit<ActionPlan, 'id'>>) => {
@@ -155,6 +156,44 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemo
       console.error("Error generating PDF:", error);
     } finally {
       setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleGenerateExcel = async () => {
+    if (!plan) return;
+    setIsGeneratingExcel(true);
+    try {
+        const { utils, writeFile } = await import('xlsx');
+
+        const header = ["Task Description", "Due Date", "Status"];
+        const tasksData = plan.tasks.map(task => ([
+            task.description,
+            format(parseISO(task.dueDate), 'yyyy-MM-dd'),
+            task.completed ? 'Completed' : 'Pending',
+        ]));
+
+        const finalData = [
+            ["Action Plan for:", plan.targetName, `(${plan.targetType})`],
+            [],
+            header,
+            ...tasksData,
+            [],
+            ["Notes:"],
+            [plan.notes || ''],
+        ];
+
+        const worksheet = utils.aoa_to_sheet(finalData);
+
+        worksheet['!cols'] = [ { wch: 50 }, { wch: 20 }, { wch: 15 } ];
+
+        const workbook = utils.book_new();
+        utils.book_append_sheet(workbook, worksheet, 'Action Plan');
+
+        writeFile(workbook, `Action_Plan_${plan.targetName.replace(/\s+/g, '_')}.xlsx`);
+    } catch (error) {
+        console.error("Error generating Excel:", error);
+    } finally {
+        setIsGeneratingExcel(false);
     }
   };
 
@@ -248,6 +287,10 @@ function ActionPlanDetails({ item, plan: initialPlan, onUpdateActionPlan, onRemo
           <Button onClick={handleShareOnWhatsApp} variant="outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
               WhatsApp
+          </Button>
+          <Button onClick={handleGenerateExcel} disabled={isGeneratingExcel} variant="outline">
+            {isGeneratingExcel ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+            {isGeneratingExcel ? 'Generating...' : 'Export Excel'}
           </Button>
           <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
             {isGeneratingPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
@@ -360,6 +403,7 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
   const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
   
   const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
+  const [isGeneratingAllExcel, setIsGeneratingAllExcel] = useState(false);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
 
   const existingActionPlans = useMemo(() => {
@@ -446,6 +490,47 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
     }
   };
 
+  const handleGenerateAllExcel = async () => {
+    if (existingActionPlans.length === 0) return;
+    setIsGeneratingAllExcel(true);
+    try {
+        const { utils, writeFile } = await import('xlsx');
+        
+        const allData: (string | number | Date | null)[][] = [];
+        allData.push(['Target', 'Type', 'Task', 'Due Date', 'Status', 'Notes']);
+
+        existingActionPlans.forEach(plan => {
+            allData.push([plan.targetName, plan.targetType, '---', '---', '---', plan.notes || '']);
+
+            if (plan.tasks.length > 0) {
+                plan.tasks.forEach(task => {
+                    allData.push([
+                        '',
+                        '',
+                        task.description,
+                        format(parseISO(task.dueDate), 'yyyy-MM-dd'),
+                        task.completed ? 'Completed' : 'Pending',
+                        '',
+                    ]);
+                });
+            }
+            allData.push([]); // Spacer row
+        });
+
+        const ws = utils.aoa_to_sheet(allData);
+        ws['!cols'] = [ { wch: 30 }, { wch: 10 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 50 } ];
+        
+        const wb = utils.book_new();
+        utils.book_append_sheet(wb, ws, 'All Action Plans');
+        writeFile(wb, 'All_Action_Plans.xlsx');
+    } catch (error) {
+        console.error("Error generating all Excel files:", error);
+    } finally {
+        setIsGeneratingAllExcel(false);
+    }
+  };
+
+
   return (
     <>
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
@@ -472,7 +557,7 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
               <CardTitle>Action Plan Management</CardTitle>
               <CardDescription>Create and manage action plans for sites and cleaners.</CardDescription>
             </div>
-             <div className="flex gap-2">
+             <div className="flex flex-wrap gap-2">
                 <Button onClick={() => setCreateDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Create Action Plan
                 </Button>
@@ -480,9 +565,13 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     Share All
                 </Button>
+                 <Button onClick={handleGenerateAllExcel} disabled={isGeneratingAllExcel || existingActionPlans.length === 0} variant="outline">
+                    {isGeneratingAllExcel ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                    {isGeneratingAllExcel ? 'Generating...' : 'Export All (Excel)'}
+                </Button>
                  <Button onClick={handleGenerateAllPdfs} disabled={isGeneratingAllPdf || existingActionPlans.length === 0}>
                     {isGeneratingAllPdf ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                    {isGeneratingAllPdf ? 'Generating...' : 'Download All'}
+                    {isGeneratingAllPdf ? 'Generating...' : 'Download All (PDF)'}
                 </Button>
             </div>
           </div>
