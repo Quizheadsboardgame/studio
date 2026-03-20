@@ -85,8 +85,8 @@ const ALL_AVAILABLE_TABS = [
 ];
 
 function LoginPage() {
-  const [email, setEmail] = useState(MASTER_EMAILS[0]);
-  const [password, setPassword] = useState('cleanflow');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const auth = useAuth();
