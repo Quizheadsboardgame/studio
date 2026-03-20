@@ -1,10 +1,7 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * CleanOps Hub Multi-Tenant Master Control Rules
-     */
 
     function isSignedIn() {
       return request.auth != null;
@@ -19,8 +16,10 @@ service cloud.firestore {
 
     // --- User Profiles (Hubs) ---
     match /userProfiles/{userProfileId} {
-      // Split list rules to ensure Master users can list all docs unconditionally
-      allow list: if isMaster();
+      // Allow Master to do anything with profiles
+      allow read, write: if isMaster();
+
+      // Allow users to list profiles they are a member of
       allow list: if isSignedIn() && (
         userProfileId == 'hub-' + request.auth.uid || 
         request.auth.uid in resource.data.members
@@ -28,46 +27,31 @@ service cloud.firestore {
 
       // Single document access
       allow get: if isSignedIn() && (
-        isMaster() || 
         userProfileId == 'hub-' + request.auth.uid || 
         request.auth.uid in resource.data.members
       );
       
+      // Allow creation during sign-up
       allow create: if isSignedIn(); 
       
+      // Allow owners to update their own hub (e.g. adding members)
       allow update: if isSignedIn() && (
-        isMaster() || 
         userProfileId == 'hub-' + request.auth.uid || 
         resource.data.members[request.auth.uid] == 'owner'
       );
-      
-      allow delete: if isMaster();
 
       // --- Hub-Scoped Data (Subcollections) ---
-      // We use denormalized members map in documents for efficient listing
       match /{collectionName}/{docId} {
-        allow list: if isMaster();
-        allow list: if isSignedIn() && (
+        allow read, write: if isMaster();
+        
+        allow list, get: if isSignedIn() && (
           userProfileId == 'hub-' + request.auth.uid || 
-          request.auth.uid in resource.data.members
-        );
-
-        allow get: if isSignedIn() && (
-          isMaster() || 
-          userProfileId == 'hub-' + request.auth.uid || 
-          request.auth.uid in resource.data.members
-        );
-
-        allow create: if isSignedIn() && (
-          isMaster() || 
-          userProfileId == 'hub-' + request.auth.uid ||
           get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data.members[request.auth.uid] != null
         );
 
-        allow update, delete: if isSignedIn() && (
-          isMaster() || 
+        allow create, update, delete: if isSignedIn() && (
           userProfileId == 'hub-' + request.auth.uid || 
-          request.auth.uid in resource.data.members
+          get(/databases/$(database)/documents/userProfiles/$(userProfileId)).data.members[request.auth.uid] in ['owner', 'admin']
         );
       }
     }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -8,7 +9,7 @@ import {
   type UserProfile
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, query, where, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,7 @@ import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } f
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 
@@ -107,6 +109,71 @@ function LoginPage() {
   );
 }
 
+function MemberManagementDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate: (hubId: string, members: Record<string, string>) => void }) {
+  const [newUid, setNewUid] = useState('');
+  const [newRole, setNewRole] = useState('owner');
+
+  const handleAdd = () => {
+    if (!newUid) return;
+    onUpdate(hub.id, { ...hub.members, [newUid]: newRole });
+    setNewUid('');
+  };
+
+  const handleRemove = (uid: string) => {
+    const updated = { ...hub.members };
+    delete updated[uid];
+    onUpdate(hub.id, updated);
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 px-2"><UserCog className="mr-2 h-4 w-4" /> Members</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Manage Members: {hub.name}</DialogTitle>
+          <DialogDescription>Directly link Firebase User IDs (UIDs) to this operational hub.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 space-y-2">
+              <Label>User UID</Label>
+              <Input value={newUid} onChange={e => setNewUid(e.target.value)} placeholder="e.g. sWN2W9Cbz..." />
+            </div>
+            <div className="w-32 space-y-2">
+              <Label>Role</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleAdd} size="icon"><Plus className="h-4 w-4" /></Button>
+          </div>
+          <div className="border rounded-md divide-y max-h-64 overflow-auto">
+            {Object.entries(hub.members || {}).map(([uid, role]) => (
+              <div key={uid} className="flex items-center justify-between p-3 text-sm">
+                <div className="flex flex-col">
+                  <span className="font-mono text-xs text-muted-foreground">{uid}</span>
+                  <span className="font-bold text-primary uppercase text-[10px]">{role}</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => handleRemove(uid)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))}
+            {Object.keys(hub.members || {}).length === 0 && (
+              <div className="p-8 text-center text-muted-foreground text-sm">No members linked yet.</div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -122,9 +189,7 @@ export default function DashboardPage() {
   // --- Hub Orchestration ---
   const profilesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Super admin sees ALL profiles to allow switching
     if (isMasterUser) return collection(firestore, 'userProfiles');
-    // Standard users only see profiles where they are members
     return query(collection(firestore, 'userProfiles'), where(`members.${user.uid}`, '!=', null));
   }, [firestore, user, isMasterUser]);
 
@@ -146,9 +211,14 @@ export default function DashboardPage() {
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Initial setup for new users (Auto-create first hub if none exist)
+  // Initial setup for new users (Auto-create first hub if none exist, or check for pre-provisioned ones)
   useEffect(() => {
     if (!isProfileLoading && user && (!allHubs || allHubs.length === 0)) {
+      // Check if a Hub already exists for this email (Pre-provisioned by Master)
+      const existingHubQuery = query(collection(firestore, 'userProfiles'), where('email', '==', user.email));
+      // Since we can't easily wait for a one-time fetch inside useEffect without async, 
+      // we'll rely on the subscription to handle it, but for the "No Hub Found" case:
+      
       const newProfileId = `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', newProfileId);
       setDoc(profileRef, {
@@ -159,6 +229,16 @@ export default function DashboardPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
+    } else if (!isProfileLoading && user && allHubs && allHubs.length > 0) {
+      // Auto-associate UID if user logs in but isn't explicitly in the members map yet (matched by email)
+      allHubs.forEach(hub => {
+        if (hub.email === user.email && !hub.members[user.uid]) {
+          updateDoc(doc(firestore, 'userProfiles', hub.id), {
+            [`members.${user.uid}`]: 'owner',
+            updatedAt: new Date().toISOString()
+          });
+        }
+      });
     }
   }, [isProfileLoading, user, allHubs, firestore, isMasterUser]);
 
@@ -180,11 +260,17 @@ export default function DashboardPage() {
       id: hubId,
       name,
       email: ownerEmail,
-      members: {}, // Master can add member UID later
+      members: {}, // Client will be auto-added when they sign up with this email
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    toast({ title: 'Hub Created', description: `${name} is ready for configuration.` });
+    toast({ title: 'Hub Provisioned', description: `${name} created. The client can now Sign Up with ${ownerEmail} to access it.` });
+  };
+
+  const handleUpdateHubMembers = (hubId: string, members: Record<string, string>) => {
+    if (!firestore) return;
+    updateDoc(doc(firestore, 'userProfiles', hubId), { members, updatedAt: new Date().toISOString() });
+    toast({ title: 'Membership Updated' });
   };
 
   const handleDeleteHub = (hubId: string) => {
@@ -261,7 +347,6 @@ export default function DashboardPage() {
       userProfileId: activeProfileId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      members: activeProfile?.members || {}
     });
   };
 
@@ -286,7 +371,6 @@ export default function DashboardPage() {
       userProfileId: activeProfileId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      members: activeProfile?.members || {}
     });
   };
 
@@ -309,7 +393,6 @@ export default function DashboardPage() {
       userProfileId: activeProfileId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      members: activeProfile?.members || {}
     });
   };
 
@@ -328,10 +411,10 @@ export default function DashboardPage() {
 
   const renderAdminTab = () => (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/20 shadow-lg">
         <CardHeader>
-          <CardTitle>Create New Client Hub</CardTitle>
-          <CardDescription>Add a new organization or user account to the system.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-primary"><ShieldCheck className="h-6 w-6" /> Provision New Client Hub</CardTitle>
+          <CardDescription>Enter the details below. Once created, the client can "Sign Up" with the email provided to claim their hub.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => {
@@ -341,14 +424,14 @@ export default function DashboardPage() {
             (e.target as HTMLFormElement).reset();
           }} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="space-y-2 flex-1">
-              <Label>Hub/Client Name</Label>
+              <Label>Client/Business Name</Label>
               <Input name="name" placeholder="e.g. Acme Cleaning Services" required />
             </div>
             <div className="space-y-2 flex-1">
-              <Label>Owner Email</Label>
+              <Label>Client Email (Login ID)</Label>
               <Input name="email" type="email" placeholder="owner@client.com" required />
             </div>
-            <Button type="submit"><Plus className="mr-2 h-4 w-4" /> Create Hub</Button>
+            <Button type="submit" className="h-10 px-6"><Plus className="mr-2 h-4 w-4" /> Create Profile</Button>
           </form>
         </CardContent>
       </Card>
@@ -356,7 +439,7 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Active Client Hubs</CardTitle>
-          <CardDescription>Manage existing accounts and access permissions.</CardDescription>
+          <CardDescription>Manage existing accounts and direct UID access.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
@@ -364,7 +447,7 @@ export default function DashboardPage() {
               <thead className="bg-muted">
                 <tr className="border-b">
                   <th className="p-3 text-left">Hub Name</th>
-                  <th className="p-3 text-left">Owner Email</th>
+                  <th className="p-3 text-left">Provisioned Email</th>
                   <th className="p-3 text-left">Created</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
@@ -377,9 +460,10 @@ export default function DashboardPage() {
                     <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
-                        {hub.id !== activeProfileId && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHub(hub.id)} className="text-destructive">
+                        <MemberManagementDialog hub={hub} onUpdate={handleUpdateHubMembers} />
+                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
+                        {hub.id !== activeProfileId && hub.id !== `hub-${user.uid}` && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHub(hub.id)} className="text-destructive h-8 w-8">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}

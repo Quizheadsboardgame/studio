@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -19,6 +20,10 @@
           "description": "The email address for identifying the user profile.",
           "format": "email"
         },
+        "members": {
+          "type": "object",
+          "description": "A map of user UIDs to roles (e.g., {'uid123': 'owner'})."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",
@@ -34,6 +39,7 @@
         "id",
         "name",
         "email",
+        "members",
         "createdAt",
         "updatedAt"
       ]
@@ -190,7 +196,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Top-level collection for user or organization profiles. Each document represents a distinct operational hub. It includes a `members` map for collaborative authorization, where keys are Firebase UIDs and values are roles (e.g., 'owner', 'admin', 'viewer'). The document ID `{userProfileId}` is a unique, generated identifier for the profile.",
+          "description": "Top-level collection for user or organization profiles. Each document represents a distinct operational hub.",
           "params": [
             {
               "name": "userProfileId",
@@ -206,7 +212,7 @@
           "schema": {
             "$ref": "#/backend/entities/Site"
           },
-          "description": "Subcollection storing physical cleaning sites, each belonging to a specific UserProfile. Documents in this collection include the denormalized `userProfileId` and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "description": "Subcollection storing physical cleaning sites, each belonging to a specific UserProfile.",
           "params": [
             {
               "name": "userProfileId",
@@ -226,7 +232,7 @@
           "schema": {
             "$ref": "#/backend/entities/Cleaner"
           },
-          "description": "Subcollection storing cleaner profiles, each managed by a specific UserProfile. Documents in this collection include the denormalized `userProfileId` and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "description": "Subcollection storing cleaner profiles, each managed by a specific UserProfile.",
           "params": [
             {
               "name": "userProfileId",
@@ -246,7 +252,7 @@
           "schema": {
             "$ref": "#/backend/entities/CleaningScheduleEntry"
           },
-          "description": "Subcollection storing individual entries in the cleaning schedule, each belonging to a specific UserProfile. Documents in this collection include the denormalized `userProfileId`, `siteId`, `cleanerId`, and a denormalized `members` map from the parent UserProfile for authorization independence.",
+          "description": "Subcollection storing individual entries in the cleaning schedule, each belonging to a specific UserProfile.",
           "params": [
             {
               "name": "userProfileId",
@@ -259,7 +265,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure is designed to support a multi-tenant application where each 'UserProfile' acts as an independent operational hub, owning its own sites, cleaners, and schedules. The core strategy hinges on structural segregation and authorization independence through denormalization.\n\n1.  **Authorization Independence (CRITICAL):** To eliminate the need for `get()` calls in security rules, which break atomic operations and complicate debugging, the authorization context (specifically, the `members` map from the `UserProfile`) is denormalized into all subcollection documents (`Site`, `Cleaner`, `CleaningScheduleEntry`). This means each site, cleaner, and schedule entry document will contain a copy of the `members` map from its owning UserProfile. This allows security rules to evaluate permissions directly on the document being accessed, ensuring atomic writes and simpler, more predictable rule evaluation. A Cloud Function would be responsible for updating these denormalized `members` maps in subcollection documents when the parent `UserProfile`'s `members` change.\n\n2.  **Structural Segregation (Homogeneous Security Posture):** All entities belonging to a specific UserProfile (Sites, Cleaners, Cleaning Schedule Entries) are grouped under their respective `userProfileId` in a hierarchical path (e.g., `/userProfiles/{userProfileId}/sites/{siteId}`). This ensures that all documents within a given subcollection share the same security requirements tied to their parent `UserProfile`'s membership.\n\n3.  **Access Modeling & QAPs (Queries as Permissions):**\n    *   **UserProfiles:** The `/userProfiles/{userProfileId}` collection uses a 'membership map' (`members: { [uid]: 'role' }`) within each `UserProfile` document itself. This allows multiple Firebase authenticated users (`request.auth.uid`) to be associated with and manage a single `UserProfile`. To list profiles a user has access to, a query like `db.collection('userProfiles').where('members.' + auth.uid, 'exists')` can be used. This directly enforces that only profiles where the user is a member are returned, satisfying QAPs for `list` operations on the top-level entity.\n    *   **Subcollections (Sites, Cleaners, CleaningScheduleEntries):** For subcollections like `/userProfiles/{userProfileId}/sites/{siteId}`, the `userProfileId` in the path and the denormalized `members` map in each document facilitate secure and efficient `list` operations. For example, to list all sites for a specific `userProfileId` that the authenticated user has access to, a query would look like `db.collection('userProfiles').doc(userProfileId).collection('sites').where('members.' + auth.uid, 'in', ['owner', 'admin', 'viewer'])`. This combination of path-based scoping and denormalized permissions ensures secure `list` queries without complex rule dependencies or inefficient cross-document reads.\n\n4.  **Data Clarity and Predictability:** Consistent path naming (`userProfiles`, `{userProfileId}`, `sites`, etc.) and the explicit `userProfileId` field within child entities (which aligns with the path structure) enhance clarity. The `status` field in `Site` and `performanceRating` in `Cleaner` explicitly model state, rather than inferring it, simplifying data interpretation and rule writing.\n\nThis design prioritizes robust security, simplified rule sets, and efficient querying for a multi-tenant application, while explicitly addressing the needs for authorization independence and QAPs."
+    ]
   }
 }
