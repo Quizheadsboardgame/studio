@@ -62,7 +62,7 @@ import { restoreProfessionalData } from '@/lib/restore-seeder';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
 const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
-const CURRENT_RESTORATION_VERSION = 2;
+const CURRENT_RESTORATION_VERSION = 3;
 
 const ALL_AVAILABLE_TABS = [
   { id: 'summary', label: 'Daily Summary', group: 'Overview' },
@@ -322,10 +322,10 @@ export default function DashboardPage() {
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
-        toast({ title: 'Restoring Data...', description: 'Recovering professional site and cleaner data.' });
+        toast({ title: 'Restoring Lot 4 Data...', description: 'Recovering professional site and cleaner data.' });
         await restoreProfessionalData(firestore, targetHubId);
         await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-        toast({ title: 'Restoration Complete', description: 'Your original Lot 4 data has been recovered.' });
+        toast({ title: 'Restoration Complete', description: 'Your original Lot 4 Addenbrooke\'s data has been recovered.' });
       };
 
       if (allHubs.length === 0) {

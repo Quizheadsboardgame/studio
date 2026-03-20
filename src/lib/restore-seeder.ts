@@ -32,21 +32,42 @@ const PROFESSIONAL_SITES = [
   'WEST FORVIE',
   'STRAGEWAYS (SLR)',
   'HLRI',
-  'ANNE MCLAREN'
+  'ANNE MCLAREN',
+  'BAY 13',
+  'E7 BUILDING',
+  'POST DOC BUILDING'
 ];
 
 const PROFESSIONAL_CLEANERS = [
-  'Alice Thompson', 'Bob Richards', 'Charlie Davis', 'Diana Prince', 'Edward Norton',
-  'Fiona Gallagher', 'George Miller', 'Hannah Abbott', 'Ian Wright', 'Jenny Slate',
-  'Kevin Hart', 'Laura Palmer', 'Michael Scott', 'Nina Simone', 'Oscar Isaac',
-  'Peter Parker', 'Quinn Fabray', 'Rose Tyler', 'Steven Strange', 'Tina Fey'
+  'Petros Karas',
+  'Vania Silva',
+  'Maria Santos',
+  'John O’Shea',
+  'Elena Popa',
+  'Ahmed Hassan',
+  'Sonia Gupta',
+  'Ricardo Gomes',
+  'Tatiana Volkov',
+  'Liam Murphy',
+  'Sarah Jenkins',
+  'Kofi Mensah',
+  'Fatima Zahra',
+  'Andrzej Nowak',
+  'Chen Wei',
+  'Aisha Bello',
+  'Dimitris Papadopoulos',
+  'Ingrid Nielsen',
+  'Miguel Fernandez',
+  'Yuki Tanaka'
 ];
 
 class BatchManager {
-  private batch = writeBatch(this.db);
+  private batch: any;
   private count = 0;
 
-  constructor(private db: Firestore) {}
+  constructor(private db: Firestore) {
+    this.batch = writeBatch(this.db);
+  }
 
   async add(ref: any, data: any) {
     this.batch.set(ref, data, { merge: true });
