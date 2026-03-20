@@ -197,4 +197,5 @@ export type UserProfile = {
   createdAt: string;
   updatedAt: string;
   members: Record<string, string>; // uid -> role
+  enabledTabs?: string[]; // List of tab IDs enabled for this hub
 };

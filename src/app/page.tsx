@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -18,7 +17,7 @@ import {
   type Consumable
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -51,6 +50,7 @@ import { collection, query, where, doc, setDoc, deleteDoc, updateDoc } from 'fir
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +58,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
+
+const ALL_AVAILABLE_TABS = [
+  { id: 'summary', label: 'Daily Summary', group: 'Overview' },
+  { id: 'risk', label: 'Risk Dashboard', group: 'Overview' },
+  { id: 'gold-standard', label: 'Gold Standard', group: 'Overview' },
+  { id: 'portfolio', label: 'Site Portfolio', group: 'Overview' },
+  { id: 'sites', label: 'Sites', group: 'Management' },
+  { id: 'cleaners', label: 'Cleaners', group: 'Management' },
+  { id: 'action-plan', label: 'Action Plans', group: 'Management' },
+  { id: 'tasks', label: 'To-Do List', group: 'Management' },
+  { id: 'conversation-log', label: 'Conversation Log', group: 'Management' },
+  { id: 'good-news', label: 'Good News Centre', group: 'Management' },
+  { id: 'audits', label: 'Site Audits', group: 'Operations' },
+  { id: 'audit-history', label: 'Audit History', group: 'Operations' },
+  { id: 'supplies', label: 'Supplies', group: 'Operations' },
+  { id: 'company-schedule', label: 'Schedule', group: 'Scheduling' },
+  { id: 'leave-calendar', label: 'Leave & Cover', group: 'Scheduling' },
+  { id: 'availability', label: 'Availability', group: 'Scheduling' },
+  { id: 'diary', label: 'Diary', group: 'Scheduling' },
+  { id: 'directions', label: 'Site Directions', group: 'Utilities' },
+];
 
 function LoginPage() {
   const [email, setEmail] = useState(MASTER_EMAILS[0]);
@@ -125,6 +146,62 @@ function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function TabConfigurationDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate: (hubId: string, enabledTabs: string[]) => void }) {
+  const [enabledTabs, setEnabledTabs] = useState<string[]>(hub.enabledTabs || ALL_AVAILABLE_TABS.map(t => t.id));
+
+  const toggleTab = (tabId: string) => {
+    setEnabledTabs(prev => 
+      prev.includes(tabId) ? prev.filter(id => id !== tabId) : [...prev, tabId]
+    );
+  };
+
+  const handleSave = () => {
+    onUpdate(hub.id, enabledTabs);
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 px-2"><Layers className="mr-2 h-4 w-4" /> Tabs</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Configure Features: {hub.name}</DialogTitle>
+          <DialogDescription>Select which tools are visible for this hub.</DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-auto">
+          {Object.entries(
+            ALL_AVAILABLE_TABS.reduce((acc, tab) => {
+              if (!acc[tab.group]) acc[tab.group] = [];
+              acc[tab.group].push(tab);
+              return acc;
+            }, {} as Record<string, typeof ALL_AVAILABLE_TABS>)
+          ).map(([group, tabs]) => (
+            <div key={group} className="space-y-3">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-1">{group}</h4>
+              <div className="space-y-2">
+                {tabs.map(tab => (
+                  <div key={tab.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`tab-${hub.id}-${tab.id}`} 
+                      checked={enabledTabs.includes(tab.id)} 
+                      onCheckedChange={() => toggleTab(tab.id)}
+                    />
+                    <Label htmlFor={`tab-${hub.id}-${tab.id}`} className="text-sm font-medium leading-none cursor-pointer">{tab.label}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button onClick={handleSave}>Save Configuration</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -201,7 +278,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('summary');
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Master Control']);
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Management', 'Operations', 'Scheduling', 'Utilities', 'Master Control']);
 
   const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()), [user]);
 
@@ -241,6 +318,7 @@ export default function DashboardPage() {
         name: isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`,
         email: user.email,
         members: { [user.uid]: 'owner' },
+        enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
@@ -286,6 +364,10 @@ export default function DashboardPage() {
 
   // --- Navigation Mapping ---
   const menuGroups = useMemo(() => {
+    // If master is configuring a hub, they might want to see all tabs to test them
+    // but typically we should respect the Hub's settings.
+    const enabledTabs = activeProfile?.enabledTabs || ALL_AVAILABLE_TABS.map(t => t.id);
+
     const groups = [
       {
         group: 'Overview',
@@ -296,7 +378,7 @@ export default function DashboardPage() {
           { value: 'risk', label: 'Risk Dashboard', icon: ShieldAlert },
           { value: 'gold-standard', label: 'Gold Standard', icon: Award },
           { value: 'portfolio', label: 'Site Portfolio', icon: BookOpen },
-        ],
+        ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
         group: 'Management',
@@ -309,7 +391,7 @@ export default function DashboardPage() {
           { value: 'tasks', label: 'To-Do List', icon: CheckSquare },
           { value: 'conversation-log', label: 'Conversation Log', icon: MessageSquare },
           { value: 'good-news', label: 'Good News Centre', icon: Heart },
-        ],
+        ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
         group: 'Operations',
@@ -319,7 +401,7 @@ export default function DashboardPage() {
           { value: 'audits', label: 'Site Audits', icon: ClipboardCheck },
           { value: 'audit-history', label: 'Audit History', icon: History },
           { value: 'supplies', label: 'Supplies', icon: Package },
-        ],
+        ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
         group: 'Scheduling',
@@ -330,7 +412,7 @@ export default function DashboardPage() {
           { value: 'leave-calendar', label: 'Leave & Cover', icon: CalendarDays },
           { value: 'availability', label: 'Availability', icon: Clock },
           { value: 'diary', label: 'Diary', icon: BookOpen },
-        ],
+        ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
         group: 'Utilities',
@@ -338,7 +420,7 @@ export default function DashboardPage() {
         color: 'text-muted-foreground',
         items: [
           { value: 'directions', label: 'Site Directions', icon: Map },
-        ],
+        ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
     ];
 
@@ -353,8 +435,8 @@ export default function DashboardPage() {
       });
     }
 
-    return groups;
-  }, [isMasterUser]);
+    return groups.filter(g => g.items.length > 0);
+  }, [isMasterUser, activeProfile]);
 
   const activeTabInfo = useMemo(() => {
       for (const group of menuGroups) {
@@ -460,6 +542,7 @@ export default function DashboardPage() {
               name,
               email,
               members: {},
+              enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
@@ -482,7 +565,7 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Active Client Hubs</CardTitle>
-          <CardDescription>Manage existing accounts and direct UID access.</CardDescription>
+          <CardDescription>Manage existing accounts, features, and direct UID access.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
@@ -503,6 +586,7 @@ export default function DashboardPage() {
                     <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
+                        <TabConfigurationDialog hub={hub} onUpdate={(id, enabledTabs) => updateDoc(doc(firestore!, 'userProfiles', id), { enabledTabs })} />
                         <MemberManagementDialog hub={hub} onUpdate={(id, members) => updateDoc(doc(firestore!, 'userProfiles', id), { members })} />
                         <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
                         {hub.id !== activeProfileId && hub.id !== `hub-${user.uid}` && (
