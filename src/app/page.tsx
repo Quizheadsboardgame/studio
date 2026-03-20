@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -35,12 +36,14 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 export default function DashboardPage() {
   const { firestore, auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('summary');
+  const isMobile = useIsMobile();
 
   // --- DATA FETCHING ---
   const sitesCollection = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'sites') : null, [firestore, user]);
@@ -841,7 +844,7 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-        <Sidebar>
+        <Sidebar collapsible={isMobile ? 'offcanvas' : 'icon'}>
             <SidebarHeader>
                 <div className="flex items-center gap-3">
                     <div className="p-1 relative">
@@ -943,5 +946,7 @@ export default function DashboardPage() {
 
     
 
+
+    
 
     
