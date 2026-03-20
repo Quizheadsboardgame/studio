@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { type Site, type Cleaner, type SiteStatus, type CleanerPerformance, type ActionPlan, type Leave, type ScheduleEntry, type Consumable, type MonthlySupplyOrder, type MonthlyAudit, type Appointment, type Task, type ConversationRecord, type AvailabilityStatus, initialSites, initialCleaners, initialSchedule, initialLeave } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, FileCheck, FileClock, Package, BookOpenCheck, ListTodo, MessageSquare, Clock, Map, Award, Briefcase, CalendarRange } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -11,6 +11,7 @@ import RiskDashboardTab from '@/components/risk-dashboard-tab';
 import DailySummaryTab from '@/components/daily-summary-tab';
 import ActionPlanTab from '@/components/action-plan-tab';
 import LeaveCalendarTab from '@/components/leave-calendar-tab';
+import MonthlyLeaveCalendar from '@/components/monthly-leave-calendar';
 import AuditsTab from '@/components/audits-tab';
 import AuditHistoryTab from '@/components/audit-history-tab';
 import SuppliesTab from '@/components/supplies-tab';
@@ -45,6 +46,7 @@ export default function DashboardPage() {
     { value: 'risk', label: 'Site Risk Dashboard', icon: ShieldAlert },
     { value: 'company-schedule', label: 'Company Schedule', icon: Calendar },
     { value: 'leave-calendar', label: 'Leave Calendar', icon: CalendarDays },
+    { value: 'monthly-leave', label: 'Monthly Leave View', icon: CalendarRange },
     { value: 'audits', label: 'Audits', icon: FileCheck },
     { value: 'audit-history', label: 'Audit History', icon: FileClock },
     { value: 'supplies', label: 'Supply Orders', icon: Package },
@@ -664,6 +666,8 @@ export default function DashboardPage() {
             );
         case 'leave-calendar':
             return <LeaveCalendarTab cleaners={sortedCleaners} leave={leave || []} schedule={sortedSchedule || []} onAddLeave={handleAddLeave} onDeleteLeave={handleDeleteLeave} onUpdateLeave={handleUpdateLeave} />;
+        case 'monthly-leave':
+            return <MonthlyLeaveCalendar leave={leave || []} />;
         case 'supplies':
             return <SuppliesTab sites={sortedSites} firestore={firestore} supplyOrders={supplyOrders || []} onSetOrder={handleSetSupplyOrder} onAddConsumable={handleAddConsumable} onEditConsumable={handleEditConsumable} onRemoveConsumable={handleRemoveConsumable} />;
         case 'audits':
