@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { 
   type Site, 
   type Cleaner, 
@@ -94,6 +96,7 @@ function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const auth = useAuth();
   const { toast } = useToast();
+  const logo = PlaceHolderImages.find(img => img.id === 'app-logo');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,9 +154,20 @@ function LoginPage() {
 
       <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-2xl p-6">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-[0_0_20px_rgba(243,112,33,0.4)]">
-            C
-          </div>
+          {logo ? (
+            <Image 
+              src={logo.imageUrl} 
+              alt={logo.description} 
+              width={64} 
+              height={64} 
+              className="rounded-xl shadow-[0_0_20px_rgba(243,112,33,0.4)]"
+              data-ai-hint={logo.imageHint}
+            />
+          ) : (
+            <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-[0_0_20px_rgba(243,112,33,0.4)]">
+              C
+            </div>
+          )}
           
           <div className="text-center space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-white">CleanFlow</h1>
@@ -340,6 +354,7 @@ export default function DashboardPage() {
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Management', 'Operations', 'Scheduling', 'Utilities', 'Account Settings', 'Master Control']);
+  const logo = PlaceHolderImages.find(img => img.id === 'app-logo');
 
   const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()), [user]);
 
@@ -846,7 +861,18 @@ export default function DashboardPage() {
         <Sidebar collapsible={isMobile ? 'offcanvas' : 'icon'}>
             <SidebarHeader className="border-b pb-4">
                 <div className="flex items-center gap-3 p-2">
-                    <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-md">C</div>
+                    {logo ? (
+                      <Image 
+                        src={logo.imageUrl} 
+                        alt={logo.description} 
+                        width={36} 
+                        height={36} 
+                        className="rounded-lg shadow-md"
+                        data-ai-hint={logo.imageHint}
+                      />
+                    ) : (
+                      <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-md">C</div>
+                    )}
                     <div className='flex flex-col overflow-hidden'>
                         <h1 className="text-lg font-bold tracking-tight text-foreground leading-none mb-1">CleanFlow</h1>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest">Enterprise v1.0</span>

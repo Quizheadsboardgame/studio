@@ -5,6 +5,12 @@
       "description": "A map of the Addenbrooke's hospital site.",
       "imageUrl": "https://picsum.photos/seed/sitemap/1200/900",
       "imageHint": "hospital map"
+    },
+    {
+      "id": "app-logo",
+      "description": "CleanFlow Logo",
+      "imageUrl": "https://i.ibb.co/ZRnNHZcF/Logo-maker-project.png",
+      "imageHint": "company logo"
     }
   ]
 }
