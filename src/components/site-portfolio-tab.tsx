@@ -564,14 +564,14 @@ export default function SitePortfolioTab({
                                 </AccordionItem>
                                 <AccordionItem value="tasks">
                                     <AccordionTrigger>
-                                        <div className="flex justify-between items-center w-full pr-4">
-                                            <span>Tasks</span>
-                                            <AddTaskDialog siteName={selectedSite.name} onAddTask={onAddTask}>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}><PlusCircle className="h-4 w-4" /></Button>
-                                            </AddTaskDialog>
-                                        </div>
+                                        <span>Tasks</span>
                                     </AccordionTrigger>
                                     <AccordionContent>
+                                         <div className="flex justify-end mb-2">
+                                            <AddTaskDialog siteName={selectedSite.name} onAddTask={onAddTask}>
+                                                <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Task</Button>
+                                            </AddTaskDialog>
+                                         </div>
                                          {siteData?.tasks && siteData.tasks.length > 0 ? (
                                              <div className="space-y-2">
                                                 {siteData.tasks.map(t => (
@@ -592,14 +592,14 @@ export default function SitePortfolioTab({
                                 </AccordionItem>
                                  <AccordionItem value="appointments">
                                     <AccordionTrigger>
-                                        <div className="flex justify-between items-center w-full pr-4">
-                                            <span>Appointments</span>
-                                            <AppointmentDialog sites={sites} onSave={onAddAppointment} defaultAssignee="Manager">
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}><PlusCircle className="h-4 w-4" /></Button>
-                                            </AppointmentDialog>
-                                        </div>
+                                        <span>Appointments</span>
                                     </AccordionTrigger>
                                     <AccordionContent>
+                                          <div className="flex justify-end mb-2">
+                                            <AppointmentDialog sites={sites} onSave={onAddAppointment} defaultAssignee="Manager">
+                                                <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Appointment</Button>
+                                            </AppointmentDialog>
+                                          </div>
                                           {siteData?.appointments && siteData.appointments.length > 0 ? (
                                              <div className="space-y-3">
                                                 {siteData.appointments.map(a => (

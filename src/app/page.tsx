@@ -158,13 +158,13 @@ function LoginPage() {
             <Image 
               src={logo.imageUrl} 
               alt={logo.description} 
-              width={120} 
-              height={120} 
-              className="rounded-xl shadow-[0_0_20px_rgba(243,112,33,0.4)]"
+              width={240} 
+              height={240} 
+              className="object-contain"
               data-ai-hint={logo.imageHint}
             />
           ) : (
-            <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-[0_0_20px_rgba(243,112,33,0.4)]">
+            <div className="h-24 w-24 bg-primary flex items-center justify-center text-primary-foreground font-bold text-4xl">
               C
             </div>
           )}
@@ -885,9 +885,9 @@ export default function DashboardPage() {
                       <Image 
                         src={logo.imageUrl} 
                         alt={logo.description} 
-                        width={36} 
-                        height={36} 
-                        className="rounded-lg shadow-md"
+                        width={72} 
+                        height={72} 
+                        className="object-contain"
                         data-ai-hint={logo.imageHint}
                       />
                     ) : (
