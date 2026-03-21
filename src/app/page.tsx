@@ -18,7 +18,7 @@ import {
   type Leave,
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX, Zap, Rocket } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History as HistoryIcon, Package, Map as MapIcon, BookOpen, Layers, ShieldX, Zap, Rocket } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -158,8 +158,8 @@ function LoginPage() {
             <Image 
               src={logo.imageUrl} 
               alt={logo.description} 
-              width={64} 
-              height={64} 
+              width={120} 
+              height={120} 
               className="rounded-xl shadow-[0_0_20px_rgba(243,112,33,0.4)]"
               data-ai-hint={logo.imageHint}
             />
@@ -463,9 +463,24 @@ export default function DashboardPage() {
   const rawSites = useCollection<Site>(sitesRef).data || [];
   const rawCleaners = useCollection<Cleaner>(cleanersRef).data || [];
   
-  // ALPHABETICAL SORTING OF CORE DATA
-  const sites = useMemo(() => [...rawSites].sort((a, b) => a.name.localeCompare(b.name)), [rawSites]);
-  const cleaners = useMemo(() => [...rawCleaners].sort((a, b) => a.name.localeCompare(b.name)), [rawCleaners]);
+  // ALPHABETICAL SORTING AND DE-DUPLICATION OF CORE DATA
+  const sites = useMemo(() => {
+    const unique = new Map<string, Site>();
+    rawSites.forEach(s => {
+      const key = s.name.toLowerCase().trim();
+      if (!unique.has(key)) unique.set(key, s);
+    });
+    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [rawSites]);
+
+  const cleaners = useMemo(() => {
+    const unique = new Map<string, Cleaner>();
+    rawCleaners.forEach(c => {
+      const key = c.name.toLowerCase().trim();
+      if (!unique.has(key)) unique.set(key, c);
+    });
+    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [rawCleaners]);
 
   const schedule = useCollection<ScheduleEntry>(scheduleRef).data || [];
   const audits = useCollection<MonthlyAudit>(auditsRef).data || [];
@@ -614,7 +629,7 @@ export default function DashboardPage() {
         color: 'text-excellerate-lime',
         items: [
           { value: 'audits', label: 'Site Audits', icon: ClipboardCheck },
-          { value: 'audit-history', label: 'Audit History', icon: History },
+          { value: 'audit-history', label: 'Audit History', icon: HistoryIcon },
           { value: 'supplies', label: 'Supplies', icon: Package },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
@@ -635,7 +650,7 @@ export default function DashboardPage() {
         icon: Settings,
         color: 'text-muted-foreground',
         items: [
-          { value: 'directions', label: 'Site Directions', icon: Map },
+          { value: 'directions', label: 'Site Directions', icon: MapIcon },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
