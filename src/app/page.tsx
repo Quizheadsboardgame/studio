@@ -111,28 +111,27 @@ function LoginPage() {
         title: isSignUp ? 'Sign Up Failed' : 'Login Failed',
         description: error.message,
       });
-    } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = () => {
     setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        try {
-          await createUserWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
-        } catch (createError: any) {
-          toast({ variant: 'destructive', title: 'Demo Failed', description: createError.message });
+    signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123')
+      .catch((error: any) => {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          // If login fails, try to create the account (it might have been wiped or never existed)
+          createUserWithEmailAndPassword(auth, 'owen@newton.com', 'password123')
+            .catch((createError: any) => {
+              setLoading(false);
+              toast({ variant: 'destructive', title: 'Demo Failed', description: createError.message });
+            });
+        } else {
+          setLoading(false);
+          toast({ variant: 'destructive', title: 'Demo Failed', description: error.message });
         }
-      } else {
-        toast({ variant: 'destructive', title: 'Demo Failed', description: error.message });
-      }
-    } finally {
-      setLoading(false);
-    }
+      });
+    // If successful, the auth listener will handle the redirect/unmount
   };
 
   return (
@@ -144,7 +143,11 @@ function LoginPage() {
         onClick={handleDemoLogin}
         disabled={loading}
       >
-        <Rocket className="mr-2 h-4 w-4" />
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Rocket className="mr-2 h-4 w-4" />
+        )}
         Launch Demo Account
       </Button>
 
@@ -414,7 +417,7 @@ export default function DashboardPage() {
         }).catch((error: any) => {
           if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: hubRef.path,
+              path: profileRef.path,
               operation: 'create',
               requestResourceData: newProfileData
             } satisfies SecurityRuleContext));
