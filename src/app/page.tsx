@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { 
   type Site, 
   type Cleaner, 
@@ -131,12 +131,10 @@ function LoginPage() {
           toast({ variant: 'destructive', title: 'Demo Failed', description: error.message });
         }
       });
-    // If successful, the auth listener will handle the redirect/unmount
   };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] p-4 gap-8">
-      {/* Top Demo Button */}
       <Button 
         variant="outline" 
         className="w-full max-w-[400px] border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 h-12 text-xs font-bold tracking-widest uppercase"
@@ -151,7 +149,6 @@ function LoginPage() {
         Launch Demo Account
       </Button>
 
-      {/* Main Login Card */}
       <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-2xl p-6">
         <div className="flex flex-col items-center gap-6">
           <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-[0_0_20px_rgba(243,112,33,0.4)]">
@@ -356,7 +353,6 @@ export default function DashboardPage() {
   const { data: allHubsResult, isLoading: isProfileLoading } = useCollection<UserProfile>(profilesQuery);
   const allHubs = allHubsResult || [];
   
-  // Resolve active hub
   const activeProfile = useMemo(() => {
     if (allHubs.length === 0) return null;
     if (selectedHubId) return allHubs.find(h => h.id === selectedHubId) || allHubs[0];
@@ -365,14 +361,12 @@ export default function DashboardPage() {
 
   const activeProfileId = activeProfile?.id;
 
-  // Set default selection when data loads
   useEffect(() => {
     if (activeProfileId && !selectedHubId) {
       setSelectedHubId(activeProfileId);
     }
   }, [activeProfileId, selectedHubId]);
 
-  // Restoration and Initial setup logic
   useEffect(() => {
     if (!isProfileLoading && user && firestore) {
       const email = user.email?.toLowerCase();
@@ -392,7 +386,7 @@ export default function DashboardPage() {
               path: profileRef.path,
               operation: 'update',
               requestResourceData: { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() }
-            } satisfies SecurityRuleContext));
+            }));
           }
         }
       };
@@ -400,7 +394,6 @@ export default function DashboardPage() {
       const existingHub = allHubs.find(h => h.id === targetHubId);
 
       if (!existingHub) {
-        // Brand new user
         const newProfileData = {
           id: targetHubId,
           name: isTargetEmail ? "Excellerate Services - Lot 4" : (isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`),
@@ -420,23 +413,18 @@ export default function DashboardPage() {
               path: profileRef.path,
               operation: 'create',
               requestResourceData: newProfileData
-            } satisfies SecurityRuleContext));
+            }));
           }
         });
       } else {
-        // Check for restoration requirement
         if (isTargetEmail && (existingHub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
           performRestoration();
         }
-        
-        // Auto-Reactivate if deactivated
         if (existingHub.isDeactivated) {
           updateDoc(profileRef, { isDeactivated: false, updatedAt: new Date().toISOString() }).then(() => {
             toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
           });
         }
-        
-        // Ensure membership
         if (!existingHub.members || !existingHub.members[user.uid]) {
           updateDoc(profileRef, { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
         }
@@ -445,21 +433,18 @@ export default function DashboardPage() {
   }, [isProfileLoading, user, allHubs, firestore, isMasterUser, toast]);
 
   // --- Hub-Scoped Data Hooks ---
-  const createHubRef = (sub: string) => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, sub) : null;
+  const sitesRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'sites') : null, [firestore, activeProfileId]);
+  const cleanersRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaners') : null, [firestore, activeProfileId]);
+  const scheduleRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'cleaningScheduleEntries') : null, [firestore, activeProfileId]);
+  const auditsRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'audits') : null, [firestore, activeProfileId]);
+  const appointmentsRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'appointments') : null, [firestore, activeProfileId]);
+  const tasksRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'tasks') : null, [firestore, activeProfileId]);
+  const conversationsRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'conversations') : null, [firestore, activeProfileId]);
+  const goodNewsRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'goodNews') : null, [firestore, activeProfileId]);
+  const supplyOrdersRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'supplyOrders') : null, [firestore, activeProfileId]);
+  const actionPlansRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'actionPlans') : null, [firestore, activeProfileId]);
+  const leaveRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'leave') : null, [firestore, activeProfileId]);
 
-  const sitesRef = useMemoFirebase(() => createHubRef('sites'), [firestore, activeProfileId]);
-  const cleanersRef = useMemoFirebase(() => createHubRef('cleaners'), [firestore, activeProfileId]);
-  const scheduleRef = useMemoFirebase(() => createHubRef('cleaningScheduleEntries'), [firestore, activeProfileId]);
-  const auditsRef = useMemoFirebase(() => createHubRef('audits'), [firestore, activeProfileId]);
-  const appointmentsRef = useMemoFirebase(() => createHubRef('appointments'), [firestore, activeProfileId]);
-  const tasksRef = useMemoFirebase(() => createHubRef('tasks'), [firestore, activeProfileId]);
-  const conversationsRef = useMemoFirebase(() => createHubRef('conversations'), [firestore, activeProfileId]);
-  const goodNewsRef = useMemoFirebase(() => createHubRef('goodNews'), [firestore, activeProfileId]);
-  const supplyOrdersRef = useMemoFirebase(() => createHubRef('supplyOrders'), [firestore, activeProfileId]);
-  const actionPlansRef = useMemoFirebase(() => createHubRef('actionPlans'), [firestore, activeProfileId]);
-  const leaveRef = useMemoFirebase(() => createHubRef('leave'), [firestore, activeProfileId]);
-
-  // UseCollection with fallback to empty array to prevent filtering on null
   const sites = useCollection<Site>(sitesRef).data || [];
   const cleaners = useCollection<Cleaner>(cleanersRef).data || [];
   const schedule = useCollection<ScheduleEntry>(scheduleRef).data || [];
@@ -471,6 +456,108 @@ export default function DashboardPage() {
   const supplyOrders = useCollection<MonthlySupplyOrder>(supplyOrdersRef).data || [];
   const actionPlans = useCollection<ActionPlan>(actionPlansRef).data || [];
   const leave = useCollection<Leave>(leaveRef).data || [];
+
+  // --- Handlers (Memoized for Stability) ---
+  const handleAddSite = useCallback((siteName: string) => {
+    if (!sitesRef || !activeProfileId) return;
+    const newDocRef = doc(sitesRef);
+    setDocumentNonBlocking(newDocRef, {
+      id: newDocRef.id,
+      name: siteName,
+      status: 'No Concerns',
+      userProfileId: activeProfileId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  }, [sitesRef, activeProfileId]);
+
+  const handleUpdateSite = useCallback((siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
+    if (!sitesRef) return;
+    updateDocumentNonBlocking(doc(sitesRef, siteId), { ...updatedData, updatedAt: new Date().toISOString() });
+  }, [sitesRef]);
+
+  const handleRemoveSite = useCallback((siteId: string) => {
+    if (!sitesRef) return;
+    deleteDocumentNonBlocking(doc(sitesRef, siteId));
+  }, [sitesRef]);
+
+  const handleAddCleaner = useCallback((cleanerName: string) => {
+    if (!cleanersRef || !activeProfileId) return;
+    const newDocRef = doc(cleanersRef);
+    setDocumentNonBlocking(newDocRef, {
+      id: newDocRef.id,
+      name: cleanerName,
+      rating: 'No Concerns',
+      holidayAllowance: 20,
+      userProfileId: activeProfileId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  }, [cleanersRef, activeProfileId]);
+
+  const handleUpdateCleaner = useCallback((cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
+    if (!cleanersRef) return;
+    updateDocumentNonBlocking(doc(cleanersRef, cleanerId), { ...updatedData, updatedAt: new Date().toISOString() });
+  }, [cleanersRef]);
+
+  const handleRemoveCleaner = useCallback((cleanerId: string) => {
+    if (!cleanersRef) return;
+    deleteDocumentNonBlocking(doc(cleanersRef, cleanerId));
+  }, [cleanersRef]);
+
+  const handleAddActionPlan = useCallback((plan: ActionPlan) => {
+    if (!actionPlansRef) return;
+    setDocumentNonBlocking(doc(actionPlansRef, plan.id), plan, { merge: true });
+  }, [actionPlansRef]);
+
+  const handleUpdateActionPlan = useCallback((plan: ActionPlan) => {
+    if (!actionPlansRef) return;
+    updateDocumentNonBlocking(doc(actionPlansRef, plan.id), plan);
+  }, [actionPlansRef]);
+
+  const handleRemoveActionPlan = useCallback((planId: string) => {
+    if (!actionPlansRef) return;
+    deleteDocumentNonBlocking(doc(actionPlansRef, planId));
+  }, [actionPlansRef]);
+
+  // --- Account Management logic ---
+  const handleDeactivate = async () => {
+    if (!activeProfileId) return;
+    const updateData = { isDeactivated: true, updatedAt: new Date().toISOString() };
+    const profileRef = doc(firestore!, 'userProfiles', activeProfileId);
+    try {
+      await updateDoc(profileRef, updateData);
+      signOut(auth);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: profileRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        }));
+      }
+    }
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!activeProfileId || !firestore) return;
+    const batch = writeBatch(firestore);
+    const collectionsToWipe = ['sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'];
+
+    try {
+      for (const col of collectionsToWipe) {
+        const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
+        const snapshot = await getDocs(colRef);
+        snapshot.forEach(d => batch.delete(d.ref));
+      }
+      const profileRef = doc(firestore, 'userProfiles', activeProfileId);
+      batch.delete(profileRef);
+      await batch.commit();
+      signOut(auth);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
+    }
+  };
 
   // --- Navigation Mapping ---
   const menuGroups = useMemo(() => {
@@ -563,108 +650,6 @@ export default function DashboardPage() {
       return undefined;
   }, [activeTab, menuGroups]);
 
-  // --- Handlers (Scoped to Hub) ---
-  const handleAddSite = (siteName: string) => {
-    if (!sitesRef) return;
-    const newDocRef = doc(sitesRef);
-    setDocumentNonBlocking(newDocRef, {
-      id: newDocRef.id,
-      name: siteName,
-      status: 'No Concerns',
-      userProfileId: activeProfileId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
-  };
-
-  const handleUpdateSite = (siteId: string, updatedData: Partial<Omit<Site, 'id'>>) => {
-    if (!sitesRef) return;
-    updateDocumentNonBlocking(doc(sitesRef, siteId), { ...updatedData, updatedAt: new Date().toISOString() });
-  };
-
-  const handleRemoveSite = (siteId: string) => {
-    if (!sitesRef) return;
-    deleteDocumentNonBlocking(doc(sitesRef, siteId));
-  };
-
-  const handleAddCleaner = (cleanerName: string) => {
-    if (!cleanersRef) return;
-    const newDocRef = doc(cleanersRef);
-    setDocumentNonBlocking(newDocRef, {
-      id: newDocRef.id,
-      name: cleanerName,
-      rating: 'No Concerns',
-      holidayAllowance: 20,
-      userProfileId: activeProfileId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
-  };
-
-  const handleUpdateCleaner = (cleanerId: string, updatedData: Partial<Omit<Cleaner, 'id'>>) => {
-    if (!cleanersRef) return;
-    updateDocumentNonBlocking(doc(cleanersRef, cleanerId), { ...updatedData, updatedAt: new Date().toISOString() });
-  };
-
-  const handleRemoveCleaner = (cleanerId: string) => {
-    if (!cleanersRef) return;
-    deleteDocumentNonBlocking(doc(cleanersRef, cleanerId));
-  };
-
-  const handleAddActionPlan = (plan: ActionPlan) => {
-    if (!actionPlansRef) return;
-    setDocumentNonBlocking(doc(actionPlansRef, plan.id), plan, { merge: true });
-  };
-
-  const handleUpdateActionPlan = (plan: ActionPlan) => {
-    if (!actionPlansRef) return;
-    updateDocumentNonBlocking(doc(actionPlansRef, plan.id), plan);
-  };
-
-  const handleRemoveActionPlan = (planId: string) => {
-    if (!actionPlansRef) return;
-    deleteDocumentNonBlocking(doc(actionPlansRef, planId));
-  };
-
-  // --- Account Management Logic ---
-  const handleDeactivate = async () => {
-    if (!activeProfileId) return;
-    const updateData = { isDeactivated: true, updatedAt: new Date().toISOString() };
-    const profileRef = doc(firestore!, 'userProfiles', activeProfileId);
-    try {
-      await updateDoc(profileRef, updateData);
-      signOut(auth);
-    } catch (error: any) {
-      if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: profileRef.path,
-          operation: 'update',
-          requestResourceData: updateData
-        } satisfies SecurityRuleContext));
-      }
-    }
-  };
-
-  const handleDeleteAllData = async () => {
-    if (!activeProfileId || !firestore) return;
-    const batch = writeBatch(firestore);
-    const collectionsToWipe = ['sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'];
-
-    try {
-      for (const col of collectionsToWipe) {
-        const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
-        const snapshot = await getDocs(colRef);
-        snapshot.forEach(d => batch.delete(d.ref));
-      }
-      const profileRef = doc(firestore, 'userProfiles', activeProfileId);
-      batch.delete(profileRef);
-      await batch.commit();
-      signOut(auth);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
-    }
-  };
-
   if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -710,7 +695,7 @@ export default function DashboardPage() {
                   path: hubRef.path,
                   operation: 'create',
                   requestResourceData: newHubData
-                } satisfies SecurityRuleContext));
+                }));
               }
             });
             toast({ title: 'Hub Provisioned', description: `${name} created.` });
