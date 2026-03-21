@@ -63,8 +63,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
-const RESTORATION_TARGET = 'owen@newton.com';
-const CURRENT_RESTORATION_VERSION = 7;
+const RESTORATION_TARGETS = ['owen@newton.com', 'owen.newton@excellerateservices.com'];
+const CURRENT_RESTORATION_VERSION = 8;
 
 const ALL_AVAILABLE_TABS = [
   { id: 'summary', label: 'Daily Summary', group: 'Overview' },
@@ -120,7 +120,7 @@ function LoginPage() {
   const handleDemoLogin = async () => {
     setLoading(true);
     try {
-      // Professional demo account for Owen
+      // Professional demo account access - one-click login
       await signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
@@ -149,6 +149,26 @@ function LoginPage() {
           <CardDescription>{isSignUp ? 'Create your operational account' : 'Operation Hub Management'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!isSignUp && (
+            <div className="pb-4">
+              <Button 
+                variant="default" 
+                className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 group hover:scale-[1.02] transition-transform" 
+                onClick={handleDemoLogin} 
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Zap className="mr-2 h-6 w-6 fill-current group-hover:animate-pulse" />}
+                Launch Professional Demo
+              </Button>
+              <p className="text-center text-[10px] text-muted-foreground mt-2 uppercase font-bold tracking-tighter">Enter instantly - No login required</p>
+            </div>
+          )}
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">{isSignUp ? 'Registration' : 'Partner Sign In'}</span></div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -158,29 +178,11 @@ function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full h-11 text-lg font-semibold" disabled={loading}>
+            <Button type="submit" variant="outline" className="w-full h-11 text-lg font-semibold" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSignUp ? <UserPlus className="mr-2 h-5 w-5" /> : <LogIn className="mr-2 h-5 w-5" />)}
               {isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
           </form>
-
-          {!isSignUp && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Demo Access</span></div>
-              </div>
-              <Button 
-                variant="outline" 
-                className="w-full h-11 border-primary/20 hover:bg-primary/5 group" 
-                onClick={handleDemoLogin} 
-                disabled={loading}
-              >
-                <Zap className="mr-2 h-4 w-4 text-primary group-hover:animate-pulse" />
-                Launch Professional Demo
-              </Button>
-            </>
-          )}
 
           <div className="text-center mt-4">
             <button 
@@ -359,24 +361,23 @@ export default function DashboardPage() {
   // Restoration and Initial setup logic
   useEffect(() => {
     if (!isProfileLoading && user && firestore) {
-      const isTargetEmail = user.email?.toLowerCase() === RESTORATION_TARGET;
-      const targetHubId = allHubs.find(h => h.email?.toLowerCase() === RESTORATION_TARGET)?.id || `hub-${user.uid}`;
+      const isTargetEmail = user.email && RESTORATION_TARGETS.includes(user.email.toLowerCase());
+      const targetHubId = allHubs.find(h => h.email && RESTORATION_TARGETS.includes(h.email.toLowerCase()))?.id || `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
-        toast({ title: 'Performing Professional Restoration...', description: 'Deleting all current data and re-importing Lot 4 roster for March 2026.' });
+        toast({ title: 'Performing Professional Restoration...', description: 'Wiping all current data and re-importing Lot 4 dataset for March 2026.' });
         try {
           await restoreProfessionalData(firestore, targetHubId);
           await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-          toast({ title: 'Restoration Complete', description: 'Your Lot 4 data for March 2026 has been reset.' });
+          toast({ title: 'Restoration Complete', description: 'Your Lot 4 Addenbrooke\'s environment has been reset.' });
         } catch (error: any) {
           if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: profileRef.path,
               operation: 'update',
               requestResourceData: { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() }
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            } satisfies SecurityRuleContext));
           }
         }
       };
@@ -398,50 +399,34 @@ export default function DashboardPage() {
           if (isTargetEmail) performRestoration();
         }).catch((error: any) => {
           if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: profileRef.path,
               operation: 'create',
               requestResourceData: newProfileData
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            } satisfies SecurityRuleContext));
           }
         });
       } else {
         // Existing user check for restoration or reactivation
         allHubs.forEach(hub => {
+          if (hub.email && RESTORATION_TARGETS.includes(hub.email.toLowerCase())) {
+            // Professional Data Restoration check
+            if ((hub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
+              performRestoration();
+            }
+          }
+          
           if (hub.email?.toLowerCase() === user.email?.toLowerCase()) {
             const hubRef = doc(firestore, 'userProfiles', hub.id);
             // Auto-Reactivate
             if (hub.isDeactivated) {
-              const reactivateData = { isDeactivated: false, updatedAt: new Date().toISOString() };
-              updateDoc(hubRef, reactivateData).then(() => {
+              updateDoc(hubRef, { isDeactivated: false, updatedAt: new Date().toISOString() }).then(() => {
                 toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
-              }).catch((error: any) => {
-                if (error.code === 'permission-denied') {
-                  errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: hubRef.path,
-                    operation: 'update',
-                    requestResourceData: reactivateData
-                  } satisfies SecurityRuleContext));
-                }
               });
             }
             // Ensure owner membership
             if (!hub.members || !hub.members[user.uid]) {
-              const membershipUpdate = { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() };
-              updateDoc(hubRef, membershipUpdate).catch((error: any) => {
-                if (error.code === 'permission-denied') {
-                  errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: hubRef.path,
-                    operation: 'update',
-                    requestResourceData: membershipUpdate
-                  } satisfies SecurityRuleContext));
-                }
-              });
-            }
-            // Professional Data Restoration check
-            if (isTargetEmail && (hub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
-              performRestoration();
+              updateDoc(hubRef, { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
             }
           }
         });
@@ -634,10 +619,7 @@ export default function DashboardPage() {
   // --- Account Management Logic ---
   const handleDeactivate = async () => {
     if (!activeProfileId) return;
-    const updateData = { 
-      isDeactivated: true,
-      updatedAt: new Date().toISOString()
-    };
+    const updateData = { isDeactivated: true, updatedAt: new Date().toISOString() };
     const profileRef = doc(firestore!, 'userProfiles', activeProfileId);
     try {
       await updateDoc(profileRef, updateData);
@@ -656,51 +638,20 @@ export default function DashboardPage() {
   const handleDeleteAllData = async () => {
     if (!activeProfileId || !firestore) return;
     const batch = writeBatch(firestore);
-    
-    // Collections to wipe
-    const collectionsToWipe = [
-      'sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 
-      'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
-    ];
+    const collectionsToWipe = ['sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'];
 
     try {
       for (const col of collectionsToWipe) {
         const colRef = collection(firestore, 'userProfiles', activeProfileId, col);
-        let snapshot;
-        try {
-          snapshot = await getDocs(colRef);
-        } catch (error: any) {
-          if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: colRef.path,
-              operation: 'list'
-            } satisfies SecurityRuleContext));
-            return; // Stop processing further to avoid more permission errors
-          }
-          throw error;
-        }
+        const snapshot = await getDocs(colRef);
         snapshot.forEach(d => batch.delete(d.ref));
       }
-
-      // Finally delete the profile
       const profileRef = doc(firestore, 'userProfiles', activeProfileId);
       batch.delete(profileRef);
-      
-      await batch.commit().catch(error => {
-        if (error.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `/userProfiles/${activeProfileId}`,
-            operation: 'write'
-          } satisfies SecurityRuleContext));
-        }
-        throw error;
-      });
+      await batch.commit();
       signOut(auth);
     } catch (error: any) {
-      if (error.code !== 'permission-denied') {
-        // Only show generic toast for non-security errors
-        toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
-      }
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
     }
   };
 

@@ -113,6 +113,7 @@ class BatchManager {
 export async function restoreProfessionalData(db: Firestore, hubId: string) {
   const bm = new BatchManager(db, hubId);
 
+  // 0. Comprehensive Wipe
   const subCollections = [
     'sites', 'cleaners', 'cleaningScheduleEntries', 'audits', 'appointments', 
     'tasks', 'conversations', 'goodNews', 'supplyOrders', 'actionPlans', 'leave'
@@ -125,11 +126,10 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
       snapshot = await getDocs(colRef);
     } catch (error: any) {
       if (error.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: colRef.path,
           operation: 'list',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        } satisfies SecurityRuleContext));
         continue;
       }
       throw error;
@@ -143,11 +143,10 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
           consumablesSnapshot = await getDocs(consumablesRef);
         } catch (error: any) {
           if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: consumablesRef.path,
               operation: 'list',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            } satisfies SecurityRuleContext));
             continue;
           }
           throw error;
@@ -178,10 +177,8 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
   }
 
   // 2. Seed Professional Cleaners
-  const cleanerIds: string[] = [];
   for (const cleanerName of PROFESSIONAL_CLEANERS) {
     const cleanerRef = doc(collection(db, 'userProfiles', hubId, 'cleaners'));
-    cleanerIds.push(cleanerRef.id);
     await bm.add(cleanerRef, {
       id: cleanerRef.id,
       name: cleanerName,
@@ -193,7 +190,7 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     });
   }
 
-  // 3. Seed Schedule for March 2026 baseline
+  // 3. Seed Schedule Baseline
   const shifts = [
     { site: 'CLINICAL SCHOOLS', cleaner: 'Petros Karas', start: '06:00', finish: '09:00' },
     { site: 'ISLAND RESEARCH BUILDING - IRB', cleaner: 'Vania Silva', start: '17:00', finish: '20:00' },
@@ -237,11 +234,11 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     });
   }
 
-  // 5. Seed Appointments around March 19, 2026
+  // 5. Seed March 19th, 2026 Dataset (Appointments & Tasks)
   const appointments = [
-    { title: 'Site Inspection', date: '2026-03-19', site: 'BAY 13', assignee: 'Manager', startTime: '09:00', endTime: '10:30' },
-    { title: 'Staff Meeting', date: '2026-03-19', assignee: 'Supervisor', startTime: '14:00', endTime: '15:00' },
-    { title: 'New Starter Induction', date: '2026-03-20', site: 'CLINICAL SCHOOLS', assignee: 'Manager', startTime: '11:00', endTime: '12:00' },
+    { title: 'Urgent Site Inspection', date: '2026-03-19', site: 'BAY 13', assignee: 'Manager', startTime: '09:00', endTime: '10:30' },
+    { title: 'Lot 4 Monthly Sync', date: '2026-03-19', assignee: 'Supervisor', startTime: '14:00', endTime: '15:30' },
+    { title: 'New Starter Induction: Yuki Tanaka', date: '2026-03-20', site: 'CLINICAL SCHOOLS', assignee: 'Manager', startTime: '11:00', endTime: '12:00' },
   ];
 
   for (const app of appointments) {
@@ -251,14 +248,14 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
       ...app,
       recurrence: 'none',
       recurrenceEndDate: null,
-      notes: 'Professional operational sync.',
+      notes: 'Standard Lot 4 operational sync.',
     });
   }
 
-  // 6. Seed Tasks
   const tasks = [
     { description: 'Review Bay 13 cleaning standards', dueDate: '2026-03-19', site: 'BAY 13', assignee: 'Manager', completed: false },
-    { description: 'Order floor polish for CAB', dueDate: '2026-03-21', site: 'CLIFFORD ALLBUTT BUILDING - CAB', assignee: 'Supervisor', completed: false },
+    { description: 'Verify inventory at CAB', dueDate: '2026-03-19', site: 'CLIFFORD ALLBUTT BUILDING - CAB', assignee: 'Supervisor', completed: false },
+    { description: 'Order floor polish for IRB', dueDate: '2026-03-21', site: 'ISLAND RESEARCH BUILDING - IRB', assignee: 'Supervisor', completed: false },
   ];
 
   for (const task of tasks) {
