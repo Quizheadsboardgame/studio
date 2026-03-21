@@ -17,7 +17,6 @@ import {
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX, Zap } from 'lucide-react';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -361,8 +360,9 @@ export default function DashboardPage() {
   // Restoration and Initial setup logic
   useEffect(() => {
     if (!isProfileLoading && user && firestore) {
-      const isTargetEmail = user.email && RESTORATION_TARGETS.includes(user.email.toLowerCase());
-      const targetHubId = allHubs.find(h => h.email && RESTORATION_TARGETS.includes(h.email.toLowerCase()))?.id || `hub-${user.uid}`;
+      const email = user.email?.toLowerCase();
+      const isTargetEmail = email && RESTORATION_TARGETS.includes(email);
+      const targetHubId = allHubs.find(h => h.email?.toLowerCase() === email)?.id || `hub-${user.uid}`;
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
@@ -382,7 +382,9 @@ export default function DashboardPage() {
         }
       };
 
-      if (allHubs.length === 0) {
+      const existingHub = allHubs.find(h => h.id === targetHubId);
+
+      if (!existingHub) {
         // Brand new user
         const newProfileData = {
           id: targetHubId,
@@ -407,29 +409,22 @@ export default function DashboardPage() {
           }
         });
       } else {
-        // Existing user check for restoration or reactivation
-        allHubs.forEach(hub => {
-          if (hub.email && RESTORATION_TARGETS.includes(hub.email.toLowerCase())) {
-            // Professional Data Restoration check
-            if ((hub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
-              performRestoration();
-            }
-          }
-          
-          if (hub.email?.toLowerCase() === user.email?.toLowerCase()) {
-            const hubRef = doc(firestore, 'userProfiles', hub.id);
-            // Auto-Reactivate
-            if (hub.isDeactivated) {
-              updateDoc(hubRef, { isDeactivated: false, updatedAt: new Date().toISOString() }).then(() => {
-                toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
-              });
-            }
-            // Ensure owner membership
-            if (!hub.members || !hub.members[user.uid]) {
-              updateDoc(hubRef, { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
-            }
-          }
-        });
+        // Check for restoration requirement
+        if (isTargetEmail && (existingHub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
+          performRestoration();
+        }
+        
+        // Auto-Reactivate if deactivated
+        if (existingHub.isDeactivated) {
+          updateDoc(profileRef, { isDeactivated: false, updatedAt: new Date().toISOString() }).then(() => {
+            toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
+          });
+        }
+        
+        // Ensure membership
+        if (!existingHub.members || !existingHub.members[user.uid]) {
+          updateDoc(profileRef, { [`members.${user.uid}`]: 'owner', updatedAt: new Date().toISOString() });
+        }
       }
     }
   }, [isProfileLoading, user, allHubs, firestore, isMasterUser, toast]);
