@@ -16,7 +16,7 @@ import {
   type Leave,
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX, Zap } from 'lucide-react';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
@@ -117,6 +117,27 @@ function LoginPage() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      // Professional demo account for Owen
+      await signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // Create the demo account if it doesn't exist yet
+        try {
+          await createUserWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
+        } catch (createError: any) {
+          toast({ variant: 'destructive', title: 'Demo Failed', description: createError.message });
+        }
+      } else {
+        toast({ variant: 'destructive', title: 'Demo Failed', description: error.message });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
@@ -127,7 +148,7 @@ function LoginPage() {
           <CardTitle className="text-3xl font-bold tracking-tight">CleanFlow</CardTitle>
           <CardDescription>{isSignUp ? 'Create your operational account' : 'Operation Hub Management'}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -141,16 +162,35 @@ function LoginPage() {
               {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSignUp ? <UserPlus className="mr-2 h-5 w-5" /> : <LogIn className="mr-2 h-5 w-5" />)}
               {isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
-            <div className="text-center mt-4">
-              <button 
-                type="button" 
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-primary hover:underline font-medium"
-              >
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </button>
-            </div>
           </form>
+
+          {!isSignUp && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Demo Access</span></div>
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full h-11 border-primary/20 hover:bg-primary/5 group" 
+                onClick={handleDemoLogin} 
+                disabled={loading}
+              >
+                <Zap className="mr-2 h-4 w-4 text-primary group-hover:animate-pulse" />
+                Launch Professional Demo
+              </Button>
+            </>
+          )}
+
+          <div className="text-center mt-4">
+            <button 
+              type="button" 
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>
