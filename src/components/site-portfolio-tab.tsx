@@ -53,6 +53,10 @@ function AssociatedCleanersDialog({ site, allCleaners, onUpdateSite, children }:
     onUpdateSite(site.id, { additionalCleaners: newAssociatedCleaners });
     toast({ title: 'Association Removed' });
   };
+
+  const sortedAdditionalCleaners = useMemo(() => {
+    return [...(site.additionalCleaners || [])].sort((a, b) => a.name.localeCompare(b.name));
+  }, [site.additionalCleaners]);
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -95,8 +99,8 @@ function AssociatedCleanersDialog({ site, allCleaners, onUpdateSite, children }:
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(site.additionalCleaners || []).length > 0 ? (
-                            site.additionalCleaners?.map(c => (
+                        {sortedAdditionalCleaners.length > 0 ? (
+                            sortedAdditionalCleaners.map(c => (
                                 <TableRow key={c.name}>
                                     <TableCell>{c.name}</TableCell>
                                     <TableCell>{c.role}</TableCell>
@@ -273,6 +277,11 @@ export default function SitePortfolioTab({
 
   const selectedSite = useMemo(() => sites.find(s => s.id === selectedSiteId), [sites, selectedSiteId]);
 
+  const sortedAdditionalCleaners = useMemo(() => {
+    if (!selectedSite?.additionalCleaners) return [];
+    return [...selectedSite.additionalCleaners].sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedSite?.additionalCleaners]);
+
   const siteData = useMemo(() => {
     if (!selectedSite || !schedule || !actionPlans || !monthlyAudits || !tasks || !appointments) return null;
     
@@ -356,9 +365,9 @@ export default function SitePortfolioTab({
                                     <AccordionTrigger>Associated Cleaners</AccordionTrigger>
                                     <AccordionContent>
                                         <div className="space-y-2">
-                                            {(selectedSite.additionalCleaners || []).length > 0 ? (
+                                            {sortedAdditionalCleaners.length > 0 ? (
                                                 <ul className="list-disc pl-5 space-y-1">
-                                                    {selectedSite.additionalCleaners?.map(c => <li key={c.name}>{c.name} ({c.role})</li>)}
+                                                    {sortedAdditionalCleaners.map(c => <li key={c.name}>{c.name} ({c.role})</li>)}
                                                 </ul>
                                             ) : <p className="text-muted-foreground">No associated cleaners.</p>}
                                             <AssociatedCleanersDialog site={selectedSite} allCleaners={cleaners} onUpdateSite={onUpdateSite}>

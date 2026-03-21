@@ -460,8 +460,13 @@ export default function DashboardPage() {
   const actionPlansRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'actionPlans') : null, [firestore, activeProfileId]);
   const leaveRef = useMemoFirebase(() => activeProfileId ? collection(firestore, 'userProfiles', activeProfileId, 'leave') : null, [firestore, activeProfileId]);
 
-  const sites = useCollection<Site>(sitesRef).data || [];
-  const cleaners = useCollection<Cleaner>(cleanersRef).data || [];
+  const rawSites = useCollection<Site>(sitesRef).data || [];
+  const rawCleaners = useCollection<Cleaner>(cleanersRef).data || [];
+  
+  // ALPHABETICAL SORTING OF CORE DATA
+  const sites = useMemo(() => [...rawSites].sort((a, b) => a.name.localeCompare(b.name)), [rawSites]);
+  const cleaners = useMemo(() => [...rawCleaners].sort((a, b) => a.name.localeCompare(b.name)), [rawCleaners]);
+
   const schedule = useCollection<ScheduleEntry>(scheduleRef).data || [];
   const audits = useCollection<MonthlyAudit>(auditsRef).data || [];
   const appointments = useCollection<Appointment>(appointmentsRef).data || [];

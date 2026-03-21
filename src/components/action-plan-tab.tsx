@@ -399,9 +399,6 @@ interface ActionPlanTabProps {
 }
 
 export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateActionPlan, onRemoveActionPlan }: ActionPlanTabProps) {
-  const sortedSites = useMemo(() => sites ? [...sites].sort((a, b) => a.name.localeCompare(b.name)) : [], [sites]);
-  const sortedCleaners = useMemo(() => cleaners ? [...cleaners].sort((a, b) => a.name.localeCompare(b.name)) : [], [cleaners]);
-  
   const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
   const [isGeneratingAllExcel, setIsGeneratingAllExcel] = useState(false);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -545,8 +542,8 @@ export default function ActionPlanTab({ sites, cleaners, actionPlans, onUpdateAc
       <CreateActionPlanDialog
         open={isCreateDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        sites={sortedSites}
-        cleaners={sortedCleaners}
+        sites={sites}
+        cleaners={cleaners}
         existingPlanIds={existingActionPlans.map(p => p.id)}
         onCreatePlan={onUpdateActionPlan}
       />
