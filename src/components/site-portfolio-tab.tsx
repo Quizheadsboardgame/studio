@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { Site, Cleaner, ScheduleEntry, ActionPlan, MonthlyAudit, Task, Appointment, AdditionalCleaner } from '@/lib/data';
+import { useState, useMemo, useEffect } from 'react';
+import type { Site, Cleaner, ScheduleEntry, ActionPlan, MonthlyAudit, Task, Appointment, AdditionalCleaner, SiteStatus } from '@/lib/data';
+import { siteStatuses } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { User, Users, Star, PlusCircle, Trash2, Pencil, Check, X } from 'lucide-react';
+import { User, Users, Star, PlusCircle, Trash2, Pencil, Check, X, Calendar, ClipboardList } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
@@ -235,6 +236,77 @@ function ManageScheduleDialog({ site, allCleaners, siteSchedule, onAdd, onRemove
   )
 }
 
+interface AddTaskDialogProps {
+    siteName: string;
+    onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
+    children: React.ReactNode;
+}
+
+function AddTaskDialog({ siteName, onAddTask, children }: AddTaskDialogProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [description, setDescription] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [assignee, setAssignee] = useState('Unassigned');
+    const { toast } = useToast();
+
+    const handleSave = () => {
+        if (!description.trim()) {
+            toast({ variant: 'destructive', title: 'Task description is required.' });
+            return;
+        }
+        onAddTask({
+            description,
+            dueDate: dueDate || null,
+            assignee: assignee || null,
+            site: siteName,
+        });
+        setDescription('');
+        setDueDate('');
+        setAssignee('Unassigned');
+        setIsOpen(false);
+        toast({ title: 'Task Created' });
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add Task for {siteName}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="What needs to be done?" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Due Date</Label>
+                            <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Assignee</Label>
+                            <Select value={assignee} onValueChange={setAssignee}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Unassigned">Unassigned</SelectItem>
+                                    <SelectItem value="Manager">Manager</SelectItem>
+                                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                    <SelectItem value="Mobile Cleaner">Mobile Cleaner</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                    <Button onClick={handleSave}>Save Task</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 interface SitePortfolioTabProps {
   sites: Site[];
@@ -245,6 +317,7 @@ interface SitePortfolioTabProps {
   tasks: Task[];
   appointments: Appointment[];
   onUpdateSite: (siteId: string, data: Partial<Omit<Site, 'id'>>) => void;
+  onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
   onUpdateTask: (taskId: string, task: Partial<Omit<Task, 'id'>>) => void;
   onRemoveTask: (taskId: string) => void;
   onAddAppointment: (data: Omit<Appointment, 'id'>) => void;
@@ -264,6 +337,7 @@ export default function SitePortfolioTab({
   tasks,
   appointments,
   onUpdateSite,
+  onAddTask,
   onUpdateTask,
   onRemoveTask,
   onAddAppointment,
@@ -274,8 +348,32 @@ export default function SitePortfolioTab({
   onRemoveScheduleEntry,
 }: SitePortfolioTabProps) {
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  
+  // Info Editing State
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const [editStatus, setEditStatus] = useState<SiteStatus>('No Concerns');
 
   const selectedSite = useMemo(() => sites.find(s => s.id === selectedSiteId), [sites, selectedSiteId]);
+
+  useEffect(() => {
+    if (selectedSite) {
+        setEditName(selectedSite.name);
+        setEditCode(selectedSite.siteCode || '');
+        setEditStatus(selectedSite.status);
+    }
+  }, [selectedSite, isEditingInfo]);
+
+  const handleSaveInfo = () => {
+    if (!selectedSite) return;
+    onUpdateSite(selectedSite.id, {
+        name: editName,
+        siteCode: editCode,
+        status: editStatus,
+    });
+    setIsEditingInfo(false);
+  };
 
   const sortedAdditionalCleaners = useMemo(() => {
     if (!selectedSite?.additionalCleaners) return [];
@@ -330,25 +428,64 @@ export default function SitePortfolioTab({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Site Information</CardTitle>
+                            {!isEditingInfo ? (
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditingInfo(true)}>
+                                    <Pencil className="h-4 w-4 mr-2" /> Edit
+                                </Button>
+                            ) : (
+                                <div className="flex gap-1">
+                                    <Button variant="ghost" size="icon" onClick={handleSaveInfo} className="h-8 w-8">
+                                        <Check className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setIsEditingInfo(false)} className="h-8 w-8">
+                                        <X className="h-4 w-4 text-red-600" />
+                                    </Button>
+                                </div>
+                            )}
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
-                            <p><strong>Site Code:</strong> {selectedSite.siteCode || 'N/A'}</p>
-                            <p><strong>Status:</strong> {selectedSite.status}</p>
+                            {isEditingInfo ? (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Site Name</Label>
+                                        <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Site Code</Label>
+                                        <Input value={editCode} onChange={e => setEditCode(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Status</Label>
+                                        <Select value={editStatus} onValueChange={(v: SiteStatus) => setEditStatus(v)}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                {siteStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <p><strong>Name:</strong> {selectedSite.name}</p>
+                                    <p><strong>Site Code:</strong> {selectedSite.siteCode || 'N/A'}</p>
+                                    <p><strong>Status:</strong> {selectedSite.status}</p>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader><CardTitle className="flex items-center gap-2"><Users /> Personnel</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Personnel</CardTitle></CardHeader>
                         <CardContent>
                            <Accordion type="multiple" defaultValue={['current', 'associated']}>
                                 <AccordionItem value="current">
                                     <AccordionTrigger>Current Cleaners</AccordionTrigger>
                                     <AccordionContent>
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             {siteData?.siteSchedule && siteData.siteSchedule.length > 0 ? (
                                                 <ul className="list-disc pl-5 space-y-1">
                                                     {siteData.siteSchedule.map(entry => <li key={entry.id}>{entry.cleaner} ({entry.start} - {entry.finish})</li>)}
                                                 </ul>
-                                            ) : <p className="text-muted-foreground">No cleaners currently scheduled.</p>}
+                                            ) : <p className="text-muted-foreground italic text-xs">No cleaners currently scheduled.</p>}
                                              <ManageScheduleDialog 
                                                 site={selectedSite} 
                                                 allCleaners={cleaners} 
@@ -356,7 +493,7 @@ export default function SitePortfolioTab({
                                                 onAdd={onAddScheduleEntry} 
                                                 onRemove={onRemoveScheduleEntry}
                                             >
-                                                <Button variant="secondary" size="sm">Manage Schedule</Button>
+                                                <Button variant="secondary" size="sm" className="w-full mt-2">Manage Schedule</Button>
                                             </ManageScheduleDialog>
                                         </div>
                                     </AccordionContent>
@@ -364,14 +501,14 @@ export default function SitePortfolioTab({
                                  <AccordionItem value="associated">
                                     <AccordionTrigger>Associated Cleaners</AccordionTrigger>
                                     <AccordionContent>
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             {sortedAdditionalCleaners.length > 0 ? (
                                                 <ul className="list-disc pl-5 space-y-1">
                                                     {sortedAdditionalCleaners.map(c => <li key={c.name}>{c.name} ({c.role})</li>)}
                                                 </ul>
-                                            ) : <p className="text-muted-foreground">No associated cleaners.</p>}
+                                            ) : <p className="text-muted-foreground italic text-xs">No associated cleaners records.</p>}
                                             <AssociatedCleanersDialog site={selectedSite} allCleaners={cleaners} onUpdateSite={onUpdateSite}>
-                                                <Button variant="secondary" size="sm">Manage Associated Cleaners</Button>
+                                                <Button variant="secondary" size="sm" className="w-full mt-2">Manage Associated Cleaners</Button>
                                             </AssociatedCleanersDialog>
                                         </div>
                                     </AccordionContent>
@@ -409,7 +546,7 @@ export default function SitePortfolioTab({
                                                 ))}
                                                 {siteData.actionPlan.notes && <p className="text-sm text-muted-foreground pt-2 border-t mt-2">Notes: {siteData.actionPlan.notes}</p>}
                                             </div>
-                                        ) : <p className="text-muted-foreground">No action plan for this site.</p>}
+                                        ) : <p className="text-muted-foreground italic text-xs">No active action plan for this site.</p>}
                                     </AccordionContent>
                                 </AccordionItem>
                                  <AccordionItem value="audit-history">
@@ -422,11 +559,18 @@ export default function SitePortfolioTab({
                                                      {siteData.audits.map(a => <TableRow key={a.id}><TableCell>{format(parseISO(a.bookedDate!), 'PP')}</TableCell><TableCell>{a.score}%</TableCell></TableRow>)}
                                                  </TableBody>
                                              </Table>
-                                         ) : <p className="text-muted-foreground">No completed audits for this site.</p>}
+                                         ) : <p className="text-muted-foreground italic text-xs">No completed audits found for this site.</p>}
                                     </AccordionContent>
                                 </AccordionItem>
                                 <AccordionItem value="tasks">
-                                    <AccordionTrigger>Tasks</AccordionTrigger>
+                                    <AccordionTrigger>
+                                        <div className="flex justify-between items-center w-full pr-4">
+                                            <span>Tasks</span>
+                                            <AddTaskDialog siteName={selectedSite.name} onAddTask={onAddTask}>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}><PlusCircle className="h-4 w-4" /></Button>
+                                            </AddTaskDialog>
+                                        </div>
+                                    </AccordionTrigger>
                                     <AccordionContent>
                                          {siteData?.tasks && siteData.tasks.length > 0 ? (
                                              <div className="space-y-2">
@@ -436,24 +580,34 @@ export default function SitePortfolioTab({
                                                         <Checkbox checked={t.completed} onCheckedChange={(checked) => onUpdateTask(t.id, { completed: !!checked })} />
                                                         <label className={t.completed ? 'line-through text-muted-foreground' : ''}>
                                                             {t.description}
-                                                            {t.dueDate && ` (Due: ${format(parseISO(t.dueDate), 'PP')})`}
+                                                            {t.dueDate && <span className="text-xs text-muted-foreground ml-2"> (Due: {format(parseISO(t.dueDate), 'PP')})</span>}
                                                         </label>
                                                     </div>
                                                     <Button variant="ghost" size="icon" onClick={() => onRemoveTask(t.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                                                   </div>
                                                 ))}
                                             </div>
-                                         ) : <p className="text-muted-foreground">No tasks for this site.</p>}
+                                         ) : <p className="text-muted-foreground italic text-xs">No generic tasks assigned to this site.</p>}
                                     </AccordionContent>
                                 </AccordionItem>
                                  <AccordionItem value="appointments">
-                                    <AccordionTrigger>Appointments</AccordionTrigger>
+                                    <AccordionTrigger>
+                                        <div className="flex justify-between items-center w-full pr-4">
+                                            <span>Appointments</span>
+                                            <AppointmentDialog sites={sites} onSave={onAddAppointment} defaultAssignee="Manager">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}><PlusCircle className="h-4 w-4" /></Button>
+                                            </AppointmentDialog>
+                                        </div>
+                                    </AccordionTrigger>
                                     <AccordionContent>
                                           {siteData?.appointments && siteData.appointments.length > 0 ? (
-                                             <div className="space-y-2">
+                                             <div className="space-y-3">
                                                 {siteData.appointments.map(a => (
-                                                  <div key={a.id} className="flex items-center justify-between">
-                                                    <p>{a.title} on {format(parseISO(a.date), 'PP')} with {a.assignee}</p>
+                                                  <div key={a.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                                                    <div className="flex flex-col">
+                                                        <p className="font-medium text-sm">{a.title}</p>
+                                                        <p className="text-xs text-muted-foreground">{format(parseISO(a.date), 'PPP')} | {a.assignee}</p>
+                                                    </div>
                                                     <div className="flex items-center gap-1">
                                                       <AppointmentDialog sites={sites} onSave={(data) => onUpdateAppointment(a.id, data)} appointment={a}>
                                                           <Button variant="ghost" size="icon"><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
@@ -472,7 +626,7 @@ export default function SitePortfolioTab({
                                                   </div>
                                                 ))}
                                             </div>
-                                         ) : <p className="text-muted-foreground">No appointments for this site.</p>}
+                                         ) : <p className="text-muted-foreground italic text-xs">No upcoming appointments for this site.</p>}
                                     </AccordionContent>
                                 </AccordionItem>
                             </Accordion>
