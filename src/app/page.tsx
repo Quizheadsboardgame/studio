@@ -16,7 +16,7 @@ import {
   type Leave,
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX, Zap } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History, Package, Map, BookOpen, Layers, ShieldX, Zap, Rocket } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -119,11 +119,9 @@ function LoginPage() {
   const handleDemoLogin = async () => {
     setLoading(true);
     try {
-      // Professional demo account access - one-click login
       await signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        // Create the demo account if it doesn't exist yet
         try {
           await createUserWithEmailAndPassword(auth, 'owen@newton.com', 'password123');
         } catch (createError: any) {
@@ -138,61 +136,75 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-2xl border-primary/20">
-        <CardHeader className="text-center pb-2">
-          <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-lg shadow-primary/20">C</div>
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">CleanFlow</CardTitle>
-          <CardDescription>{isSignUp ? 'Create your operational account' : 'Operation Hub Management'}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!isSignUp && (
-            <div className="pb-4">
-              <Button 
-                variant="default" 
-                className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 group hover:scale-[1.02] transition-transform" 
-                onClick={handleDemoLogin} 
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Zap className="mr-2 h-6 w-6 fill-current group-hover:animate-pulse" />}
-                Launch Professional Demo
-              </Button>
-              <p className="text-center text-[10px] text-muted-foreground mt-2 uppercase font-bold tracking-tighter">Enter instantly - No login required</p>
-            </div>
-          )}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] p-4 gap-8">
+      {/* Top Demo Button */}
+      <Button 
+        variant="outline" 
+        className="w-full max-w-[400px] border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 h-12 text-xs font-bold tracking-widest uppercase"
+        onClick={handleDemoLogin}
+        disabled={loading}
+      >
+        <Rocket className="mr-2 h-4 w-4" />
+        Launch Demo Account
+      </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">{isSignUp ? 'Registration' : 'Partner Sign In'}</span></div>
+      {/* Main Login Card */}
+      <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-2xl p-6">
+        <div className="flex flex-col items-center gap-6">
+          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-[0_0_20px_rgba(243,112,33,0.4)]">
+            C
+          </div>
+          
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight text-white">CleanFlow</h1>
+            <p className="text-xs text-muted-foreground/60 font-medium">Operation Hub Management</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="name@example.com" />
+          <form onSubmit={handleSubmit} className="w-full space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Email Address</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  placeholder="name@example.com" 
+                  className="bg-[#1a1a1a] border-white/5 focus:border-primary/50 h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  className="bg-[#1a1a1a] border-white/5 focus:border-primary/50 h-11"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
-            <Button type="submit" variant="outline" className="w-full h-11 text-lg font-semibold" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (isSignUp ? <UserPlus className="mr-2 h-5 w-5" /> : <LogIn className="mr-2 h-5 w-5" />)}
+
+            <Button type="submit" className="w-full h-12 bg-primary text-black hover:bg-primary/90 font-bold" disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <LogIn className="mr-2 h-5 w-5" />
+              )}
               {isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
           </form>
 
-          <div className="text-center mt-4">
-            <button 
-              type="button" 
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-            </button>
-          </div>
-        </CardContent>
+          <button 
+            type="button" 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs text-primary hover:text-primary/80 font-semibold"
+          >
+            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+          </button>
+        </div>
       </Card>
     </div>
   );
@@ -402,7 +414,7 @@ export default function DashboardPage() {
         }).catch((error: any) => {
           if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: profileRef.path,
+              path: hubRef.path,
               operation: 'create',
               requestResourceData: newProfileData
             } satisfies SecurityRuleContext));
