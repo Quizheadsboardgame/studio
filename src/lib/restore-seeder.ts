@@ -130,7 +130,6 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
           operation: 'list',
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        // If listing fails due to permissions, we stop the restoration process for this collection
         continue;
       }
       throw error;
@@ -149,7 +148,6 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
               operation: 'list',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            // Skip consumables for this site if permissions fail
             continue;
           }
           throw error;
@@ -163,25 +161,31 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
   }
   await bm.commit();
 
+  // 1. Seed Professional Sites
+  const siteMap = new Map<string, string>();
   for (const siteInfo of PROFESSIONAL_SITES) {
     const siteRef = doc(collection(db, 'userProfiles', hubId, 'sites'));
+    siteMap.set(siteInfo.name, siteRef.id);
     await bm.add(siteRef, {
       id: siteRef.id,
       name: siteInfo.name,
       siteCode: siteInfo.code,
-      status: 'No Concerns',
+      status: siteInfo.name === 'BAY 13' ? 'Client concerns' : 'No Concerns',
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
   }
 
+  // 2. Seed Professional Cleaners
+  const cleanerIds: string[] = [];
   for (const cleanerName of PROFESSIONAL_CLEANERS) {
     const cleanerRef = doc(collection(db, 'userProfiles', hubId, 'cleaners'));
+    cleanerIds.push(cleanerRef.id);
     await bm.add(cleanerRef, {
       id: cleanerRef.id,
       name: cleanerName,
-      rating: 'No Concerns',
+      rating: cleanerName === 'Petros Karas' ? 'Gold Star Cleaner' : 'No Concerns',
       holidayAllowance: 20,
       userProfileId: hubId,
       createdAt: new Date().toISOString(),
@@ -189,5 +193,86 @@ export async function restoreProfessionalData(db: Firestore, hubId: string) {
     });
   }
 
+  // 3. Seed Schedule for March 2026 baseline
+  const shifts = [
+    { site: 'CLINICAL SCHOOLS', cleaner: 'Petros Karas', start: '06:00', finish: '09:00' },
+    { site: 'ISLAND RESEARCH BUILDING - IRB', cleaner: 'Vania Silva', start: '17:00', finish: '20:00' },
+    { site: 'BAY 13', cleaner: 'Maria Santos', start: '18:00', finish: '21:00' },
+    { site: 'CLIFFORD ALLBUTT BUILDING - CAB', cleaner: 'John O’Shea', start: '05:30', finish: '08:30' },
+    { site: 'JEFFREY CHEAH (CAPELLA)', cleaner: 'Elena Popa', start: '17:30', finish: '20:30' },
+  ];
+
+  for (const shift of shifts) {
+    const scheduleRef = doc(collection(db, 'userProfiles', hubId, 'cleaningScheduleEntries'));
+    await bm.add(scheduleRef, {
+      id: scheduleRef.id,
+      ...shift,
+      userProfileId: hubId,
+    });
+  }
+
+  // 4. Seed Historical Audits for March 2026
+  const audits = [
+    { site: 'CLINICAL SCHOOLS', score: 98, date: '2026-03-15' },
+    { site: 'BAY 13', score: 85, date: '2026-03-12' },
+    { site: 'CLIFFORD ALLBUTT BUILDING - CAB', score: 100, date: '2026-03-18' },
+  ];
+
+  for (const audit of audits) {
+    const siteId = siteMap.get(audit.site);
+    if (!siteId) continue;
+    const auditDate = parseISO(audit.date);
+    const auditId = `${siteId}-${auditDate.getFullYear()}-${auditDate.getMonth() + 1}`;
+    const auditRef = doc(db, 'userProfiles', hubId, 'audits', auditId);
+    await bm.add(auditRef, {
+      id: auditId,
+      siteId,
+      year: auditDate.getFullYear(),
+      month: auditDate.getMonth() + 1,
+      status: 'Completed',
+      score: audit.score,
+      bookedDate: audit.date,
+      bookedTime: '10:00',
+      auditor: 'Manager',
+    });
+  }
+
+  // 5. Seed Appointments around March 19, 2026
+  const appointments = [
+    { title: 'Site Inspection', date: '2026-03-19', site: 'BAY 13', assignee: 'Manager', startTime: '09:00', endTime: '10:30' },
+    { title: 'Staff Meeting', date: '2026-03-19', assignee: 'Supervisor', startTime: '14:00', endTime: '15:00' },
+    { title: 'New Starter Induction', date: '2026-03-20', site: 'CLINICAL SCHOOLS', assignee: 'Manager', startTime: '11:00', endTime: '12:00' },
+  ];
+
+  for (const app of appointments) {
+    const appRef = doc(collection(db, 'userProfiles', hubId, 'appointments'));
+    await bm.add(appRef, {
+      id: appRef.id,
+      ...app,
+      recurrence: 'none',
+      recurrenceEndDate: null,
+      notes: 'Professional operational sync.',
+    });
+  }
+
+  // 6. Seed Tasks
+  const tasks = [
+    { description: 'Review Bay 13 cleaning standards', dueDate: '2026-03-19', site: 'BAY 13', assignee: 'Manager', completed: false },
+    { description: 'Order floor polish for CAB', dueDate: '2026-03-21', site: 'CLIFFORD ALLBUTT BUILDING - CAB', assignee: 'Supervisor', completed: false },
+  ];
+
+  for (const task of tasks) {
+    const taskRef = doc(collection(db, 'userProfiles', hubId, 'tasks'));
+    await bm.add(taskRef, {
+      id: taskRef.id,
+      ...task,
+    });
+  }
+
   await bm.commit();
+}
+
+function parseISO(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }

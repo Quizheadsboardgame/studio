@@ -63,7 +63,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const MASTER_EMAILS = ['clean@flow.com', 'clean@flow.co.uk'];
-const RESTORATION_TARGET = 'owen.newton@excellerateservices.com';
+const RESTORATION_TARGET = 'owen@newton.com';
 const CURRENT_RESTORATION_VERSION = 7;
 
 const ALL_AVAILABLE_TABS = [
@@ -324,11 +324,11 @@ export default function DashboardPage() {
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
-        toast({ title: 'Performing Clean Restoration...', description: 'Deleting all current data and re-importing Lot 4 roster.' });
+        toast({ title: 'Performing Professional Restoration...', description: 'Deleting all current data and re-importing Lot 4 roster for March 2026.' });
         try {
           await restoreProfessionalData(firestore, targetHubId);
           await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-          toast({ title: 'Restoration Complete', description: 'Your strictly professional Lot 4 data has been reset.' });
+          toast({ title: 'Restoration Complete', description: 'Your Lot 4 data for March 2026 has been reset.' });
         } catch (error: any) {
           if (error.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
