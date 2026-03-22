@@ -26,83 +26,52 @@
   .multi-color-hover:hover::after, .multi-color-hover[data-state=open]::after {
     transform: scaleY(1);
   }
+
+  .tech-gradient {
+    background: radial-gradient(circle at top left, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(2, 6, 23, 1) 100%);
+  }
 }
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 24.6 95% 53.1%; /* Excellerate Orange */
-    --primary-foreground: 0 0% 10%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 175 100% 33%; /* Excellerate Teal */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 24.6 95% 53.1%; /* Managers Matrix Orange */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 175 100% 33%; /* Managers Matrix Teal */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
     --excellerate-red-hsl: 2.7 78.4% 50.2%;
     --excellerate-blue-hsl: 209 100% 32.5%;
     --excellerate-lime-hsl: 79.5 56.4% 51.4%;
     --excellerate-purple-hsl: 271.4 76.1% 52.9%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
     --ring: 24.6 95% 53.1%;
-    --chart-1: 0 84.2% 60.2%;
+    --chart-1: 24.6 95% 53.1%;
     --chart-2: 175 100% 33%;
-    --chart-3: 176 100% 33%;
-    --chart-4: 24 90% 54%;
-    --chart-5: 209 100% 33%;
+    --chart-3: 199 89% 48%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
     --gold-star: 45 85% 45%;
-    --radius: 0.5rem;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 0 0% 98%;
+    --radius: 0.75rem;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 24.6 95% 53.1%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 24.6 95% 53.1%;
-  }
-  .dark {
-    --background: 240 5.9% 10%;
-    --foreground: 0 0% 98%;
-    --card: 240 3.7% 15.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 3.7% 15.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 24.6 95% 53.1%; /* Excellerate Orange */
-    --primary-foreground: 0 0% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 175 100% 33%; /* Excellerate Teal */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 25%;
-    --input: 240 3.7% 25%;
-    --ring: 24.6 95% 53.1%;
-    --chart-1: 0 84.2% 60.2%;
-    --chart-2: 175 100% 33%;
-    --chart-3: 176 100% 33%;
-    --chart-4: 24 90% 54%;
-    --chart-5: 209 100% 33%;
-    --gold-star: 45 85% 45%;
-    --sidebar-background: 240 6% 12%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 24.6 95% 53.1%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 240 5% 20%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 4% 18%;
-    --sidebar-ring: 24.6 95% 53.1%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 224.3 76.3% 48%;
   }
 }
 
@@ -111,6 +80,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(24, 95%, 53%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(175, 100%, 33%, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 }

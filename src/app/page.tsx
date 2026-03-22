@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
@@ -105,7 +104,7 @@ function LoginPage() {
     try {
       if (isSignUp) {
         await createUserWithEmailAndPassword(auth, email, password);
-        toast({ title: 'Account Created', description: 'Welcome to CleanFlow!' });
+        toast({ title: 'Account Created', description: 'Welcome to Managers Matrix!' });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -137,10 +136,12 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] p-4 gap-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#020617] p-4 gap-8">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(37,99,235,0.1),transparent_50%)] pointer-events-none" />
+      
       <Button 
         variant="outline" 
-        className="w-full max-w-[400px] border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 h-12 text-xs font-bold tracking-widest uppercase"
+        className="w-full max-w-[400px] border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 h-12 text-xs font-black tracking-[0.2em] uppercase z-10"
         onClick={handleDemoLogin}
         disabled={loading}
       >
@@ -152,71 +153,74 @@ function LoginPage() {
         Launch Demo Account
       </Button>
 
-      <Card className="w-full max-w-[400px] border-none bg-transparent shadow-none p-6">
-        <div className="flex flex-col items-center gap-6">
+      <Card className="w-full max-w-[400px] border-none bg-white/5 backdrop-blur-xl shadow-2xl p-8 rounded-2xl relative z-10 border border-white/10">
+        <div className="flex flex-col items-center gap-8">
           {logo ? (
-            <Image 
-              src={logo.imageUrl} 
-              alt={logo.description} 
-              width={240} 
-              height={240} 
-              className="object-contain mb-2"
-              data-ai-hint={logo.imageHint}
-            />
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all duration-500 opacity-50" />
+              <Image 
+                src={logo.imageUrl} 
+                alt="Managers Matrix Logo" 
+                width={240} 
+                height={240} 
+                className="object-contain mb-2 relative"
+                data-ai-hint={logo.imageHint}
+              />
+            </div>
           ) : (
-            <div className="h-24 w-24 flex items-center justify-center text-primary font-bold text-6xl">
-              C
+            <div className="h-32 w-32 flex items-center justify-center text-primary font-black text-7xl bg-primary/10 rounded-3xl">
+              M
             </div>
           )}
           
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-white">CleanFlow</h1>
-            <p className="text-xs text-muted-foreground/60 font-medium">Operation Hub Management</p>
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-extrabold tracking-tighter text-white uppercase italic">Managers Matrix</h1>
+            <p className="text-[10px] text-primary font-black tracking-[0.25em] uppercase opacity-80">POWERED BY HARLEY: WORK SMARTER</p>
           </div>
 
           <form onSubmit={handleSubmit} className="w-full space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Email Address</Label>
+                <Label htmlFor="email" className="text-[10px] font-black text-muted-foreground/60 ml-1 uppercase tracking-widest">Access Point ID</Label>
                 <Input 
                   id="email" 
                   type="email" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   required 
-                  placeholder="name@example.com" 
-                  className="bg-[#1a1a1a] border-white/5 focus:border-primary/50 h-11"
+                  placeholder="name@matrix.ai" 
+                  className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Password</Label>
+                <Label htmlFor="password" className="text-[10px] font-black text-muted-foreground/60 ml-1 uppercase tracking-widest">Encryption Key</Label>
                 <Input 
                   id="password" 
                   type="password" 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
                   required 
-                  className="bg-[#1a1a1a] border-white/5 focus:border-primary/50 h-11"
+                  className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl focus:ring-primary/20"
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 bg-primary text-black hover:bg-primary/90 font-bold" disabled={loading}>
+            <Button type="submit" className="w-full h-14 bg-primary text-black hover:bg-primary/90 font-black tracking-widest uppercase rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20" disabled={loading}>
               {loading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <LogIn className="mr-2 h-5 w-5" />
               )}
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+              {isSignUp ? 'Initialize' : 'Sign In'}
             </Button>
           </form>
 
           <button 
             type="button" 
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs text-primary hover:text-primary/80 font-semibold"
+            className="text-[10px] text-primary hover:text-primary/80 font-black tracking-widest uppercase"
           >
-            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            {isSignUp ? "Existing Terminal? Link Here" : "New Terminal? Provision Here"}
           </button>
         </div>
       </Card>
@@ -242,10 +246,10 @@ function TabConfigurationDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 px-2"><Layers className="mr-2 h-4 w-4" /> Tabs</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-[#0f172a] border-white/10">
         <DialogHeader>
-          <DialogTitle>Configure Features: {hub.name}</DialogTitle>
-          <DialogDescription>Select which tools are visible for this hub.</DialogDescription>
+          <DialogTitle>Configure Matrix Nodes: {hub.name}</DialogTitle>
+          <DialogDescription>Select which processing nodes are visible for this terminal.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-auto">
           {Object.entries(
@@ -256,7 +260,7 @@ function TabConfigurationDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
             }, {} as Record<string, typeof ALL_AVAILABLE_TABS>)
           ).map(([group, tabs]) => (
             <div key={group} className="space-y-3">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-1">{group}</h4>
+              <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary border-b border-white/5 pb-1">{group}</h4>
               <div className="space-y-2">
                 {tabs.map(tab => (
                   <div key={tab.id} className="flex items-center space-x-2">
@@ -265,7 +269,7 @@ function TabConfigurationDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
                       checked={enabledTabs.includes(tab.id)} 
                       onCheckedChange={() => toggleTab(tab.id)}
                     />
-                    <Label htmlFor={`tab-${hub.id}-${tab.id}`} className="text-sm font-medium leading-none cursor-pointer">{tab.label}</Label>
+                    <Label htmlFor={`tab-${hub.id}-${tab.id}`} className="text-xs font-bold leading-none cursor-pointer uppercase tracking-tight">{tab.label}</Label>
                   </div>
                 ))}
               </div>
@@ -273,7 +277,7 @@ function TabConfigurationDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
           ))}
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button onClick={handleSave}>Save Configuration</Button></DialogClose>
+          <DialogClose asChild><Button onClick={handleSave} className="bg-primary text-black font-black uppercase text-xs">Commit Configuration</Button></DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -299,23 +303,23 @@ function MemberManagementDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 px-2"><UserCog className="mr-2 h-4 w-4" /> Members</Button>
+        <Button variant="ghost" size="sm" className="h-8 px-2"><UserCog className="mr-2 h-4 w-4" /> Access</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="bg-[#0f172a] border-white/10">
         <DialogHeader>
-          <DialogTitle>Manage Members: {hub.name}</DialogTitle>
-          <DialogDescription>Directly link Firebase User IDs (UIDs) to this operational hub.</DialogDescription>
+          <DialogTitle>Terminal Authorization: {hub.name}</DialogTitle>
+          <DialogDescription>Link Firebase Access Tokens to this processing hub.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex gap-2 items-end">
             <div className="flex-1 space-y-2">
-              <Label>User UID</Label>
-              <Input value={newUid} onChange={e => setNewUid(e.target.value)} placeholder="e.g. sWN2W9Cbz..." />
+              <Label className="text-[10px] uppercase font-black">User UID</Label>
+              <Input value={newUid} onChange={e => setNewUid(e.target.value)} placeholder="e.g. sWN2W9Cbz..." className="bg-black/40" />
             </div>
             <div className="w-32 space-y-2">
-              <Label>Role</Label>
+              <Label className="text-[10px] uppercase font-black">Clearance</Label>
               <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="bg-black/40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
@@ -323,20 +327,20 @@ function MemberManagementDialog({ hub, onUpdate }: { hub: UserProfile, onUpdate:
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleAdd} size="icon"><Plus className="h-4 w-4" /></Button>
+            <Button onClick={handleAdd} size="icon" className="bg-primary text-black"><Plus className="h-4 w-4" /></Button>
           </div>
-          <div className="border rounded-md divide-y max-h-64 overflow-auto">
+          <div className="border border-white/10 rounded-xl divide-y divide-white/5 max-h-64 overflow-auto bg-black/20">
             {Object.entries(hub.members || {}).map(([uid, role]) => (
               <div key={uid} className="flex items-center justify-between p-3 text-sm">
                 <div className="flex flex-col">
-                  <span className="font-mono text-xs text-muted-foreground">{uid}</span>
-                  <span className="font-bold text-primary uppercase text-[10px]">{role}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{uid}</span>
+                  <span className="font-black text-primary uppercase text-[9px] tracking-widest">{role}</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleRemove(uid)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => handleRemove(uid)} className="text-destructive/70 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
               </div>
             ))}
             {Object.keys(hub.members || {}).length === 0 && (
-              <div className="p-8 text-center text-muted-foreground text-sm">No members linked yet.</div>
+              <div className="p-8 text-center text-muted-foreground text-[10px] uppercase font-black tracking-widest">No terminal links active.</div>
             )}
           </div>
         </div>
@@ -391,11 +395,11 @@ export default function DashboardPage() {
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
-        toast({ title: 'Performing Professional Restoration...', description: 'Wiping current data and re-importing Lot 4 dataset for March 2026.' });
+        toast({ title: 'Initializing AI Matrix Recovery...', description: 'Synching Lot 4 dataset for March 2026. Stand by.' });
         try {
           await restoreProfessionalData(firestore, targetHubId);
           await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-          toast({ title: 'Restoration Complete', description: 'Your Lot 4 environment has been reset.' });
+          toast({ title: 'Matrix Synched', description: 'Lot 4 environment recovery complete.' });
         } catch (error: any) {
           if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -412,7 +416,7 @@ export default function DashboardPage() {
       if (!existingHub) {
         const newProfileData = {
           id: targetHubId,
-          name: isTargetEmail ? "Excellerate Services - Lot 4" : (isMasterUser ? "Main Enterprise Hub" : `${user.email?.split('@')[0]}'s Operations`),
+          name: isTargetEmail ? "EXCELLERATE AI - LOT 4" : (isMasterUser ? "ENTERPRISE CORE MATRIX" : `${user.email?.split('@')[0].toUpperCase()}'S MATRIX`),
           email: user.email,
           members: { [user.uid]: 'owner' },
           enabledTabs: ALL_AVAILABLE_TABS.map(t => t.id),
@@ -439,7 +443,7 @@ export default function DashboardPage() {
         }
         if (existingHub.isDeactivated) {
           updateDoc(profileRef, { isDeactivated: false, updatedAt: new Date().toISOString() }).then(() => {
-            toast({ title: 'Welcome Back!', description: 'Your account has been reactivated.' });
+            toast({ title: 'Terminal Online', description: 'Matrix core reactivated.' });
           });
         }
         if (!existingHub.members || !existingHub.members[user.uid]) {
@@ -465,7 +469,6 @@ export default function DashboardPage() {
   const rawSites = useCollection<Site>(sitesRef).data || [];
   const rawCleaners = useCollection<Cleaner>(cleanersRef).data || [];
   
-  // ALPHABETICAL SORTING AND DE-DUPLICATION
   const sites = useMemo(() => {
     const unique = new globalThis.Map<string, Site>();
     rawSites.forEach(s => {
@@ -688,10 +691,16 @@ export default function DashboardPage() {
 
   if (isUserLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground font-medium animate-pulse">Initializing CleanFlow...</p>
+      <div className="flex h-screen items-center justify-center bg-[#020617]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
+            <Loader2 className="h-16 w-16 animate-spin text-primary relative" />
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-white font-black tracking-widest uppercase text-xs animate-pulse">Initializing Matrix Core</p>
+            <p className="text-primary/60 font-bold uppercase text-[8px] tracking-[0.3em]">Harley AI Verification Active</p>
+          </div>
         </div>
       </div>
     );
@@ -701,10 +710,10 @@ export default function DashboardPage() {
 
   const renderAdminTab = () => (
     <div className="space-y-6">
-      <Card className="border-primary/20">
+      <Card className="border-primary/20 bg-white/5 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary"><ShieldCheck className="h-6 w-6" /> Provision New Client Hub</CardTitle>
-          <CardDescription>Once created, the client can "Sign Up" with this email to claim their hub.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-primary uppercase font-black tracking-tighter"><ShieldCheck className="h-6 w-6" /> Provision Matrix Node</CardTitle>
+          <CardDescription className="text-xs uppercase font-bold tracking-widest opacity-60">Authorize new client terminal for deployment.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => {
@@ -734,45 +743,45 @@ export default function DashboardPage() {
                 }));
               }
             });
-            toast({ title: 'Hub Provisioned', description: `${name} created.` });
+            toast({ title: 'Hub Provisioned', description: `${name} matrix node active.` });
             (e.target as HTMLFormElement).reset();
           }} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="space-y-2 flex-1">
-              <Label>Business Name</Label>
-              <Input name="name" placeholder="e.g. Acme Cleaning Services" required />
+              <Label className="text-[10px] uppercase font-black">Business Entity</Label>
+              <Input name="name" placeholder="e.g. CORE ANALYTICS" className="bg-black/40 h-11" required />
             </div>
             <div className="space-y-2 flex-1">
-              <Label>Client Email</Label>
-              <Input name="email" type="email" placeholder="owner@client.com" required />
+              <Label className="text-[10px] uppercase font-black">Authorized Email</Label>
+              <Input name="email" type="email" placeholder="admin@matrix.ai" className="bg-black/40 h-11" required />
             </div>
-            <Button type="submit" className="h-10 px-6"><Plus className="mr-2 h-4 w-4" /> Create Profile</Button>
+            <Button type="submit" className="h-11 px-8 bg-primary text-black font-black uppercase text-xs tracking-widest"><Plus className="mr-2 h-4 w-4" /> Provision</Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardHeader>
-          <CardTitle>Active Client Hubs</CardTitle>
-          <CardDescription>Manage existing accounts and feature visibility.</CardDescription>
+          <CardTitle className="uppercase font-black tracking-tighter">Active Matrix Hubs</CardTitle>
+          <CardDescription className="text-[10px] uppercase font-bold tracking-widest opacity-60">Manage neural links and terminal nodes.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20">
             <table className="w-full text-sm">
-              <thead className="bg-muted">
-                <tr className="border-b">
-                  <th className="p-3 text-left">Hub Name</th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Created</th>
-                  <th className="p-3 text-right">Actions</th>
+              <thead className="bg-white/5 uppercase text-[9px] font-black tracking-[0.2em] text-muted-foreground">
+                <tr className="border-b border-white/5">
+                  <th className="p-4 text-left">Entity Name</th>
+                  <th className="p-4 text-left">Access Link</th>
+                  <th className="p-4 text-left">Deployment</th>
+                  <th className="p-4 text-right">Core Ops</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/5">
                 {allHubs.map(hub => (
-                  <tr key={hub.id} className="border-b last:border-0 hover:bg-muted/50">
-                    <td className="p-3 font-medium">{hub.name}</td>
-                    <td className="p-3 text-muted-foreground">{hub.email}</td>
-                    <td className="p-3 text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
-                    <td className="p-3 text-right">
+                  <tr key={hub.id} className="hover:bg-white/5 transition-colors">
+                    <td className="p-4 font-black uppercase text-xs tracking-tight">{hub.name}</td>
+                    <td className="p-4 text-xs font-mono text-muted-foreground">{hub.email}</td>
+                    <td className="p-4 text-[10px] font-bold text-muted-foreground">{hub.createdAt ? format(parseISO(hub.createdAt), 'PP') : 'N/A'}</td>
+                    <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
                         <TabConfigurationDialog hub={hub} onUpdate={(id, enabledTabs) => {
                           const ref = doc(firestore!, 'userProfiles', id);
@@ -798,7 +807,7 @@ export default function DashboardPage() {
                             }
                           });
                         }} />
-                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setSelectedHubId(hub.id)}>Access</Button>
+                        <Button variant="outline" size="sm" className="h-8 px-4 text-[10px] font-black uppercase border-primary/20 hover:bg-primary/10" onClick={() => setSelectedHubId(hub.id)}>Synch</Button>
                         {hub.id !== activeProfileId && hub.id !== `hub-${user.uid}` && (
                           <Button variant="ghost" size="icon" onClick={() => {
                             const ref = doc(firestore!, 'userProfiles', hub.id);
@@ -810,7 +819,7 @@ export default function DashboardPage() {
                                 }));
                               }
                             });
-                          }} className="text-destructive h-8 w-8">
+                          }} className="text-destructive/60 hover:text-destructive h-8 w-8">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -879,44 +888,47 @@ export default function DashboardPage() {
   return (
     <SidebarProvider>
         <FirebaseErrorListener />
-        <Sidebar collapsible={isMobile ? 'offcanvas' : 'icon'}>
-            <SidebarHeader className="border-b pb-4">
-                <div className="flex items-center gap-3 p-2">
+        <Sidebar collapsible={isMobile ? 'offcanvas' : 'icon'} className="border-r border-white/5">
+            <SidebarHeader className="border-b border-white/5 pb-6">
+                <div className="flex items-center gap-4 p-2">
                     {logo ? (
-                      <Image 
-                        src={logo.imageUrl} 
-                        alt={logo.description} 
-                        width={72} 
-                        height={72} 
-                        className="object-contain"
-                        data-ai-hint={logo.imageHint}
-                      />
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/10 blur-lg rounded-full" />
+                        <Image 
+                          src={logo.imageUrl} 
+                          alt="Managers Matrix Logo" 
+                          width={72} 
+                          height={72} 
+                          className="object-contain relative"
+                          data-ai-hint={logo.imageHint}
+                        />
+                      </div>
                     ) : (
-                      <div className="h-18 w-18 flex items-center justify-center text-primary font-bold text-4xl">C</div>
+                      <div className="h-14 w-14 flex items-center justify-center text-primary font-black text-4xl bg-primary/10 rounded-xl">M</div>
                     )}
                     <div className='flex flex-col overflow-hidden'>
-                        <h1 className="text-lg font-bold tracking-tight text-foreground leading-none mb-1">CleanFlow</h1>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest">Enterprise v1.0</span>
+                        <h1 className="text-sm font-black tracking-tight text-white leading-none mb-1 uppercase italic">Managers Matrix</h1>
+                        <span className="text-[7px] uppercase font-black text-primary tracking-[0.2em] leading-tight opacity-80">POWERED BY HARLEY</span>
                     </div>
                 </div>
                 {isMasterUser && allHubs.length > 0 && (
                   <div className="px-2 mt-2">
                     <Select value={selectedHubId || ''} onValueChange={setSelectedHubId}>
-                      <SelectTrigger className="h-8 text-xs bg-muted/50 border-none">
-                        <Building2 className="mr-2 h-3 w-3" />
-                        <SelectValue placeholder="Select Hub" />
+                      <SelectTrigger className="h-9 text-[10px] font-black uppercase tracking-widest bg-white/5 border-white/10 rounded-lg">
+                        <Building2 className="mr-2 h-3.5 w-3.5 text-primary" />
+                        <SelectValue placeholder="Neural Node" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#0f172a] border-white/10">
                         {allHubs.map(hub => (
-                          <SelectItem key={hub.id} value={hub.id} className="text-xs">{hub.name}</SelectItem>
+                          <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-bold uppercase tracking-tight">{hub.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 )}
             </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu className="px-2 mt-4">
+            <SidebarContent className="bg-black/20">
+              <SidebarMenu className="px-3 mt-6">
                   {menuGroups.map((group) => (
                       <Collapsible
                           key={group.group}
@@ -926,31 +938,31 @@ export default function DashboardPage() {
                                   isOpen ? [...prev, group.group] : prev.filter((g) => g !== group.group)
                               )
                           }
-                          className="w-full mb-2"
+                          className="w-full mb-3"
                       >
                           <SidebarMenuItem>
                               <CollapsibleTrigger asChild>
-                                  <SidebarMenuButton className="justify-between w-full hover:bg-muted/50">
-                                      <div className={cn("flex items-center gap-2 font-semibold", group.color)}>
+                                  <SidebarMenuButton className="justify-between w-full hover:bg-white/5 rounded-xl px-3 h-10">
+                                      <div className={cn("flex items-center gap-2.5 text-[10px] font-black uppercase tracking-[0.15em]", group.color)}>
                                           <group.icon className="h-4 w-4" />
                                           <span>{group.group}</span>
                                       </div>
-                                      <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" style={{ transform: openCollapsibles.includes(group.group) ? 'rotate(90deg)' : 'none' }}/>
+                                      <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-300 opacity-40" style={{ transform: openCollapsibles.includes(group.group) ? 'rotate(90deg)' : 'none' }}/>
                                   </SidebarMenuButton>
                               </CollapsibleTrigger>
                           </SidebarMenuItem>
-                          <CollapsibleContent>
-                              <SidebarMenuSub className="ml-4 border-l border-primary/10">
+                          <CollapsibleContent className="transition-all">
+                              <SidebarMenuSub className="ml-4 mt-1 border-l-2 border-white/5 pl-2 space-y-1">
                                   {group.items.map((item) => (
                                       <SidebarMenuItem key={item.value}>
                                           <SidebarMenuButton
                                               onClick={() => setActiveTab(item.value)}
                                               isActive={activeTab === item.value}
-                                              className="justify-start w-full"
+                                              className="justify-start w-full rounded-lg h-9 px-3 text-[11px] font-bold tracking-tight uppercase transition-all duration-200 hover:pl-4"
                                               tooltip={item.label}
                                           >
-                                              <item.icon className={cn("h-4 w-4", activeTab === item.value && group.color)} />
-                                              <span className={cn(activeTab === item.value && "font-bold")}>{item.label}</span>
+                                              <item.icon className={cn("h-3.5 w-3.5", activeTab === item.value ? group.color : "opacity-40")} />
+                                              <span className={cn(activeTab === item.value ? "text-white opacity-100" : "text-muted-foreground/60")}>{item.label}</span>
                                           </SidebarMenuButton>
                                       </SidebarMenuItem>
                                   ))}
@@ -960,38 +972,47 @@ export default function DashboardPage() {
                   ))}
               </SidebarMenu>
             </SidebarContent>
-            <SidebarFooter className="p-4 border-t bg-muted/20">
+            <SidebarFooter className="p-4 border-t border-white/5 bg-black/40">
                 <div className="mb-4 px-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Account</p>
-                  <p className="text-xs font-medium truncate">{user.email}</p>
+                  <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em] mb-1">Terminal Active</p>
+                  <p className="text-[10px] font-bold text-white/60 truncate uppercase tracking-tight">{user.email}</p>
                 </div>
-                <Button variant="outline" className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20" onClick={() => signOut(auth)}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                <Button variant="outline" className="w-full h-10 justify-start text-[10px] font-black uppercase tracking-widest text-muted-foreground border-white/5 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20 rounded-xl" onClick={() => signOut(auth)}>
+                    <LogOut className="mr-2 h-3.5 w-3.5" />
+                    Terminate
                 </Button>
             </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6">
-                <div className="flex items-center gap-2">
+        <SidebarInset className="tech-gradient">
+            <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-white/5 bg-background/60 backdrop-blur-xl px-6 sm:px-10">
+                <div className="flex items-center gap-4">
                     <SidebarTrigger className="sm:hidden" />
-                    <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
-                      <Building2 className="h-4 w-4" />
-                      <span className="text-sm font-medium">{activeProfile?.name || 'Loading Hub...'}</span>
-                      <ChevronRight className="h-3 w-3" />
+                    <div className="hidden sm:flex items-center gap-3">
+                      <div className="bg-primary/10 p-1.5 rounded-lg border border-primary/20">
+                        <Building2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-[0.1em] text-white/80">{activeProfile?.name || 'Synching Hub...'}</span>
+                      <ChevronRight className="h-3.5 w-3.5 opacity-30" />
                     </div>
-                    {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
-                    <h2 className="font-bold text-lg tracking-tight">{activeTabInfo?.label}</h2>
+                    <div className="flex items-center gap-2.5">
+                      {activeTabInfo?.icon && <activeTabInfo.icon className={cn("h-5 w-5", activeTabInfo.groupColor)} />}
+                      <h2 className="font-black text-lg tracking-tight uppercase italic">{activeTabInfo?.label}</h2>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isMasterUser && <div className="hidden md:flex bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-tighter">Master Key Active</div>}
+                <div className="flex items-center gap-4">
+                  <div className="hidden md:flex flex-col items-end">
+                    <span className="text-[10px] font-black text-primary tracking-[0.2em] uppercase">Matrix Node Active</span>
+                    <span className="text-[8px] font-bold text-white/40 uppercase tracking-[0.1em]">POWERED BY HARLEY AI</span>
+                  </div>
+                  {isMasterUser && <div className="hidden lg:flex bg-primary text-black text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-tighter shadow-lg shadow-primary/20">System Key</div>}
                 </div>
             </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 bg-muted/5">
+            <main className="flex flex-1 flex-col gap-6 p-6 md:gap-10 md:p-10">
                 <div className="w-full max-w-7xl mx-auto">
                     {activeProfile ? renderActiveTab() : (
-                      <div className="flex items-center justify-center h-64">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <div className="flex flex-col items-center justify-center h-96 gap-4">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
+                        <span className="text-[10px] font-black tracking-[0.3em] text-primary/40 uppercase">Mapping Neural Links</span>
                       </div>
                     )}
                 </div>
