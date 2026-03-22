@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { 
@@ -18,7 +18,7 @@ import {
   type Leave,
 } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History as HistoryIcon, Package, Map as MapIcon, BookOpen, Layers, ShieldX, Zap, Rocket } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ShieldAlert, FileText, ClipboardList, CalendarDays, Globe, Building2, Trash2, UserPlus, LogIn, LogOut, Loader2, Settings, Plus, ChevronRight, Clock, Award, ShieldCheck, UserCog, CheckSquare, MessageSquare, Heart, ClipboardCheck, History as LucideHistory, Package, Map as LucideMap, BookOpen, Layers, ShieldX, Zap, Rocket } from 'lucide-react';
 import SitesTab from '@/components/sites-tab';
 import CleanersTab from '@/components/cleaners-tab';
 import CompanyScheduleTab from '@/components/schedule-tab';
@@ -123,7 +123,6 @@ function LoginPage() {
     signInWithEmailAndPassword(auth, 'owen@newton.com', 'password123')
       .catch((error: any) => {
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-          // If login fails, try to create the account (it might have been wiped or never existed)
           createUserWithEmailAndPassword(auth, 'owen@newton.com', 'password123')
             .catch((createError: any) => {
               setLoading(false);
@@ -152,7 +151,7 @@ function LoginPage() {
         Launch Demo Account
       </Button>
 
-      <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-2xl p-6">
+      <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-none p-6">
         <div className="flex flex-col items-center gap-6">
           {logo ? (
             <Image 
@@ -160,11 +159,11 @@ function LoginPage() {
               alt={logo.description} 
               width={240} 
               height={240} 
-              className="object-contain"
+              className="object-contain mb-2"
               data-ai-hint={logo.imageHint}
             />
           ) : (
-            <div className="h-24 w-24 bg-primary flex items-center justify-center text-primary-foreground font-bold text-4xl">
+            <div className="h-24 w-24 flex items-center justify-center text-primary font-bold text-6xl">
               C
             </div>
           )}
@@ -355,6 +354,7 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>(['Overview', 'Management', 'Operations', 'Scheduling', 'Utilities', 'Account Settings', 'Master Control']);
   const logo = PlaceHolderImages.find(img => img.id === 'app-logo');
+  const restorationStarted = useRef(false);
 
   const isMasterUser = useMemo(() => user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()), [user]);
 
@@ -390,11 +390,11 @@ export default function DashboardPage() {
       const profileRef = doc(firestore, 'userProfiles', targetHubId);
 
       const performRestoration = async () => {
-        toast({ title: 'Performing Professional Restoration...', description: 'Wiping all current data and re-importing Lot 4 dataset for March 2026.' });
+        toast({ title: 'Performing Professional Restoration...', description: 'Wiping current data and re-importing Lot 4 dataset for March 2026.' });
         try {
           await restoreProfessionalData(firestore, targetHubId);
           await updateDoc(profileRef, { restorationVersion: CURRENT_RESTORATION_VERSION, updatedAt: new Date().toISOString() });
-          toast({ title: 'Restoration Complete', description: 'Your Lot 4 Addenbrooke\'s environment has been reset.' });
+          toast({ title: 'Restoration Complete', description: 'Your Lot 4 environment has been reset.' });
         } catch (error: any) {
           if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -432,7 +432,8 @@ export default function DashboardPage() {
           }
         });
       } else {
-        if (isTargetEmail && (existingHub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
+        if (isTargetEmail && !restorationStarted.current && (existingHub.restorationVersion || 0) < CURRENT_RESTORATION_VERSION) {
+          restorationStarted.current = true;
           performRestoration();
         }
         if (existingHub.isDeactivated) {
@@ -463,9 +464,9 @@ export default function DashboardPage() {
   const rawSites = useCollection<Site>(sitesRef).data || [];
   const rawCleaners = useCollection<Cleaner>(cleanersRef).data || [];
   
-  // ALPHABETICAL SORTING AND DE-DUPLICATION OF CORE DATA
+  // ALPHABETICAL SORTING AND DE-DUPLICATION
   const sites = useMemo(() => {
-    const unique = new Map<string, Site>();
+    const unique = new globalThis.Map<string, Site>();
     rawSites.forEach(s => {
       const key = s.name.toLowerCase().trim();
       if (!unique.has(key)) unique.set(key, s);
@@ -474,7 +475,7 @@ export default function DashboardPage() {
   }, [rawSites]);
 
   const cleaners = useMemo(() => {
-    const unique = new Map<string, Cleaner>();
+    const unique = new globalThis.Map<string, Cleaner>();
     rawCleaners.forEach(c => {
       const key = c.name.toLowerCase().trim();
       if (!unique.has(key)) unique.set(key, c);
@@ -492,7 +493,7 @@ export default function DashboardPage() {
   const actionPlans = useCollection<ActionPlan>(actionPlansRef).data || [];
   const leave = useCollection<Leave>(leaveRef).data || [];
 
-  // --- Handlers (Memoized for Stability) ---
+  // --- Handlers ---
   const handleAddSite = useCallback((siteName: string) => {
     if (!sitesRef || !activeProfileId) return;
     const newDocRef = doc(sitesRef);
@@ -555,7 +556,6 @@ export default function DashboardPage() {
     deleteDocumentNonBlocking(doc(actionPlansRef, planId));
   }, [actionPlansRef]);
 
-  // --- Account Management logic ---
   const handleDeactivate = async () => {
     if (!activeProfileId) return;
     const updateData = { isDeactivated: true, updatedAt: new Date().toISOString() };
@@ -594,7 +594,7 @@ export default function DashboardPage() {
     }
   };
 
-  // --- Navigation Mapping ---
+  // --- Navigation ---
   const menuGroups = useMemo(() => {
     const enabledTabs = activeProfile?.enabledTabs || ALL_AVAILABLE_TABS.map(t => t.id);
 
@@ -629,7 +629,7 @@ export default function DashboardPage() {
         color: 'text-excellerate-lime',
         items: [
           { value: 'audits', label: 'Site Audits', icon: ClipboardCheck },
-          { value: 'audit-history', label: 'Audit History', icon: HistoryIcon },
+          { value: 'audit-history', label: 'Audit History', icon: LucideHistory },
           { value: 'supplies', label: 'Supplies', icon: Package },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
@@ -650,7 +650,7 @@ export default function DashboardPage() {
         icon: Settings,
         color: 'text-muted-foreground',
         items: [
-          { value: 'directions', label: 'Site Directions', icon: MapIcon },
+          { value: 'directions', label: 'Site Directions', icon: LucideMap },
         ].filter(item => isMasterUser || enabledTabs.includes(item.value)),
       },
       {
@@ -700,10 +700,10 @@ export default function DashboardPage() {
 
   const renderAdminTab = () => (
     <div className="space-y-6">
-      <Card className="border-primary/20 shadow-lg">
+      <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary"><ShieldCheck className="h-6 w-6" /> Provision New Client Hub</CardTitle>
-          <CardDescription>Enter the details below. Once created, the client can "Sign Up" with the email provided to claim their hub.</CardDescription>
+          <CardDescription>Once created, the client can "Sign Up" with this email to claim their hub.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => {
@@ -737,11 +737,11 @@ export default function DashboardPage() {
             (e.target as HTMLFormElement).reset();
           }} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="space-y-2 flex-1">
-              <Label>Client/Business Name</Label>
+              <Label>Business Name</Label>
               <Input name="name" placeholder="e.g. Acme Cleaning Services" required />
             </div>
             <div className="space-y-2 flex-1">
-              <Label>Client Email (Login ID)</Label>
+              <Label>Client Email</Label>
               <Input name="email" type="email" placeholder="owner@client.com" required />
             </div>
             <Button type="submit" className="h-10 px-6"><Plus className="mr-2 h-4 w-4" /> Create Profile</Button>
@@ -752,7 +752,7 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Active Client Hubs</CardTitle>
-          <CardDescription>Manage existing accounts, features, and direct UID access.</CardDescription>
+          <CardDescription>Manage existing accounts and feature visibility.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
@@ -760,7 +760,7 @@ export default function DashboardPage() {
               <thead className="bg-muted">
                 <tr className="border-b">
                   <th className="p-3 text-left">Hub Name</th>
-                  <th className="p-3 text-left">Provisioned Email</th>
+                  <th className="p-3 text-left">Email</th>
                   <th className="p-3 text-left">Created</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
@@ -891,7 +891,7 @@ export default function DashboardPage() {
                         data-ai-hint={logo.imageHint}
                       />
                     ) : (
-                      <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-md">C</div>
+                      <div className="h-18 w-18 flex items-center justify-center text-primary font-bold text-4xl">C</div>
                     )}
                     <div className='flex flex-col overflow-hidden'>
                         <h1 className="text-lg font-bold tracking-tight text-foreground leading-none mb-1">CleanFlow</h1>
@@ -961,7 +961,7 @@ export default function DashboardPage() {
             </SidebarContent>
             <SidebarFooter className="p-4 border-t bg-muted/20">
                 <div className="mb-4 px-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">User Account</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Account</p>
                   <p className="text-xs font-medium truncate">{user.email}</p>
                 </div>
                 <Button variant="outline" className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20" onClick={() => signOut(auth)}>
