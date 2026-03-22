@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
@@ -151,7 +152,7 @@ function LoginPage() {
         Launch Demo Account
       </Button>
 
-      <Card className="w-full max-w-[400px] border-none bg-[#141414] shadow-none p-6">
+      <Card className="w-full max-w-[400px] border-none bg-transparent shadow-none p-6">
         <div className="flex flex-col items-center gap-6">
           {logo ? (
             <Image 
